@@ -1,0 +1,32 @@
+/* Onboarding UI Strings - English */
+"onboarding.subtitle.default" = "Complete the necessary setup to get started right away.";
+"onboarding.button.skip" = "Later";
+"onboarding.button.start" = "Get Started";
+"onboarding.button.required_disabled" = "Please complete required items";
+"onboarding.status.granted" = "Completed";
+"onboarding.action.open_settings" = "Open Settings";
+"onboarding.action.enable_now" = "Enable Now";
+"onboarding.action.apply_now" = "Apply Now";
+"onboarding.note.privacy" = "All data is securely stored locally on your device.";
+
+/* Permissions */
+"onboarding.item.full_disk_access.title" = "Full Disk Access";
+"onboarding.item.full_disk_access.detail" = "Full Disk Access is required to read system files and inspect disk state.";
+"onboarding.item.accessibility.title" = "Accessibility Permission";
+"onboarding.item.accessibility.detail" = "Accessibility permission is required for system control and UI automation.";
+"onboarding.item.screen_recording.title" = "Screen Recording Permission";
+"onboarding.item.screen_recording.detail" = "Screen recording permission is required for screen capture and text recognition.";
+"onboarding.item.camera.title" = "Camera Permission";
+"onboarding.item.camera.detail" = "Camera permission is required for video capture and camera features.";
+"onboarding.item.microphone.title" = "Microphone Permission";
+"onboarding.item.microphone.detail" = "Microphone permission is required for audio recording and voice input.";
+"onboarding.item.input_monitoring.title" = "Input Monitoring Permission";
+"onboarding.item.input_monitoring.detail" = "Input monitoring permission is required for keyboard shortcuts and input detection.";
+"onboarding.item.location.title" = "Location Permission";
+"onboarding.item.location.detail" = "Location permission is required for location and network status awareness.";
+
+/* Defaults & Required */
+"onboarding.item.defaults.title" = "Recommended Defaults";
+"onboarding.item.defaults.detail" = "Applies recommended default settings for optimal operation.";
+"onboarding.item.required.title" = "Required Settings";
+"onboarding.item.required.detail" = "Essential permissions and setup required for functionality.";

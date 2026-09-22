@@ -1,0 +1,1 @@
+{"schema":"game-realtime-benchmark-baseline-v1","hostProfileID":"mbp18-4-m1-max-10c-64gb-macos26-arm64-swift6-release-v1","fixtureID":"p0-core-1600-v1","medianP99Nanoseconds":7000000,"peakRSSDeltaBytes":100663296,"snapshotBytes":524288,"checkpointRingBytes":67108864}

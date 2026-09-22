@@ -1,0 +1,78 @@
+{
+  "uuid": "7acf1f17-3cb4-4646-8f95-c4dbd275fe7a",
+  "binding": {
+    "product_id": null,
+    "catalog_slug": "agent-wiki-indexer",
+    "store_catalog_id": null,
+    "store_catalog_url": null,
+    "gujo_api": "https://gujo.ai",
+    "support_url": "https://support.gujo.ai",
+    "account_url": "https://apps.gujo.ai/downloads",
+    "distribution_doc": "DISTRIBUTION.md"
+  },
+  "content": {
+    "ko": {
+      "name": "Agent Knowledge Wiki Indexer",
+      "summary": "지식 문서와 레퍼런스 아티팩트를 고속 검색 가능하도록 구조화 인덱싱하는 색인 관리기입니다.",
+      "body_markdown_inline": "Agent Knowledge Wiki Indexer는 로컬 및 팀 지식 저장소에 분산된 수천 건의 마크다운 문서와 결정 이력을 초고속 검색이 가능하도록 색인하는 인덱싱 엔진입니다. 형태소 분석과 키워드 추출을 통해 자연어 질의에 가장 적합한 문서를 수 밀리초 내에 찾아낼 수 있도록 돕습니다."
+    },
+    "en": {
+      "name": "Agent Knowledge Wiki Indexer",
+      "summary": "Builds high-performance searchable indices for knowledge bases, runbooks, and articles.",
+      "body_markdown_inline": "Builds high-performance searchable indices for knowledge bases, runbooks, and articles. Provides native macOS architecture, robust performance, and dual-entry surface coverage."
+    }
+  },
+  "platforms": [
+    "macos"
+  ],
+  "runtime": "app",
+  "tags": [
+    "macos",
+    "gujo",
+    "생산성"
+  ],
+  "x-store": {
+    "slug": "agent-wiki-indexer",
+    "title": "Agent Knowledge Wiki Indexer",
+    "tagline": "방대한 지식 문서와 런북을 초고속으로 검색할 수 있도록 색인하는 엔진",
+    "body": "Agent Knowledge Wiki Indexer는 로컬 및 팀 지식 저장소에 분산된 수천 건의 마크다운 문서와 결정 이력을 초고속 검색이 가능하도록 색인하는 인덱싱 엔진입니다. 형태소 분석과 키워드 추출을 통해 자연어 질의에 가장 적합한 문서를 수 밀리초 내에 찾아낼 수 있도록 돕습니다.",
+    "category": "생산성",
+    "price_krw": 14900,
+    "license_terms": "Gujo Pass 구독 멤버십",
+    "requirements": "macOS 14 이상 · Apple Silicon",
+    "release_note": "초기 릴리스 및 표준 메타데이터 명세 적용",
+    "features": [
+      {
+        "title": "전문 검색 역색인 구축",
+        "description": "문서 본문과 메타데이터를 정밀 파싱하여 고속 검색용 색인 파일을 생성합니다."
+      },
+      {
+        "title": "문서 간 상호 연결 그래프",
+        "description": "인용된 문서 식별자와 링크 관계를 분석하여 지식 네트워크를 형성합니다."
+      },
+      {
+        "title": "실시간 증분 색인 업데이트",
+        "description": "파일 변경 감지를 통해 수정된 문서만 즉시 재색인하여 최신성을 유지합니다."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "색인 데이터베이스는 어디에 생성되나요?",
+        "answer": "로컬 지식 저장소 디렉터리 내부의 전용 캐시 공간에 가볍게 구축됩니다."
+      },
+      {
+        "question": "한글 형태소 검색도 매끄럽게 지원하나요?",
+        "answer": "한글과 영어 모두 단어 분절 및 부분 일치 검색을 충실하게 지원합니다."
+      },
+      {
+        "question": "CLI 도구와 연동하여 질의할 수 있나요?",
+        "answer": "네, 지식 검색 CLI에서 이 인덱서를 백엔드로 호출하여 결과를 조회합니다."
+      }
+    ]
+  },
+  "x-appraisal": {
+    "approved_verdict_run_id": "86e98ea3-cd2a-4101-a10a-9a81280899a2",
+    "draft": true,
+    "price_note": "Gujo Pass 구독 멤버십 포함"
+  }
+}

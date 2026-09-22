@@ -1,0 +1,64 @@
+{
+  "source": "관공서의 공휴일에 관한 규정(제2조 공휴일, 제3조 대체공휴일) · 공직선거법 제34조(선거일) · 국세기본법 제5조(기한 특례: 토요일·일요일·공휴일·근로자의 날이면 다음 날). 음력 명절(설날·부처님오신날·추석)은 저장소 pim-calendar KoreanLunarCalendar 테스트와 Foundation 중국력(Asia/Seoul)으로 교차 확인. 대체공휴일: 3·1절·광복절·개천절·한글날·어린이날·부처님오신날·기독탄신일은 토·일 겹침, 설·추석 연휴는 일요일·다른 공휴일 겹침만 대체.",
+  "years": {
+    "2026": {
+      "notes": [
+        "추석 연휴 9/26 이 토요일 — 규정상 설·추석 대체공휴일은 일요일·다른 공휴일 겹침만이라 대체 없음. 임시공휴일 지정 시 관보 확인 필요",
+        "현충일 6/6 토요일 — 현충일은 대체공휴일 대상이 아니다"
+      ],
+      "entries": [
+        { "date": "2026-01-01", "name": "신정", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2026-02-16", "name": "설날 연휴", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 2025-12-29(섣달그믐)" },
+        { "date": "2026-02-17", "name": "설날", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 1월 1일 — 두 출처 교차 확인" },
+        { "date": "2026-02-18", "name": "설날 연휴", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2026-03-01", "name": "삼일절", "kind": "publicHoliday", "confidence": "confirmed", "note": "일요일" },
+        { "date": "2026-03-02", "name": "대체공휴일(삼일절)", "kind": "substitute", "confidence": "confirmed", "note": "삼일절 일요일 겹침 — 규정 제3조" },
+        { "date": "2026-05-01", "name": "근로자의 날", "kind": "laborDay", "confidence": "confirmed", "note": "관공서 공휴일 아님. 국세기본법 제5조 기한 특례 대상" },
+        { "date": "2026-05-05", "name": "어린이날", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2026-05-24", "name": "부처님오신날", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 4월 8일, 일요일 — 두 출처 교차 확인" },
+        { "date": "2026-05-25", "name": "대체공휴일(부처님오신날)", "kind": "substitute", "confidence": "confirmed", "note": "부처님오신날 일요일 겹침 — 규정 제3조(2023 개정으로 대상 편입)" },
+        { "date": "2026-06-03", "name": "제9회 전국동시지방선거", "kind": "election", "confidence": "confirmed", "note": "공직선거법 제34조 — 임기만료일(6/30) 전 30일 이후 첫 번째 수요일" },
+        { "date": "2026-06-06", "name": "현충일", "kind": "publicHoliday", "confidence": "confirmed", "note": "토요일, 대체 없음" },
+        { "date": "2026-08-15", "name": "광복절", "kind": "publicHoliday", "confidence": "confirmed", "note": "토요일" },
+        { "date": "2026-08-17", "name": "대체공휴일(광복절)", "kind": "substitute", "confidence": "confirmed", "note": "광복절 토요일 겹침 — 규정 제3조" },
+        { "date": "2026-09-24", "name": "추석 연휴", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2026-09-25", "name": "추석", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 8월 15일 — 두 출처 교차 확인" },
+        { "date": "2026-09-26", "name": "추석 연휴", "kind": "publicHoliday", "confidence": "confirmed", "note": "토요일 — 대체 없음(연도 notes 참조)" },
+        { "date": "2026-10-03", "name": "개천절", "kind": "publicHoliday", "confidence": "confirmed", "note": "토요일" },
+        { "date": "2026-10-05", "name": "대체공휴일(개천절)", "kind": "substitute", "confidence": "confirmed", "note": "개천절 토요일 겹침 — 규정 제3조" },
+        { "date": "2026-10-09", "name": "한글날", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2026-12-25", "name": "기독탄신일", "kind": "publicHoliday", "confidence": "confirmed" }
+      ]
+    },
+    "2027": {
+      "notes": [
+        "2027 대체공휴일은 규정 제3조에서 도출했고 연도별 관보(인사혁신처 공휴일 안내)와 대조하지 못해 needsReview",
+        "현충일 6/6 일요일 — 현충일은 대체공휴일 대상이 아니다",
+        "근로자의 날 5/1 토요일 — 어차피 토요일 이월"
+      ],
+      "entries": [
+        { "date": "2027-01-01", "name": "신정", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2027-02-05", "name": "설날 연휴", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2027-02-06", "name": "설날", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 1월 1일, 토요일 — Foundation 중국력 확인" },
+        { "date": "2027-02-07", "name": "설날 연휴", "kind": "publicHoliday", "confidence": "confirmed", "note": "일요일" },
+        { "date": "2027-02-08", "name": "대체공휴일(설날 연휴)", "kind": "substitute", "confidence": "needsReview", "note": "설날 연휴 2/7 일요일 겹침 — 규정 제3조 도출, 관보 미대조" },
+        { "date": "2027-03-01", "name": "삼일절", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2027-05-01", "name": "근로자의 날", "kind": "laborDay", "confidence": "confirmed", "note": "토요일. 국세기본법 제5조 기한 특례 대상" },
+        { "date": "2027-05-05", "name": "어린이날", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2027-05-13", "name": "부처님오신날", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 4월 8일 — Foundation 중국력 확인" },
+        { "date": "2027-06-06", "name": "현충일", "kind": "publicHoliday", "confidence": "confirmed", "note": "일요일, 대체 없음" },
+        { "date": "2027-08-15", "name": "광복절", "kind": "publicHoliday", "confidence": "confirmed", "note": "일요일" },
+        { "date": "2027-08-16", "name": "대체공휴일(광복절)", "kind": "substitute", "confidence": "needsReview", "note": "광복절 일요일 겹침 — 규정 제3조 도출, 관보 미대조" },
+        { "date": "2027-09-14", "name": "추석 연휴", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2027-09-15", "name": "추석", "kind": "publicHoliday", "confidence": "confirmed", "note": "음력 8월 15일, 수요일 — Foundation 중국력 확인" },
+        { "date": "2027-09-16", "name": "추석 연휴", "kind": "publicHoliday", "confidence": "confirmed" },
+        { "date": "2027-10-03", "name": "개천절", "kind": "publicHoliday", "confidence": "confirmed", "note": "일요일" },
+        { "date": "2027-10-04", "name": "대체공휴일(개천절)", "kind": "substitute", "confidence": "needsReview", "note": "개천절 일요일 겹침 — 규정 제3조 도출, 관보 미대조" },
+        { "date": "2027-10-09", "name": "한글날", "kind": "publicHoliday", "confidence": "confirmed", "note": "토요일" },
+        { "date": "2027-10-11", "name": "대체공휴일(한글날)", "kind": "substitute", "confidence": "needsReview", "note": "한글날 토요일 겹침 — 규정 제3조 도출, 관보 미대조" },
+        { "date": "2027-12-25", "name": "기독탄신일", "kind": "publicHoliday", "confidence": "confirmed", "note": "토요일" },
+        { "date": "2027-12-27", "name": "대체공휴일(기독탄신일)", "kind": "substitute", "confidence": "needsReview", "note": "기독탄신일 토요일 겹침 — 규정 제3조 도출, 관보 미대조" }
+      ]
+    }
+  }
+}

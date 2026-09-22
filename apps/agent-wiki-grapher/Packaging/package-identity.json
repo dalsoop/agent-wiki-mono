@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "uuid": "app_01m20kfs52y73wxmzrfkhx1n0z",
+  "name": "GujoAgentWikiGrapher",
+  "bundle_id": "net.ranode.agent-wiki-grapher",
+  "cli": "agent-wiki-grapher",
+  "object": "AgentWikiGraph",
+  "display": "Agent Wiki Graph",
+  "program": "agent-wiki-grapher",
+  "prefix": "app",
+  "gui_product": "AgentWikiGraph",
+  "cli_product": "agent-wiki-grapher",
+  "dual_entry": "helpers",
+  "cli_helper_path": "Contents/Helpers/agent-wiki-grapher",
+  "app_aliases": [
+    "AgentWikiGraph.app"
+  ],
+  "note": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).",
+  "distribution": "internal",
+  "agent_surface": {
+    "skills": [
+      "agent-wiki-graph-swift"
+    ],
+    "agents": [],
+    "attach_on": [
+      "skill-install",
+      "ship"
+    ],
+    "prefer_catalog_symlink": true
+  },
+  "purpose": "위키 객체 그래프를 색인·검색하고 고립·중심성·경로를 보여 주는 그래프 앱",
+  "state_root_env": "SWIFT_APP_STATE_ROOT"
+}

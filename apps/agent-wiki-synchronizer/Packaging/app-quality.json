@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "risks": [],
+  "runtime": {
+    "stateMirror": "required",
+    "maxStateAgeSeconds": 300
+  },
+  "e2e": {
+    "requirement": "optional",
+    "scenarios": []
+  },
+  "userAction": "single-action-request"
+}

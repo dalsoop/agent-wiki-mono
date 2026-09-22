@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "id": "ui-03-world-map",
+  "canvas": {
+    "width": 1672,
+    "height": 941
+  },
+  "components": [
+    {
+      "id": "world-map-field",
+      "kind": "image",
+      "asset": {
+        "path": "Screens/ui-03-world-map/assets/map-field.png",
+        "sha256": "f5dab80a07b72ef4035260a29a5e919f0f3e01044d44bfe93c50b3a2fa3b58a2",
+        "provenance": {
+          "classification": "faithful-source",
+          "sourceSHA256": "f5dab80a07b72ef4035260a29a5e919f0f3e01044d44bfe93c50b3a2fa3b58a2"
+        }
+      }
+    },
+    {
+      "id": "meter-track-small",
+      "kind": "meter-track",
+      "asset": {
+        "path": "Components/meter-track-small.png",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "provenance": {
+          "classification": "component",
+          "sourceSHA256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "map-field",
+      "componentID": "world-map-field",
+      "frame": { "x": 355, "y": 126, "width": 1067, "height": 701 },
+      "anchor": { "x": 0, "y": 0 },
+      "zIndex": 5,
+      "allowsOverflow": false
+    },
+    {
+      "id": "territory-a-meter",
+      "componentID": "meter-track-small",
+      "frame": { "x": 40, "y": 260, "width": 180, "height": 18 },
+      "anchor": { "x": 0, "y": 0 },
+      "zIndex": 20,
+      "allowsOverflow": false
+    },
+    {
+      "id": "territory-b-meter",
+      "componentID": "meter-track-small",
+      "frame": { "x": 40, "y": 300, "width": 180, "height": 18 },
+      "anchor": { "x": 0, "y": 0 },
+      "zIndex": 20,
+      "allowsOverflow": false
+    }
+  ],
+  "bindings": [
+    {
+      "id": "territory-a-meter-value",
+      "kind": "meter",
+      "key": "territories.a.meter",
+      "targetInstanceID": "territory-a-meter"
+    },
+    {
+      "id": "territory-b-meter-value",
+      "kind": "meter",
+      "key": "territories.b.meter",
+      "targetInstanceID": "territory-b-meter"
+    }
+  ],
+  "interactions": [
+    {
+      "instanceID": "map-field",
+      "actionID": "world-map.select-territory",
+      "hitShape": {
+        "kind": "rectangle",
+        "points": []
+      },
+      "accessibilityLabel": "영지 선택"
+    }
+  ]
+}

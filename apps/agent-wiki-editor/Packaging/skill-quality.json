@@ -1,0 +1,15 @@
+{
+  "axes" : {
+    "architecture" : 25,
+    "cli" : 25,
+    "identity" : 25,
+    "rules" : 25
+  },
+  "category" : "agent",
+  "hasCLI" : true,
+  "hasReadme" : true,
+  "object" : "app-skill",
+  "schemaVersion" : 1,
+  "targetGrade" : "B",
+  "when" : "work-order"
+}

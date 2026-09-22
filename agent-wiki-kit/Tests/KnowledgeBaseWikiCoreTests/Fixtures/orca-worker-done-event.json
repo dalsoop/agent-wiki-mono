@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "knowledge-base-wiki.repository-agent-adapter-event.v1",
+  "type": "worker_done",
+  "taskId": "kbw-content-addressed-task-id",
+  "runtimeTaskId": "task_440c033c2f33",
+  "dispatchId": "ctx_0a7a91a8b352",
+  "worker": "term_3848e8ae-8ace-405f-aa4e-6ee49ca7e5cb",
+  "body": "Focused tests passed; checker verification requested.",
+  "occurredAt": "2026-07-27T08:10:00Z"
+}

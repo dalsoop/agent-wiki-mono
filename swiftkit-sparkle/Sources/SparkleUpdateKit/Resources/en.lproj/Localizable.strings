@@ -1,0 +1,7 @@
+"sparkle.section_title" = "Updates";
+"sparkle.auto_check" = "Check for updates automatically";
+"sparkle.check_now" = "Check for Updates…";
+"sparkle.check_help" = "Looks for a newer build on the public feed.";
+"sparkle.no_channel_help" = "This install has no Sparkle channel. Ship a build that has SUFeedURL and Sparkle.framework.";
+"sparkle.no_channel_visible" = "No update channel on this install. Run app-build-manager ship, then reopen Settings.";
+"sparkle.open_settings" = "Settings…";

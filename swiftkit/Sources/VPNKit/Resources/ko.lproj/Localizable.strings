@@ -1,0 +1,45 @@
+"title.connected" = "%@에 연결됨";
+"title.unreachable" = "%@에 연결할 수 없음";
+
+"path.direct" = "직접 연결 · %@";
+"path.vpn" = "%@ · %@ · %@";
+"path.unidentified_tunnel" = "VPN형 경로 · %@ · 서비스 이름 확인 불가";
+"path.unavailable" = "연결 경로 확인 불가";
+"value.interface_unknown" = "인터페이스 확인 불가";
+
+"failure.dns" = "대상의 주소를 찾을 수 없습니다. DNS 설정과 호스트 이름을 확인하세요.";
+"failure.no_route" = "대상까지의 네트워크 경로가 없습니다. 연결할 VPN을 선택해 다시 확인하세요.";
+"failure.route_mismatch" = "VPN은 연결되어 있지만 대상 경로에는 사용되지 않습니다. 다른 VPN을 선택하세요.";
+"failure.target_vpn" = "VPN 경로는 확인됐지만 대상 서버·포트가 응답하지 않습니다. 서버, 방화벽, 포트를 확인하세요.";
+"failure.target_direct" = "대상 서버·포트가 응답하지 않습니다. 서버, 방화벽, 포트를 확인하세요.";
+"failure.unavailable" = "연결 상태를 확인하지 못했습니다: %@";
+"failure.unavailable_generic" = "연결 상태를 확인하지 못했습니다. 다시 진단하거나 앱에서 연결을 다시 시도하세요.";
+
+"status.connected" = "연결됨";
+"status.disconnected" = "연결 안 됨";
+"status.connecting" = "연결 중";
+"status.disconnecting" = "연결 해제 중";
+"status.invalid" = "사용할 수 없음";
+
+"card.target" = "대상";
+"card.last_checked" = "마지막 확인";
+"card.details" = "연결 상세";
+
+"recovery.heading" = "연결 복구";
+"recovery.choose_vpn" = "시도할 VPN";
+"recovery.no_vpn" = "시스템 VPN을 찾지 못했습니다. 시스템 설정에서 VPN을 추가하거나 활성화한 뒤 다시 진단하세요.";
+"recovery.no_alternative_vpn" = "현재 연결된 VPN은 대상 경로에 사용되지 않으며 시도할 다른 VPN이 없습니다. 시스템 설정에서 다른 VPN을 추가하거나 연결 상태를 확인하세요.";
+"recovery.connect_and_check" = "VPN 연결하고 확인";
+"recovery.diagnose_again" = "다시 진단";
+"recovery.checking" = "연결 상태 확인 중…";
+"recovery.initial" = "이 대상에 닿는 경로를 확인합니다. VPN은 직접 선택한 뒤에만 연결합니다.";
+"recovery.check_connection" = "연결 상태 확인";
+"recovery.server_check" = "이미 VPN 경로를 사용하고 있습니다. VPN을 바꾸기 전에 서버, 방화벽, 포트를 확인하세요.";
+
+"settings.heading" = "연결 복구";
+"settings.preferred" = "접속 실패 때 제안할 VPN";
+"settings.none" = "선호 VPN 없음";
+"settings.connection_test" = "연결 테스트";
+"settings.last_diagnosis" = "마지막 진단";
+"settings.not_checked" = "아직 확인하지 않음";
+"settings.disconnect_when_idle" = "유휴 시 VPN 연결 해제";

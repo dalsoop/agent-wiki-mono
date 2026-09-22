@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "uuid": "app_01m20keycaj60qjfabwcaq6n0z",
+  "name": "GujoAgentWikiIndexer",
+  "bundle_id": "net.ranode.agent-wiki-indexer",
+  "cli": "agent-wiki-indexer",
+  "object": "AgentWikiLocal",
+  "display": "Agent Wiki Local",
+  "program": "agent-wiki-indexer",
+  "dual_entry": "helpers",
+  "prefix": "app",
+  "gui_product": "AgentWikiLocal",
+  "cli_product": "agent-wiki-indexer",
+  "cli_helper_path": "Contents/Helpers/agent-wiki-indexer",
+  "app_aliases": [
+    "AgentWikiLocal.app"
+  ],
+  "agent_surface": {
+    "skills": [
+      "agent-wiki-local"
+    ],
+    "agents": [],
+    "attach_on": [
+      "skill-install",
+      "ship"
+    ],
+    "prefer_catalog_symlink": true
+  },
+  "note": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).",
+  "purpose": "저장소 .wiki/의 작업그래프·승격·세계관을 다루는 로컬 Agent Wiki CLI",
+  "state_root_env": "SWIFT_APP_STATE_ROOT"
+}

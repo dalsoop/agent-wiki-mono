@@ -1,0 +1,18 @@
+# Build & Package Manager
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+
+# General
+.DS_Store
+*.log
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,78 @@
+{
+  "binding": {
+    "product_id": null,
+    "catalog_slug": "agent-wiki-graph",
+    "store_catalog_id": null,
+    "store_catalog_url": null,
+    "gujo_api": "https://gujo.ai",
+    "support_url": "https://support.gujo.ai",
+    "account_url": "https://apps.gujo.ai/downloads",
+    "note": "Phase 2 초안. 출처=package-identity+catalog.name+listing. catalog.id를 storeProductID로 쓰지 않음.",
+    "distribution_doc": "DISTRIBUTION.md"
+  },
+  "content": {
+    "ko": {
+      "name": "Agent Wiki Graph",
+      "summary": "gujo-wiki 객체 그래프의 영향도·경로를 계산하는 앱.",
+      "body_markdown_inline": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).\n\n**구성**\npublic CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).\n\n**CLI**\nPATH CLI `agent-wiki-graph` 로 조회·조작한다.\n\n**Dual-entry**\nGUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+    },
+    "en": {
+      "name": "Agent Wiki Graph",
+      "summary": "Computes impact and paths over the gujo-wiki object graph.",
+      "body_markdown_inline": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).\n\n**구성**\npublic CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).\n\n**CLI**\nPATH CLI `agent-wiki-graph` 로 조회·조작한다.\n\n**Dual-entry**\nGUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+    }
+  },
+  "platforms": [
+    "macos"
+  ],
+  "runtime": "app",
+  "tags": [
+    "app",
+    "AgentWikiGraph",
+    "개발자 도구",
+    "agent"
+  ],
+  "x-store": {
+    "slug": "agent-wiki-graph",
+    "title": "Agent Wiki Graph",
+    "tagline": "일반 창 앱(독 앱 — 메뉴바 없음).",
+    "body": "Agent Wiki 원장을 읽기 전용으로 인덱싱해 파생 그래프를 만든다. 고아 노드·중심성·영향·경로 질의를 창과 PATH CLI `agent-wiki-graph`에서 같은 Core로 돌린다. 원장은 쓰지 않으며 그래프 수학은 GraphEngineKit, 파싱은 WikiLedgerKit에 맡긴다.",
+    "category": "개발자 도구",
+    "license_terms": "Gujo Pass 구독 멤버십",
+    "features": [
+      {
+        "title": "구성",
+        "description": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link)."
+      },
+      {
+        "title": "CLI",
+        "description": "PATH CLI `agent-wiki-graph` 로 조회·조작한다."
+      },
+      {
+        "title": "Dual-entry",
+        "description": "GUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Agent Wiki Graph은 어디에 쓰나요?",
+        "a": "Agent Wiki Graph은 macOS에서 해당 작업을 다루는 전용 앱이다."
+      },
+      {
+        "q": "명령줄이 있나요?",
+        "a": "있다. `agent-wiki-graph` 로 조회한다."
+      },
+      {
+        "q": "스토어 상품 페이지 slug는?",
+        "a": "`agent-wiki-graph`."
+      }
+    ],
+    "requirements": "macOS 14 이상. Agent Wiki 원장을 읽기 전용으로 인덱싱한다.",
+    "release_note": "~/gujo-wiki 객체 그래프를 인덱싱해 역의존 impact, 노드 간 path(BFS), rebuild를 다룬다. 객체를 고치기 전에 무엇이 영향 받는지 먼저 본다."
+  },
+  "x-appraisal": {
+    "source": "phase2-mechanical-fill-2026-08-15",
+    "draft": true,
+    "price_note": "Gujo Pass 구독 멤버십 포함"
+  }
+}

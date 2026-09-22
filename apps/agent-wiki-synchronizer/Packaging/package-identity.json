@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "uuid": "app_01m20k96e4q9hpgspr4k6a3n0z",
+  "name": "GujoAgentWikiSynchronizer",
+  "bundle_id": "net.ranode.agent-wiki-synchronizer",
+  "cli": "agent-wiki-synchronizer",
+  "object": "AgentWikiGlobal",
+  "display": "Agent Wiki Global",
+  "program": "agent-wiki-synchronizer",
+  "dual_entry": "helpers",
+  "prefix": "app",
+  "gui_product": "AgentWikiGlobal",
+  "cli_product": "agent-wiki-synchronizer",
+  "cli_helper_path": "Contents/Helpers/agent-wiki-synchronizer",
+  "app_aliases": [
+    "AgentWikiGlobal.app"
+  ],
+  "agent_surface": {
+    "skills": [
+      "agent-wiki-global"
+    ],
+    "agents": [],
+    "attach_on": [
+      "skill-install",
+      "ship"
+    ],
+    "prefer_catalog_symlink": true
+  },
+  "note": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).",
+  "purpose": "cwd를 쓰지 않고 gujo-wiki 세계를 기본으로 다루는 전역 Agent Wiki CLI",
+  "state_root_env": "SWIFT_APP_STATE_ROOT"
+}

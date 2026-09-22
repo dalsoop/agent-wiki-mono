@@ -1,0 +1,78 @@
+{
+  "binding": {
+    "product_id": 343,
+    "catalog_slug": "agent-wiki-reader",
+    "store_catalog_id": 245,
+    "store_catalog_url": "https://apps.gujo.ai/catalog/245",
+    "gujo_api": "https://gujo.ai",
+    "support_url": "https://support.gujo.ai",
+    "account_url": "https://apps.gujo.ai/downloads",
+    "note": "Phase 2 초안. 출처=package-identity+catalog.name+listing. catalog.id를 storeProductID로 쓰지 않음.",
+    "distribution_doc": "DISTRIBUTION.md"
+  },
+  "content": {
+    "ko": {
+      "name": "Agent Wiki Reader",
+      "summary": "보고용 Agent Wiki 클라이언트.",
+      "body_markdown_inline": "Report surface.\n\n**구성**\nReport surface.\n\n**CLI**\nPATH CLI `agent-wiki-reader` 로 조회·조작한다.\n\n**Dual-entry**\nGUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+    },
+    "en": {
+      "name": "Agent Wiki Reader",
+      "summary": "**보고용** Agent Wiki 클라이언트.",
+      "body_markdown_inline": "Report surface.\n\n**구성**\nReport surface.\n\n**CLI**\nPATH CLI `agent-wiki-reader` 로 조회·조작한다.\n\n**Dual-entry**\nGUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+    }
+  },
+  "platforms": [
+    "macos"
+  ],
+  "runtime": "app",
+  "tags": [
+    "app",
+    "Agent Wiki Reader",
+    "개발자 도구",
+    "agent"
+  ],
+  "x-store": {
+    "slug": "agent-wiki-reader",
+    "title": "Agent Wiki Reader",
+    "tagline": "보고용 Agent Wiki 클라이언트.",
+    "body": "Agent Wiki Reader는 Agent Wiki 원장을 읽기 전용으로 조회하는 보고용 클라이언트다. list·show·search·context·path·world·graph·verify 같은 읽기 명령만 프록시하고 publish·task·rollback 등 쓰기·운영 명령은 거절한다. 메뉴바 GUI와 PATH CLI `agent-wiki-reader`가 같은 Core를 쓰며, 데이터는 gujo-wiki 등 로컬 world를 읽는다.",
+    "category": "개발자 도구",
+    "license_terms": "Gujo Pass 구독 멤버십",
+    "features": [
+      {
+        "title": "구성",
+        "description": "Report surface."
+      },
+      {
+        "title": "CLI",
+        "description": "PATH CLI `agent-wiki-reader` 로 조회·조작한다."
+      },
+      {
+        "title": "Dual-entry",
+        "description": "GUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Agent Wiki Reader은 어디에 쓰나요?",
+        "a": "Agent Wiki Reader은 macOS에서 해당 작업을 다루는 전용 앱이다."
+      },
+      {
+        "q": "명령줄이 있나요?",
+        "a": "있다. `agent-wiki-reader` 로 조회한다."
+      },
+      {
+        "q": "스토어 상품 페이지 slug는?",
+        "a": "`agent-wiki-reader`."
+      }
+    ],
+    "requirements": "macOS 14 이상 · Apple Silicon · PATH CLI agent-wiki",
+    "release_note": "보고용 Agent Wiki 클라이언트 — 읽기·조회만 하는 리포트 면을 `agent-wiki-reader` CLI 로도 쓴다."
+  },
+  "x-appraisal": {
+    "source": "phase2-mechanical-fill-2026-08-15",
+    "draft": true,
+    "price_note": "Gujo Pass 구독 멤버십 포함"
+  }
+}

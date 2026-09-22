@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "source": "위키 9261be4f(라노드·gujo.ai 재무·세무 앱 구성) — 해외 AI API·서버 = 매출원가, 개발 도구 SaaS = 판관비 지급수수료, PG 수수료 = 지급수수료. 순서가 우선순위다(첫 일치가 이긴다).",
+  "rules": [
+    {
+      "id": "pg-fee-nicepay",
+      "accountCode": "fees",
+      "categories": ["PG수수료", "결제수수료"],
+      "descriptionPatterns": ["나이스페이 수수료", "nicepay fee", "나이스페이먼츠 수수료"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "NICEPAY 수수료는 세금계산서 수취 후 매입세액 공제(위키 9261be4f)"
+    },
+    {
+      "id": "pg-fee-inicis",
+      "accountCode": "fees",
+      "descriptionPatterns": ["이니시스 수수료", "inicis fee", "kg이니시스 수수료"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "INICIS 수수료는 세금계산서 수취 후 매입세액 공제(위키 9261be4f)"
+    },
+    {
+      "id": "paypal-fee",
+      "accountCode": "fees",
+      "descriptionPatterns": ["paypal fee", "paypal 수수료", "페이팔 수수료"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "PayPal 수수료는 해외 사업자라 매입세액 불공제 고정(위키 9261be4f)"
+    },
+    {
+      "id": "pg-settlement-inflow",
+      "accountCode": "sales",
+      "categories": ["매출", "PG정산", "정산입금"],
+      "descriptionPatterns": ["나이스페이", "nicepay", "이니시스", "inicis", "paypal", "페이팔", "정산"],
+      "flow": "inflow",
+      "confidence": "needsReview",
+      "note": "PG·PayPal 정산 입금은 수수료 차감 순액 — 매출 정본은 주문 총액이라 10/110 을 걸면 매출세액이 틀린다(위키 9261be4f). 주문 스냅샷과 대사 필요"
+    },
+    {
+      "id": "ai-api-openai",
+      "accountCode": "aiApiUsage",
+      "categories": ["AI API", "API사용료"],
+      "descriptionPatterns": ["openai"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "해외 AI API = 매출원가, 매입세액 불공제(위키 9261be4f)"
+    },
+    {
+      "id": "ai-api-anthropic",
+      "accountCode": "aiApiUsage",
+      "descriptionPatterns": ["anthropic"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "API 사용료. Claude 채팅 구독(claude.ai)은 개발 도구 SaaS → 지급수수료로 앱에서 override"
+    },
+    {
+      "id": "ai-api-other",
+      "accountCode": "aiApiUsage",
+      "descriptionPatterns": ["openrouter", "replicate", "elevenlabs", "deepseek", "mistral ai", "x.ai", "google ai studio"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "AI API 로 추정 — 실제 청구 항목 확인"
+    },
+    {
+      "id": "hosting-aws",
+      "accountCode": "hostingAndCloud",
+      "categories": ["서버", "클라우드", "호스팅"],
+      "descriptionPatterns": ["amazon web services", "aws"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "해외 서버·클라우드 = 매출원가, 매입세액 불공제(위키 9261be4f). AWS 는 한국 법인(AWS Korea) 청구면 세금계산서 수취 가능 — 청구 주체 확인"
+    },
+    {
+      "id": "hosting-cloudflare",
+      "accountCode": "hostingAndCloud",
+      "descriptionPatterns": ["cloudflare"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "해외 서버·클라우드 = 매출원가(위키 9261be4f)"
+    },
+    {
+      "id": "hosting-other",
+      "accountCode": "hostingAndCloud",
+      "descriptionPatterns": ["vultr", "hetzner", "digitalocean", "linode", "google cloud", "microsoft azure", "oracle cloud", "가비아", "카페24 호스팅", "네이버 클라우드"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "호스팅으로 추정 — 도메인 등록비는 지급수수료로 갈 수 있다"
+    },
+    {
+      "id": "dev-tool-saas",
+      "accountCode": "fees",
+      "categories": ["소프트웨어", "SaaS", "구독"],
+      "descriptionPatterns": ["github", "jetbrains", "apple developer", "figma", "notion", "slack", "1password", "bitwarden", "cursor", "vercel", "claude.ai", "chatgpt plus", "google workspace", "microsoft 365", "adobe"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "개발 도구 SaaS = 판관비(위키 9261be4f). 지급수수료로 두되 소모품비 처리 관행도 있어 세무대리인 확인"
+    },
+    {
+      "id": "communication",
+      "accountCode": "communication",
+      "categories": ["통신비", "통신"],
+      "descriptionPatterns": ["sk텔레콤", "skt", "lg u+", "lgu+", "유플러스", "kt 통신", "통신요금", "인터넷요금", "전화요금"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "통신비"
+    },
+    {
+      "id": "rent",
+      "accountCode": "rent",
+      "categories": ["임차료", "월세", "임대료"],
+      "descriptionPatterns": ["임차료", "월세", "임대료", "사무실 임차"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "임차료 — 임대인이 일반과세자면 세금계산서 수취"
+    },
+    {
+      "id": "utilities",
+      "accountCode": "utilities",
+      "categories": ["수도광열비", "공과금"],
+      "descriptionPatterns": ["한국전력", "한전", "전기요금", "수도요금", "가스요금", "도시가스"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "수도광열비"
+    },
+    {
+      "id": "tax-payments-are-drawings",
+      "accountCode": "ownerDrawing",
+      "categories": ["부가세납부", "종합소득세납부"],
+      "descriptionPatterns": ["부가가치세", "부가세", "종합소득세", "종소세"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "개인사업자의 소득세·부가세 납부는 필요경비가 아니라 인출금(자본거래) 처리 — 세무대리인 확인"
+    },
+    {
+      "id": "taxes-and-dues",
+      "accountCode": "taxesAndDues",
+      "categories": ["세금과공과"],
+      "descriptionPatterns": ["면허세", "주민세", "자동차세", "환경개선부담금", "등록면허세", "지방세", "인지세"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "세금과공과 — 소득세·부가세는 여기 아님(인출금)"
+    },
+    {
+      "id": "employee-benefits",
+      "accountCode": "employeeBenefits",
+      "categories": ["복리후생비"],
+      "descriptionPatterns": ["복리후생", "4대보험", "국민연금 사업장", "건강보험 사업장", "고용보험", "산재보험", "직원 식대"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "직원 몫 4대보험 사업주 부담분은 복리후생비, 대표 본인 국민연금·건강보험은 필요경비 아님(소득공제) — 구분 필요"
+    },
+    {
+      "id": "insurance",
+      "accountCode": "insurance",
+      "categories": ["보험료"],
+      "descriptionPatterns": ["화재보험", "배상책임보험", "영업배상", "보험료"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "사업 관련 손해보험료"
+    },
+    {
+      "id": "advertising",
+      "accountCode": "advertising",
+      "categories": ["광고선전비", "광고"],
+      "descriptionPatterns": ["google ads", "구글 광고", "meta ads", "facebook ads", "네이버 광고", "naver ads", "광고비", "카카오모먼트"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "광고선전비 — 해외 플랫폼(Google·Meta)은 매입세액 불공제"
+    },
+    {
+      "id": "travel",
+      "accountCode": "travelAndTransportation",
+      "categories": ["여비교통비", "교통비"],
+      "descriptionPatterns": ["택시", "카카오 t", "카카오택시", "코레일", "ktx", "srt", "고속버스", "대한항공", "아시아나", "제주항공", "지하철", "교통카드", "출장"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "여비교통비 — 항공·KTX 는 매입세액 불공제(여객운송 면세·영세율 아님)"
+    },
+    {
+      "id": "vehicle",
+      "accountCode": "vehicleMaintenance",
+      "categories": ["차량유지비"],
+      "descriptionPatterns": ["주유", "gs칼텍스", "sk에너지", "s-oil", "현대오일뱅크", "하이패스", "주차", "정비"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "비영업용 소형승용차 유지비는 매입세액 불공제이고 업무사용비율 입증 필요"
+    },
+    {
+      "id": "books-printing",
+      "accountCode": "booksAndPrinting",
+      "categories": ["도서인쇄비"],
+      "descriptionPatterns": ["교보문고", "yes24", "알라딘", "인쇄", "명함", "도서"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "도서인쇄비 — 도서는 면세라 매입세액 없음"
+    },
+    {
+      "id": "education",
+      "accountCode": "educationAndTraining",
+      "categories": ["교육훈련비"],
+      "descriptionPatterns": ["인프런", "udemy", "coursera", "강의", "교육비", "세미나", "컨퍼런스"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "교육훈련비"
+    },
+    {
+      "id": "supplies",
+      "accountCode": "supplies",
+      "categories": ["소모품비", "소모품"],
+      "descriptionPatterns": ["소모품", "문구", "사무용품", "다이소"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "소모품비"
+    },
+    {
+      "id": "entertainment",
+      "accountCode": "entertainment",
+      "categories": ["접대비", "기업업무추진비"],
+      "descriptionPatterns": ["접대", "거래처 식사", "거래처 선물"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "접대비(기업업무추진비) — 매입세액 불공제, 3만원 초과 건은 적격증빙 필요"
+    },
+    {
+      "id": "outsourcing",
+      "accountCode": "outsourcing",
+      "categories": ["외주비", "외주"],
+      "descriptionPatterns": ["외주", "프리랜서", "크몽", "위시켓", "숨고", "용역비"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "외주비 — 개인 프리랜서 지급은 3.3% 원천징수 대상"
+    },
+    {
+      "id": "salaries",
+      "accountCode": "salaries",
+      "categories": ["급여", "인건비"],
+      "descriptionPatterns": ["급여", "월급", "임금", "상여금"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "급여 — 원천세 익월 10일 신고·납부"
+    },
+    {
+      "id": "donations",
+      "accountCode": "donations",
+      "categories": ["기부금"],
+      "descriptionPatterns": ["기부", "후원금"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "기부금"
+    },
+    {
+      "id": "interest-expense",
+      "accountCode": "interestExpense",
+      "categories": ["이자비용", "대출이자"],
+      "descriptionPatterns": ["대출이자", "이자"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "이자비용 — 사업용 차입금 이자만 필요경비"
+    },
+    {
+      "id": "interest-income",
+      "accountCode": "interestIncome",
+      "categories": ["이자수익", "예금이자"],
+      "descriptionPatterns": ["예금이자", "이자"],
+      "flow": "inflow",
+      "confidence": "confirmed",
+      "note": "이자수익"
+    },
+    {
+      "id": "fx-gain",
+      "accountCode": "foreignExchangeGain",
+      "categories": ["환차익", "외환차익"],
+      "descriptionPatterns": ["환차익", "외환차익"],
+      "confidence": "confirmed",
+      "note": "외환차익 — PayPal 정산 차액(위키 9261be4f)"
+    },
+    {
+      "id": "fx-loss",
+      "accountCode": "foreignExchangeLoss",
+      "categories": ["환차손", "외환차손"],
+      "descriptionPatterns": ["환차손", "외환차손"],
+      "confidence": "confirmed",
+      "note": "외환차손 — PayPal 정산 차액(위키 9261be4f)"
+    },
+    {
+      "id": "depreciation",
+      "accountCode": "depreciation",
+      "categories": ["감가상각비"],
+      "descriptionPatterns": ["감가상각"],
+      "confidence": "confirmed",
+      "note": "조정분개 — 현금 거래가 아니다"
+    },
+    {
+      "id": "intangible-amortization",
+      "accountCode": "intangibleAmortization",
+      "categories": ["무형자산상각비"],
+      "descriptionPatterns": ["무형자산상각", "소프트웨어 상각"],
+      "confidence": "confirmed",
+      "note": "조정분개 — 현금 거래가 아니다"
+    },
+    {
+      "id": "loan-proceeds",
+      "accountCode": "loanProceeds",
+      "categories": ["대출실행", "차입"],
+      "descriptionPatterns": ["대출 실행", "대출금 입금", "차입금", "소상공인시장진흥공단"],
+      "flow": "inflow",
+      "confidence": "confirmed",
+      "note": "차입 — 손익 제외(자본거래)"
+    },
+    {
+      "id": "loan-repayment",
+      "accountCode": "loanRepayment",
+      "categories": ["대출상환", "원리금상환"],
+      "descriptionPatterns": ["대출 상환", "원리금", "상환"],
+      "flow": "outflow",
+      "confidence": "needsReview",
+      "note": "원리금 상환액 중 이자 부분은 이자비용으로 분리해야 한다 — business-loan-manager schedule 로 대사"
+    },
+    {
+      "id": "owner-drawing",
+      "accountCode": "ownerDrawing",
+      "categories": ["인출금", "대표인출"],
+      "descriptionPatterns": ["대표 인출", "인출", "생활비"],
+      "flow": "outflow",
+      "confidence": "confirmed",
+      "note": "대표 인출 — 손익 제외(자본거래)"
+    },
+    {
+      "id": "owner-contribution",
+      "accountCode": "ownerContribution",
+      "categories": ["자본금", "대표투입"],
+      "descriptionPatterns": ["대표 입금", "자본금", "대표 투입"],
+      "flow": "inflow",
+      "confidence": "confirmed",
+      "note": "대표 투입 — 손익 제외(자본거래)"
+    }
+  ]
+}

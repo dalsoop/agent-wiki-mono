@@ -1,0 +1,7 @@
+"sparkle.section_title" = "업데이트";
+"sparkle.auto_check" = "자동으로 업데이트 확인";
+"sparkle.check_now" = "업데이트 확인…";
+"sparkle.check_help" = "공개 피드에서 새 빌드를 확인한다.";
+"sparkle.no_channel_help" = "이 설치본에 Sparkle 채널이 없다. SUFeedURL과 Sparkle.framework가 있는 빌드를 ship 해야 한다.";
+"sparkle.no_channel_visible" = "이 설치본에 업데이트 채널이 없다. app-build-manager ship 후 설정을 다시 연다.";
+"sparkle.open_settings" = "설정…";

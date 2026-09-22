@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "knowledge-base-wiki.repository-agent-adapter-event.v1",
+  "event": "checker",
+  "canonicalTaskId": "kbw-content-addressed-task-id",
+  "runtimeTaskId": "task_440c033c2f33",
+  "dispatchId": "ctx_0a7a91a8b352",
+  "bindingObjectId": "binding-ledger-object-id",
+  "checker": "checker:repository-gate",
+  "outcome": "verified",
+  "occurredAt": "2026-07-27T08:12:00Z"
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "invalid-reference-runtime",
+  "canvas": { "width": 100, "height": 100 },
+  "components": [
+    {
+      "id": "full-screen-reference",
+      "kind": "image",
+      "asset": {
+        "path": "reference.png",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "provenance": { "classification": "reference-only" }
+      }
+    }
+  ],
+  "instances": [],
+  "bindings": [],
+  "interactions": []
+}

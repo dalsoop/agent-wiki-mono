@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "knowledge-base-wiki.repository-agent-adapter-event.v1",
+  "event": "task",
+  "canonicalTaskId": "kbw-content-addressed-task-id",
+  "runtimeTaskId": "task_440c033c2f33",
+  "dispatchId": "ctx_0a7a91a8b352",
+  "knowledgeObjectIds": ["019f74d3-example"],
+  "sourceCommit": "35f611ed8",
+  "rulesCapsule": ["Use only the explicit adapter payload as runtime input."],
+  "occurredAt": "2026-07-27T07:59:00Z"
+}

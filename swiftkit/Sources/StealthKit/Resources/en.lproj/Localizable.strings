@@ -1,0 +1,5 @@
+"StealthProfile.message" = "UA says Windows but platform is MacIntel";
+"StealthProfile.message-2" = "UA says Linux but platform is MacIntel";
+"StealthProfile.message-3" = "Mac UA with an NVIDIA GPU";
+"StealthProfile.message-4" = "Unrealistic resolution";
+"StealthProfile.message-5" = "Unrealistic core count";

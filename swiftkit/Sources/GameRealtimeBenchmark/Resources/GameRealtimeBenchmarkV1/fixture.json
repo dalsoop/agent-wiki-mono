@@ -1,0 +1,1 @@
+{"schema":"game-realtime-benchmark-fixture-v1","fixtureID":"p0-core-1600-v1","movingCircles":512,"staticAABBBlockers":256,"sweptProjectiles":512,"stateOnlyEntities":320,"occupiedBroadphaseCells":2048,"candidatePairsPerTick":16384,"resolvedPairsPerTick":4096,"deferredCommandsPerTick":1024,"authorityEventsPerTick":1024,"acceptedInputFramesPerTick":128}

@@ -1,0 +1,5 @@
+"StealthProfile.message" = "UA는 Windows인데 platform이 MacIntel";
+"StealthProfile.message-2" = "UA는 Linux인데 platform이 MacIntel";
+"StealthProfile.message-3" = "Mac UA인데 NVIDIA GPU";
+"StealthProfile.message-4" = "비현실적 해상도";
+"StealthProfile.message-5" = "비현실적 코어 수";

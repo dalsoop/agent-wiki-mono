@@ -1,0 +1,29 @@
+{
+  "source": "소득세법 제70조의2, 시행령 제133조 제1항 — 성실신고확인대상자(해당 과세기간 수입금액 기준). 기준 연도(2026 귀속) 개정 여부는 원문과 대조하지 못했다.",
+  "years": {
+    "2026": {
+      "groups": {
+        "agricultureWholesaleRetail": {
+          "thresholdMinor": 1500000000,
+          "confidence": "needsReview",
+          "note": "농·임·어업, 광업, 도소매업, 부동산매매업 등 — 해당 연도 15억원 이상이면 성실신고확인대상. 기준 연도 확인 필요"
+        },
+        "manufacturingConstructionInformation": {
+          "thresholdMinor": 750000000,
+          "confidence": "needsReview",
+          "note": "제조업·숙박음식점업·건설업·운수업·정보통신업·금융보험업 등 — 해당 연도 7억5천만원 이상이면 성실신고확인대상. 라노드(정보통신업)가 이 그룹. 기준 연도 확인 필요"
+        },
+        "realEstateRentalAndServices": {
+          "thresholdMinor": 500000000,
+          "confidence": "needsReview",
+          "note": "부동산임대업·전문과학기술서비스업·교육·보건·기타 서비스업 등 — 해당 연도 5억원 이상이면 성실신고확인대상. 기준 연도 확인 필요"
+        },
+        "professionalService": {
+          "thresholdMinor": 500000000,
+          "confidence": "needsReview",
+          "note": "전문직은 서비스업 그룹(5억원)으로 파악 — 원문 확인 필요"
+        }
+      }
+    }
+  }
+}

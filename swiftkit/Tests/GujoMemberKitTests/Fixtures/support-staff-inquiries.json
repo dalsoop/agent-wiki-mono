@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "id": 42,
+      "subject": "결제 실패",
+      "category": "billing",
+      "status": "open",
+      "user_id": 9,
+      "user_email": "ada@example.com",
+      "created_at": "2026-08-10T12:00:00.000000Z",
+      "updated_at": "2026-08-10T12:05:00.000000Z",
+      "message_count": 1,
+      "latest_body_preview": "카드 거절",
+      "latest_is_staff": false
+    }
+  ]
+}

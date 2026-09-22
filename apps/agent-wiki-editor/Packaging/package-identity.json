@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "uuid": "app_01m20k868vtkh1jpqw1vnacn0z",
+  "name": "GujoAgentWikiEditor",
+  "bundle_id": "net.ranode.agent-wiki-editor",
+  "cli": "agent-wiki-editor",
+  "object": "Agent Wiki Studio",
+  "display": "Agent Wiki Studio",
+  "program": "agent-wiki-editor",
+  "prefix": "app",
+  "gui_product": "AgentWikiStudio",
+  "cli_product": "agent-wiki-editor",
+  "full_cli_product": "agent-wiki",
+  "extra_clis": [],
+  "dual_entry": "helpers",
+  "cli_helper_path": "Contents/Helpers/agent-wiki-editor",
+  "full_cli_helper_path": "Contents/Helpers/agent-wiki",
+  "app_aliases": [
+    "Agent Wiki Studio.app",
+    "AgentWikiStudio.app"
+  ],
+  "note": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/full_cli_product.",
+  "distribution": "internal",
+  "agent_surface": {
+    "skills": [
+      "agent-wiki-studio-swift"
+    ],
+    "agents": [],
+    "attach_on": [
+      "skill-install",
+      "ship"
+    ],
+    "prefer_catalog_symlink": true
+  },
+  "purpose": "Agent Wiki 객체를 발행하고 운영하는 내부용 스튜디오 클라이언트다",
+  "state_root_env": "SWIFT_APP_STATE_ROOT"
+}

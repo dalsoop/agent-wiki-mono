@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+checked_swift_test() {
+  local test_id="${1:?exact listed test ID required}"
+  local filter="${2:?single-escaped anchored filter required}"
+  local expected_filter
+  local list_output
+  local discovery_count
+  local run_output
+  local run_status=0
+  local executed_count
+  local swift_args=(--package-path swiftkit)
+
+  if [[ -n "${SWIFT_TEST_CONFIGURATION:-}" ]]; then
+    swift_args+=(-c "$SWIFT_TEST_CONFIGURATION")
+  fi
+  expected_filter="$(
+    TEST_ID="$test_id" python3 - <<'PY'
+import os
+import re
+print("^" + re.escape(os.environ["TEST_ID"]) + "$")
+PY
+  )"
+  if [[ "$filter" != "$expected_filter" ]]; then
+    echo "filter must be the single-escaped anchored exact ID: $expected_filter" >&2
+    return 64
+  fi
+  if ! list_output="$(swift test "${swift_args[@]}" list 2>&1)"; then
+    printf '%s\n' "$list_output" >&2
+    return 65
+  fi
+  printf '%s\n' "$list_output"
+  discovery_count="$(
+    printf '%s\n' "$list_output" |
+      awk -v id="$test_id" '$0 == id { count += 1 } END { print count + 0 }'
+  )"
+  if [[ "$discovery_count" -ne 1 ]]; then
+    echo "exact listed test ID discovery count must equal 1: $test_id ($discovery_count)" >&2
+    return 66
+  fi
+  run_output="$(swift test "${swift_args[@]}" --filter "$filter" 2>&1)" || run_status=$?
+  printf '%s\n' "$run_output"
+  executed_count="$(
+    printf '%s\n' "$run_output" |
+      sed -nE \
+        -e 's/.*Executed ([0-9]+) tests?.*/\1/p' \
+        -e 's/.*Test run with ([0-9]+) tests?.*/\1/p' |
+      sort -nr |
+      sed -n '1p'
+  )"
+  executed_count="${executed_count:-0}"
+  if [[ "$executed_count" -eq 0 ]]; then
+    echo "filtered test executed zero tests: $test_id" >&2
+    return 67
+  fi
+  if printf '%s\n' "$run_output" |
+      rg -qi 'unknown filter|no matching test|no matching test cases were run|skipped required'; then
+    echo "invalid or skipped required test: $test_id" >&2
+    return 67
+  fi
+  printf 'test_id=%s filter=%s discovered=%s executed=%s status=%s\n' \
+    "$test_id" "$filter" "$discovery_count" "$executed_count" "$run_status"
+  return "$run_status"
+}
+
+checked_swift_test "$@"

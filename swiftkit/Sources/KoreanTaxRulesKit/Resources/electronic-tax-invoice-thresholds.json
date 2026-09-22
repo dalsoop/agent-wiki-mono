@@ -1,0 +1,29 @@
+{
+  "source": "부가가치세법 제32조 제2항, 시행령 제68조 — 개인사업자 전자세금계산서 의무발급 기준(직전연도 사업장별 공급가액 합계, 면세 포함). 의무 기간은 다음 해 7/1 ~ 그 다음 해 6/30.",
+  "thresholds": [
+    {
+      "effectiveFrom": "2024-07-01",
+      "thresholdMinor": 80000000,
+      "confidence": "confirmed",
+      "note": "2024-07-01 부터 직전연도 공급가액 8천만원 이상(시행령 개정 2023-02-28). 한 번 의무발급 대상이 되면 이후 수입이 줄어도 계속 대상 — 세무대리인 확인"
+    },
+    {
+      "effectiveFrom": "2023-07-01",
+      "thresholdMinor": 100000000,
+      "confidence": "confirmed",
+      "note": "2023-07-01 ~ 2024-06-30: 직전연도 공급가액 1억원 이상"
+    },
+    {
+      "effectiveFrom": "2022-07-01",
+      "thresholdMinor": 200000000,
+      "confidence": "confirmed",
+      "note": "2022-07-01 ~ 2023-06-30: 직전연도 공급가액 2억원 이상"
+    },
+    {
+      "effectiveFrom": "2019-07-01",
+      "thresholdMinor": 300000000,
+      "confidence": "needsReview",
+      "note": "2019-07-01 ~ 2022-06-30: 직전연도 공급가액 3억원 이상으로 파악 — 원문 확인 필요"
+    }
+  ]
+}

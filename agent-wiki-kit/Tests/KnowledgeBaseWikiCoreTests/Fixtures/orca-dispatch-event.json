@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "knowledge-base-wiki.repository-agent-adapter-event.v1",
+  "event": "dispatch",
+  "canonicalTaskId": "kbw-content-addressed-task-id",
+  "runtimeTaskId": "task_440c033c2f33",
+  "dispatchId": "ctx_0a7a91a8b352",
+  "knowledgeObjectIds": ["019f74d3-example", "019f74dd-example"],
+  "sourceCommit": "35f611ed8",
+  "rulesCapsule": [
+    "Edit only Agent Wiki orchestration files.",
+    "Do not scrape Orca private runtime files.",
+    "A worker_done event requires checker verification before done."
+  ],
+  "occurredAt": "2026-07-27T08:00:00Z"
+}

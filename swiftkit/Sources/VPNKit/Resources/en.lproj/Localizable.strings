@@ -1,0 +1,45 @@
+"title.connected" = "Connected to %@";
+"title.unreachable" = "Can’t connect to %@";
+
+"path.direct" = "Direct connection · %@";
+"path.vpn" = "%@ · %@ · %@";
+"path.unidentified_tunnel" = "VPN-like route · %@ · service name unavailable";
+"path.unavailable" = "Connection route unavailable";
+"value.interface_unknown" = "interface unavailable";
+
+"failure.dns" = "The target address could not be resolved. Check DNS settings and the host name.";
+"failure.no_route" = "There is no network route to the target. Select a VPN and check again.";
+"failure.route_mismatch" = "A VPN is connected, but it is not used for the target route. Select another VPN.";
+"failure.target_vpn" = "The VPN route is active, but the target server or port did not respond. Check the server, firewall, and port.";
+"failure.target_direct" = "The target server or port did not respond. Check the server, firewall, and port.";
+"failure.unavailable" = "The connection status could not be checked: %@";
+"failure.unavailable_generic" = "The connection status could not be checked. Diagnose again or retry the connection in the app.";
+
+"status.connected" = "Connected";
+"status.disconnected" = "Disconnected";
+"status.connecting" = "Connecting";
+"status.disconnecting" = "Disconnecting";
+"status.invalid" = "Unavailable";
+
+"card.target" = "Target";
+"card.last_checked" = "Last checked";
+"card.details" = "Connection details";
+
+"recovery.heading" = "Restore connection";
+"recovery.choose_vpn" = "VPN to try";
+"recovery.no_vpn" = "No system VPN was found. Add or enable a VPN in System Settings, then diagnose again.";
+"recovery.no_alternative_vpn" = "The connected VPN is not used for the target route, and no other VPN is available. Add another VPN in System Settings or check the connection.";
+"recovery.connect_and_check" = "Connect VPN and check";
+"recovery.diagnose_again" = "Diagnose again";
+"recovery.checking" = "Checking the connection…";
+"recovery.initial" = "Check which route reaches this target. A VPN connects only after you choose it.";
+"recovery.check_connection" = "Check connection";
+"recovery.server_check" = "The route already uses a VPN. Check the server, firewall, and port before changing VPNs.";
+
+"settings.heading" = "Connection recovery";
+"settings.preferred" = "VPN to suggest after a connection failure";
+"settings.none" = "No preference";
+"settings.connection_test" = "Test connection";
+"settings.last_diagnosis" = "Last diagnosis";
+"settings.not_checked" = "Not checked yet";
+"settings.disconnect_when_idle" = "Disconnect VPN when idle";

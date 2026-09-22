@@ -1,0 +1,82 @@
+// swift-tools-version: 6.1
+import PackageDescription
+
+let package = Package(
+    name: "AgentWikiStudio",
+    defaultLocalization: "en",
+    platforms: [.macOS(.v15)],
+    products: [
+        // helpers dual-entry: PATH CLI product (never MacOS GUI)
+        .executable(name: "agent-wiki-studio", targets: ["AgentWikiStudioCLI"]),
+        // full dual-entry CLI — sources symlinked from monlith KnowledgeBaseWikiCLI (ownership transition)
+        .executable(name: "agent-wiki", targets: ["AgentWikiFullCLI"]),
+        .executable(name: "AgentWikiStudio", targets: ["AgentWikiStudio"]),
+        .library(name: "AgentWikiStudioCore", targets: ["AgentWikiStudioCore"]),
+    ],
+    dependencies: [
+        .package(path: "../../swiftkit"),
+        .package(path: "../../swiftkit-sparkle"),
+        .package(path: "../../swiftkit-appscaffold", traits: ["GujoManaged"]),
+        .package(path: "../../citationledgerkit"),
+        // Core library still lives in monlith package during CLI ownership transition
+        .package(path: "../knowledge-base-wiki-swift"),
+    ],
+    targets: [
+        .target(
+            name: "AgentWikiStudioCore",
+            dependencies: [
+                .product(name: "CommandKit", package: "swiftkit"),
+                .product(name: "PrivilegedKit", package: "swiftkit"),
+                .product(name: "StateMirrorKit", package: "swiftkit"),
+            ]
+        ),
+        .executableTarget(
+            name: "AgentWikiStudio",
+            dependencies: [
+                "AgentWikiStudioCore",
+                .product(name: "LocalizationKit", package: "swiftkit"),
+                .product(name: "SettingsUIKit", package: "swiftkit"),
+                .product(name: "LaunchAtLoginKit", package: "swiftkit"),
+                .product(name: "SparkleUpdateKit", package: "swiftkit-sparkle"),
+                .product(name: "DualEntryKit", package: "swiftkit"),
+                .product(name: "PermissionKit", package: "swiftkit"),
+                .product(name: "SingleInstanceKit", package: "swiftkit"),
+                .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),
+            ],
+            resources: [.process("Localization/Resources")]
+        ),
+        // Foundation-only PATH CLI — keep AppKit out (dual-entry hang 2026-07-25)
+        .executableTarget(
+            name: "AgentWikiStudioCLI",
+            dependencies: [
+                "AgentWikiStudioCore",
+                .product(name: "InteropKit", package: "swiftkit"),
+            ]
+        ),
+        // Full public CLI (agent-wiki). Source tree is a symlink to monlith KnowledgeBaseWikiCLI
+        // until physical move; Studio owns the *product* build for dual-entry ship.
+        .executableTarget(
+            name: "AgentWikiFullCLI",
+            dependencies: [
+                .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),
+                .product(name: "AgentCLIKit", package: "swiftkit"),
+                .product(name: "KnowledgeBaseWikiCore", package: "knowledge-base-wiki-swift"),
+                .product(name: "CitationLedgerKit", package: "citationledgerkit"),
+                .product(name: "InteropKit", package: "swiftkit"),
+                .product(name: "AgentSurfaceKit", package: "swiftkit"),
+            ],
+            path: "Sources/AgentWikiFullCLI",
+            resources: [
+                .copy("Resources/agents"),
+                .copy("Resources/plugin"),
+            ]
+        ),
+        .testTarget(
+            name: "AgentWikiStudioCoreTests",
+            dependencies: [
+                "AgentWikiStudioCore",
+                .product(name: "CommandKit", package: "swiftkit"),
+            ]
+        ),
+    ]
+)

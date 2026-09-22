@@ -1,0 +1,12 @@
+"settings.title" = "Settings";
+"settings.about" = "About";
+"settings.language" = "Language";
+"settings.launch_at_login" = "Launch at Login";
+"settings.version" = "Version";
+"settings.build" = "Build";
+"settings.bundle_id" = "Bundle ID";
+"settings.license" = "License";
+"settings.check_for_updates" = "Check for Updates…";
+"settings.website" = "Website";
+"settings.repository" = "Repository";
+"settings.links" = "Links";

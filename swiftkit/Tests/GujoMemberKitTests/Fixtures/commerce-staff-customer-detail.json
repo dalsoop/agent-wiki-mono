@@ -1,0 +1,54 @@
+{
+  "data": {
+    "id": 7,
+    "email": "ada@example.com",
+    "name": "Ada Lovelace",
+    "locale": "ko",
+    "is_admin": false,
+    "created_at": "2026-08-01T00:00:00.000000Z",
+    "entitlements": [
+      {
+        "id": 1,
+        "product_id": 2,
+        "product_name": "Tool",
+        "status": "active",
+        "granted_at": "2026-08-01T00:00:00.000000Z"
+      }
+    ],
+    "orders": [],
+    "subscriptions": [
+      {
+        "id": 5,
+        "status": "active",
+        "product_name": "Tool",
+        "cancel_at_period_end": false,
+        "starts_at": "2026-08-01T00:00:00.000000Z",
+        "ends_at": "2026-09-01T00:00:00.000000Z"
+      }
+    ]
+  },
+  "devices": {
+    "data": [
+      {
+        "id": 21,
+        "product_id": 2,
+        "name": "Native app: Tool",
+        "key_prefix": "sk_abc",
+        "revoked_at": null,
+        "last_used_at": "2026-08-20T01:00:00.000000Z",
+        "expires_at": null,
+        "active": true
+      },
+      {
+        "id": 22,
+        "product_id": 3,
+        "name": "Native app: Other",
+        "key_prefix": "sk_def",
+        "revoked_at": "2026-08-02T00:00:00.000000Z",
+        "last_used_at": "2026-08-21T01:00:00.000000Z",
+        "expires_at": null,
+        "active": false
+      }
+    ]
+  }
+}

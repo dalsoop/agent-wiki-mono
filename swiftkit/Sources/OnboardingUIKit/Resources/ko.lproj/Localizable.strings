@@ -1,0 +1,32 @@
+/* Onboarding UI Strings - Korean */
+"onboarding.subtitle.default" = "앱이 바로 동작하도록 필요한 설정을 지금 끝냅니다.";
+"onboarding.button.skip" = "나중에";
+"onboarding.button.start" = "시작하기";
+"onboarding.button.required_disabled" = "필수 항목을 완료해 주세요";
+"onboarding.status.granted" = "완료됨";
+"onboarding.action.open_settings" = "설정 열기";
+"onboarding.action.enable_now" = "지금 켜기";
+"onboarding.action.apply_now" = "지금 적용";
+"onboarding.note.privacy" = "모든 데이터는 기기 로컬에만 안전하게 보관됩니다.";
+
+/* Permissions */
+"onboarding.item.full_disk_access.title" = "전체 디스크 접근 권한";
+"onboarding.item.full_disk_access.detail" = "시스템 파일 및 디스크 상태를 분석하기 위해 전체 디스크 접근 권한이 필요합니다.";
+"onboarding.item.accessibility.title" = "손쉬운 사용 권한";
+"onboarding.item.accessibility.detail" = "시스템 제어 및 UI 자동화 기능 수행을 위해 손쉬운 사용 권한이 필요합니다.";
+"onboarding.item.screen_recording.title" = "화면 기록 권한";
+"onboarding.item.screen_recording.detail" = "화면 캡처 및 OCR 텍스트 인식을 위해 화면 기록 권한이 필요합니다.";
+"onboarding.item.camera.title" = "카메라 권한";
+"onboarding.item.camera.detail" = "영상 캡처 및 카메라 기능을 위해 카메라 접근 권한이 필요합니다.";
+"onboarding.item.microphone.title" = "마이크 권한";
+"onboarding.item.microphone.detail" = "오디오 녹음 및 음성 입력을 위해 마이크 접근 권한이 필요합니다.";
+"onboarding.item.input_monitoring.title" = "입력 모니터링 권한";
+"onboarding.item.input_monitoring.detail" = "키보드 및 단축키 인식을 위해 입력 모니터링 권한이 필요합니다.";
+"onboarding.item.location.title" = "위치 권한";
+"onboarding.item.location.detail" = "위치 및 네트워크 상태 인식을 위해 위치 접근 권한이 필요합니다.";
+
+/* Defaults & Required */
+"onboarding.item.defaults.title" = "권장 기본값";
+"onboarding.item.defaults.detail" = "앱 실행에 필요한 기본 설정을 활성화합니다.";
+"onboarding.item.required.title" = "필수 설정";
+"onboarding.item.required.detail" = "정상적인 기능 수행을 위해 필요한 필수 권한입니다.";

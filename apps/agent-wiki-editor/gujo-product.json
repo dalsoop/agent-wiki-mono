@@ -1,0 +1,78 @@
+{
+  "binding": {
+    "product_id": 342,
+    "catalog_slug": "agent-wiki-studio",
+    "store_catalog_id": 244,
+    "store_catalog_url": "https://apps.gujo.ai/catalog/244",
+    "gujo_api": "https://gujo.ai",
+    "support_url": "https://support.gujo.ai",
+    "account_url": "https://apps.gujo.ai/downloads",
+    "note": "Phase 2 초안. 출처=package-identity+catalog.name+listing. catalog.id를 storeProductID로 쓰지 않음.",
+    "distribution_doc": "DISTRIBUTION.md"
+  },
+  "content": {
+    "ko": {
+      "name": "Agent Wiki Studio",
+      "summary": "내부용 Agent Wiki 클라이언트.",
+      "body_markdown_inline": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/full_cli_product.\n\n**구성**\nOps surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/ful\n\n**CLI**\nPATH CLI `agent-wiki-studio` 로 조회·조작한다.\n\n**Dual-entry**\nGUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+    },
+    "en": {
+      "name": "Agent Wiki Studio",
+      "summary": "**내부용** Agent Wiki 클라이언트.",
+      "body_markdown_inline": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/full_cli_product.\n\n**구성**\nOps surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/ful\n\n**CLI**\nPATH CLI `agent-wiki-studio` 로 조회·조작한다.\n\n**Dual-entry**\nGUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+    }
+  },
+  "platforms": [
+    "macos"
+  ],
+  "runtime": "app",
+  "tags": [
+    "app",
+    "Agent Wiki Studio",
+    "개발자 도구",
+    "agent"
+  ],
+  "x-store": {
+    "slug": "agent-wiki-studio",
+    "title": "Agent Wiki Studio",
+    "tagline": "내부용 Agent Wiki 클라이언트.",
+    "body": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/full_cli_product.",
+    "category": "개발자 도구",
+    "license_terms": "Gujo Pass 구독 멤버십",
+    "features": [
+      {
+        "title": "구성",
+        "description": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/ful"
+      },
+      {
+        "title": "CLI",
+        "description": "PATH CLI `agent-wiki-studio` 로 조회·조작한다."
+      },
+      {
+        "title": "Dual-entry",
+        "description": "GUI는 앱, CLI는 Helpers 바이너리. GUI를 PATH에 심링크하지 않는다."
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Agent Wiki Studio은 어디에 쓰나요?",
+        "a": "Agent Wiki Studio은 macOS에서 해당 작업을 다루는 전용 앱이다."
+      },
+      {
+        "q": "명령줄이 있나요?",
+        "a": "있다. `agent-wiki-studio` 로 조회한다."
+      },
+      {
+        "q": "스토어 상품 페이지 slug는?",
+        "a": "`agent-wiki-studio`."
+      }
+    ],
+    "requirements": "macOS 14 이상. Agent Wiki 원장(~/gujo-wiki)을 읽고 쓴다.",
+    "release_note": "내부용 Agent Wiki 운영 클라이언트 — 발행·운영 화면과 in-process 원장(fixedSurface=studio), Helpers+PATH CLI로 같은 데이터를 다룬다."
+  },
+  "x-appraisal": {
+    "source": "phase2-mechanical-fill-2026-08-15",
+    "draft": true,
+    "price_note": "Gujo Pass 구독 멤버십 포함"
+  }
+}
