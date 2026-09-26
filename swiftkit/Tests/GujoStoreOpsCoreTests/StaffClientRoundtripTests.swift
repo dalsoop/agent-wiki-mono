@@ -4,7 +4,7 @@ import XCTest
 
 final class StaffClientRoundtripTests: XCTestCase {
     private func baseURL() throws -> URL {
-        try XCTUnwrap(URL(string: "https://apps.gujo.ai"))
+        try XCTUnwrap(URL(string: "https://app.gujo.ai"))
     }
 
 

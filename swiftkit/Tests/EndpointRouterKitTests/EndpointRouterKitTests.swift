@@ -144,10 +144,10 @@ func pathBuildersUseExistingKeys() {
     let table = EndpointRouter.resolve(environment: [:], homeDirectory: "/nonexistent-home")
     let apps = table["apps"] ?? ""
     let support = table["support"] ?? ""
-    #expect(apps == "https://apps.gujo.ai")
+    #expect(apps == "https://app.gujo.ai")
     #expect(support == "https://support.gujo.ai")
-    #expect(EndpointRouter.catalogPageURL(id: 30, appsBase: apps)?.absoluteString == "https://apps.gujo.ai/catalog/30")
-    #expect(EndpointRouter.downloadsURL(appsBase: apps)?.absoluteString == "https://apps.gujo.ai/downloads")
+    #expect(EndpointRouter.catalogPageURL(id: 30, appsBase: apps)?.absoluteString == "https://app.gujo.ai/catalog/30")
+    #expect(EndpointRouter.downloadsURL(appsBase: apps)?.absoluteString == "https://app.gujo.ai/downloads")
     #expect(EndpointRouter.supportPageURL(supportBase: support)?.absoluteString == "https://support.gujo.ai")
     #expect((table["pay"] ?? "") == "https://pay.gujo.ai")
     #expect(EndpointRouter.joining(table["pay"] ?? "", path: "")?.absoluteString == "https://pay.gujo.ai")
@@ -214,7 +214,7 @@ func overlayDoesNotNormalizeHyphenAndUnderscore() {
 func bundledDefaultsKeepPublicHostsAndEmptyClusterKeys() {
     let table = EndpointRouter.resolve(environment: [:], homeDirectory: "/nonexistent-home")
     #expect(table["app"] == "https://gujo.ai")
-    #expect(table["apps"] == "https://apps.gujo.ai")
+    #expect(table["apps"] == "https://app.gujo.ai")
     #expect(table["s3"] == "https://s3.ranode.net")
     #expect(table["infisical"] == "https://infisical.local.ranode.net")
     #expect(table["ranode-internal"] == "https://internal.ranode.net")

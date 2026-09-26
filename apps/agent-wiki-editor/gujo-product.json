@@ -3,10 +3,10 @@
     "product_id": 342,
     "catalog_slug": "agent-wiki-studio",
     "store_catalog_id": 244,
-    "store_catalog_url": "https://apps.gujo.ai/catalog/244",
+    "store_catalog_url": "https://app.gujo.ai/catalog/244",
     "gujo_api": "https://gujo.ai",
     "support_url": "https://support.gujo.ai",
-    "account_url": "https://apps.gujo.ai/downloads",
+    "account_url": "https://app.gujo.ai/downloads",
     "note": "Phase 2 초안. 출처=package-identity+catalog.name+listing. catalog.id를 storeProductID로 쓰지 않음.",
     "distribution_doc": "DISTRIBUTION.md"
   },
