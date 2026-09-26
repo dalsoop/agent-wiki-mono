@@ -15,7 +15,7 @@ public enum StoreOpsStaffEndpoints: Sendable {
     /// `URL(string: "")` 이 nil 이 되어 스태프 API 의 base 가 통째로 `file:///` 로 조용히 퇴화한다 —
     /// 스킬 발행·폐기·다운로드 감사 요청이 전부 파일시스템 루트를 향한다.
     /// 함대 공용 원장을 건드리는 대신 소비하는 이쪽에서 폴백 사슬을 둔다.
-    /// `apps-prod`/`apps` 는 둘 다 apps.gujo 호스트 — 스태프 API 가 사는 곳이다.
+    /// `apps-prod`/`apps` 는 둘 다 app.gujo 호스트 — 스태프 API 가 사는 곳이다.
     public static let prodHostFallbackKeys = ["apps-prod", "apps"]
 
     /// 키를 주소로 푼다. prod 키만 위 폴백 사슬을 탄다. 아무것도 못 풀면 `""`.

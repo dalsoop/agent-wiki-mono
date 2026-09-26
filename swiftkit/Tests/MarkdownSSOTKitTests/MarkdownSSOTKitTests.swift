@@ -40,11 +40,11 @@ final class MarkdownSSOTKitTests: XCTestCase {
             "apps": {
               "canonicalName": "Gujo Apps",
               "devDomain": "gujo-dev-apps.50.internal.kr",
-              "localUrl": "https://apps.gujo.test",
+              "localUrl": "https://app.gujo.test",
               "deprecated": ["software-dev.50.internal.kr", "software.gujo.test:8012"],
               "replacements": {
                 "software-dev.50.internal.kr": "gujo-dev-apps.50.internal.kr",
-                "software.gujo.test:8012": "apps.gujo.test"
+                "software.gujo.test:8012": "app.gujo.test"
               }
             }
           }
