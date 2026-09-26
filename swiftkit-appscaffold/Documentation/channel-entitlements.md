@@ -92,7 +92,7 @@ let token = try SignedLicenseCodec.issue(claims, privateKey: sk)
 
 1. [ ] NicePay 가맹 승인 · MID / Key 발급
 2. [ ] Infisical/vault 에 `nicepay` 항목 (채팅·위키 원문 금지)
-3. [ ] `apps.gujo.ai` / subscription 결제 경로에 게이트웨이 연결
+3. [ ] `app.gujo.ai` / subscription 결제 경로에 게이트웨이 연결
 4. [ ] agent-browser 로 샌드박스 카드 그리드 E2E (이미 PaymentBrowserProfile 지원)
 5. [ ] 실카드 1회 스모크 · 영수증 · 웹훅 원장 확인
 

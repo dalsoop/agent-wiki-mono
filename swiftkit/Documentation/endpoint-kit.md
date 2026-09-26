@@ -60,8 +60,8 @@ host-infra 선언은 인프라 원장에 그 호스트가 있는지다. Endpoint
 | 키 | 폴백 | host-infra 선언 |
 |---|---|---|
 | `app` | `https://gujo.ai` | 선언 |
-| `apps` / `apps-prod` | `https://apps.gujo.ai` | 선언 |
-| `assets` / `assets-prod` | `https://assets.gujo.ai` | 선언 |
+| `apps` / `apps-prod` | `https://app.gujo.ai` | 선언 |
+| `assets` / `assets-prod` | `https://asset.gujo.ai` | 선언 |
 | `support` / `support-prod` | `https://support.gujo.ai` | 선언 |
 | `learn` / `learn-prod` | `https://learn.gujo.ai` | 선언 — `lecture.gujo.ai` 와 별개 호스트 |
 | `pay` / `pay-prod` | `https://pay.gujo.ai` | 미선언 — 결정 대기 (백로그 A01E22AF, 실측 2026-09-10). **값은 바꾸지 않는다** |
