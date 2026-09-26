@@ -15,7 +15,7 @@ func fallbackDefaults() {
     #expect(table["pay-prod"] == "https://pay.gujo.ai")
     #expect(table["learn"] == "https://learn.gujo.ai")
     #expect(table["learn-prod"] == "https://learn.gujo.ai")
-    #expect(table["lecture"] == "http://lecture.gujo.test:8014")
+    #expect(table["lecture"] == "http://lecture.gujo.test:8015")
     #expect(table["lecture-prod"] == "https://lecture.gujo.ai")
     #expect(table["gpu-panel"] == "")
 }
