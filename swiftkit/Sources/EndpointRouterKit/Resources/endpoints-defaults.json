@@ -17,7 +17,7 @@
     "pay-prod": "https://pay.gujo.ai",
     "learn": "https://learn.gujo.ai",
     "learn-prod": "https://learn.gujo.ai",
-    "lecture": "http://lecture.gujo.test:8014",
+    "lecture": "http://lecture.gujo.test:8015",
     "lecture-prod": "https://lecture.gujo.ai",
     "core-prod": "https://gujo.ai",
     "gujo-core": "https://gujo.ai",
