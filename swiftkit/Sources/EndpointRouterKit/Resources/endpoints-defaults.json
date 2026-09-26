@@ -3,8 +3,8 @@
   "note": "EndpointRouterKit 번들 폴백 표. 공개·알려진 live 값만 채운다. 클러스터 키는 빈 문자열 — app-build-manager 원장이 채운다.",
   "endpoints": {
     "core": "http://gujo.test:8001",
-    "software": "http://apps.gujo.test:8012",
-    "apps-local": "http://apps.gujo.test:8012",
+    "software": "http://app.gujo.test:8012",
+    "apps-local": "http://app.gujo.test:8012",
     "tokens": "http://tokens.gujo.test:8011",
     "app": "https://gujo.ai",
     "apps": "https://app.gujo.ai",

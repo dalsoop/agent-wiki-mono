@@ -69,7 +69,7 @@ host-infra 선언은 인프라 원장에 그 호스트가 있는지다. Endpoint
 | `lecture-prod` | `https://lecture.gujo.ai` | 선언 — 강좌 사이트. `learn` 과 별개 |
 | `core` | `http://gujo.test:8001` | 로컬 폴백 |
 | `core-prod` / `gujo-core` | `https://gujo.ai` | 선언 |
-| `software` | `http://apps.gujo.test:8012` | 로컬 폴백 |
+| `software` | `http://app.gujo.test:8012` | 로컬 폴백 |
 | `tokens` | `http://tokens.gujo.test:8011` | 로컬 폴백 |
 | `api-prod` | `https://api.gujo.ai` | 선언 |
 | `infisical` | `https://infisical.local.ranode.net` | InfisicalCerts 권장 호스트 |

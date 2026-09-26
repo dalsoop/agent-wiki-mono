@@ -7,7 +7,7 @@ func fallbackDefaults() {
     let table = EndpointRouter.resolve(environment: [:], homeDirectory: "/nonexistent-home")
     #expect(table["core"] == "http://gujo.test:8001")
     #expect(table["subscription"] == nil)
-    #expect(table["software"] == "http://apps.gujo.test:8012")
+    #expect(table["software"] == "http://app.gujo.test:8012")
     #expect(table["tokens"] == "http://tokens.gujo.test:8011")
     #expect(table["core-prod"] == "https://gujo.ai")
     #expect(table["gujo-core"] == "https://gujo.ai")
