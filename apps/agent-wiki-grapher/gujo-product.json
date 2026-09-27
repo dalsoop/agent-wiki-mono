@@ -1,9 +1,9 @@
 {
   "binding": {
-    "product_id": null,
+    "product_id": 249,
     "catalog_slug": "agent-wiki-graph",
-    "store_catalog_id": null,
-    "store_catalog_url": null,
+    "store_catalog_id": 249,
+    "store_catalog_url": "https://app.gujo.ai/catalog/249",
     "gujo_api": "https://gujo.ai",
     "support_url": "https://support.gujo.ai",
     "account_url": "https://app.gujo.ai/downloads",

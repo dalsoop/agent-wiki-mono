@@ -1,10 +1,10 @@
 {
   "uuid": "065163b3-489a-4a16-86e8-887d8b6b1349",
   "binding": {
-    "product_id": null,
+    "product_id": 251,
     "catalog_slug": "agent-wiki-synchronizer",
-    "store_catalog_id": null,
-    "store_catalog_url": null,
+    "store_catalog_id": 251,
+    "store_catalog_url": "https://app.gujo.ai/catalog/251",
     "gujo_api": "https://gujo.ai",
     "support_url": "https://support.gujo.ai",
     "account_url": "https://app.gujo.ai/downloads",
