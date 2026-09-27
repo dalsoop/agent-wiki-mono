@@ -1,10 +1,10 @@
 {
   "uuid": "7acf1f17-3cb4-4646-8f95-c4dbd275fe7a",
   "binding": {
-    "product_id": null,
+    "product_id": 250,
     "catalog_slug": "agent-wiki-indexer",
-    "store_catalog_id": null,
-    "store_catalog_url": null,
+    "store_catalog_id": 250,
+    "store_catalog_url": "https://app.gujo.ai/catalog/250",
     "gujo_api": "https://gujo.ai",
     "support_url": "https://support.gujo.ai",
     "account_url": "https://app.gujo.ai/downloads",
