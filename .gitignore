@@ -16,3 +16,6 @@ DerivedData/
 .vscode/
 *.swp
 *.swo
+
+# local agent workspace (not committed)
+/.dryforge/
