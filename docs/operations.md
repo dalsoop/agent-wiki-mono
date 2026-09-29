@@ -50,6 +50,7 @@ swift build --package-path apps/agent-wiki-reader
 | `MEMO_LEDGER_BATCH` | `publish`의 기본 batch id | `runPublish` 경로 |
 | `GUJO_S3_ACCESS_KEY`, `GUJO_S3_SECRET_KEY`, `GUJO_S3_ENDPOINT`, `GUJO_S3_BUCKET`, `GUJO_S3_REGION` | blob 원격 저장소 접속 설정 | `gujo blob` |
 | `GUJO_HUB_URL` | wiki-hub 기본 주소 덮어쓰기 | `--fleet`/`--remote` 검색 |
+| `RESTIC_PASSWORD` | 백업 설정 파일에 password가 없을 때 쓰는 백업 비밀번호. 둘 다 없으면 `backup`이 실패한다 | `backup` |
 
 ## 개발용 격리 world 만들기
 
