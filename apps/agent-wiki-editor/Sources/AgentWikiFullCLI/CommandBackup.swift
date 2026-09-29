@@ -12,21 +12,32 @@ struct BackupConfig: Codable {
 
     static var path: String { StateRootKit.path(".memo-citation-ledger/backup.json") }
 
-    static func load() -> BackupConfig {
+    static let defaultRepository = "sftp:pve:/var/backups/gujo-wiki-restic"
+
+    /// 설정 파일(backup.json)이 우선이고, 없으면 기본 저장소 + 환경 변수 RESTIC_PASSWORD.
+    /// 비밀번호 기본값은 두지 않는다. 공개 저장소에 적힌 값은 비밀이 아니기 때문이다.
+    /// 어디서도 비밀번호를 못 얻으면 nil — 호출측이 실패로 끝낸다.
+    static func load(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> BackupConfig? {
         if let data = FileManager.default.contents(atPath: path) {
             do {
-                return try JSONDecoder().decode(BackupConfig.self, from: data)
-            } catch {}
+                let config = try JSONDecoder().decode(BackupConfig.self, from: data)
+                if !config.password.isEmpty { return config }
+            } catch {
+                // fall through to environment
+            }
         }
-        return BackupConfig(
-            repository: "sftp:pve:/var/backups/gujo-wiki-restic",
-            password: "memo-citation-ledger")
+        guard let password = environment["RESTIC_PASSWORD"], !password.isEmpty else { return nil }
+        return BackupConfig(repository: defaultRepository, password: password)
     }
 }
 
 func runBackup(arguments: [String]) {
     let wikiRoot = StateRootKit.path("gujo-wiki")
-    let config = BackupConfig.load()
+    guard let config = BackupConfig.load() else {
+        fail("백업 비밀번호가 없습니다: \(BackupConfig.path) 의 password 또는 환경 변수 RESTIC_PASSWORD 를 설정하세요")
+    }
     func restic(_ resticArguments: [String]) -> Int32 {
         var environment = ProcessInfo.processInfo.environment
         environment["RESTIC_PASSWORD"] = config.password
