@@ -20,7 +20,7 @@ extension RepositoryAgentOrchestration {
                   binding.canonicalTaskId == task.id else { return nil }
             return (object, binding)
         }
-        let supersededBindingIDs = Set(bindingObjects.compactMap(\.supersedes))
+        let supersededBindingIDs = Set(bindingObjects.flatMap(\.allSupersedes))
         let activeBinding = decodedBindings
             .filter { !supersededBindingIDs.contains($0.0.id) }
             .last ?? decodedBindings.last

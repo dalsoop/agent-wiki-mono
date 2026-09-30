@@ -73,7 +73,7 @@ public enum RepositoryAgentOrchestration {
             $0.effectiveType == RepositoryAgentTaskBinding.objectType
                 && $0.cites.contains { $0.id == canonicalTaskId && $0.rel == bindsRelation }
         }
-        let superseded = Set(candidates.compactMap(\.supersedes))
+        let superseded = Set(candidates.flatMap(\.allSupersedes))
         let decoded = candidates.compactMap { object -> (LedgerObject, RepositoryAgentTaskBinding)? in
             guard let binding = RepositoryAgentTaskBinding.decode(body: object.body),
                   binding.canonicalTaskId == canonicalTaskId else { return nil }

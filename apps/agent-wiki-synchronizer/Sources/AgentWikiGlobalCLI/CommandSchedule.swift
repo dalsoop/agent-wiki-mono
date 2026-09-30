@@ -157,17 +157,6 @@ private func fmt(_ i: [String: Int]) -> String {
 
 @discardableResult
 private func launchctl(_ args: [String]) -> Int32 {
-    let safeResult = SafeProcessRunner.run(
-        "/bin/launchctl",
-        args
-    )
-    let deadline = Date().addingTimeInterval(10)
-    while p.isRunning, Date() < deadline {
-        Thread.sleep(forTimeInterval: 0.05)
-    }
-    if p.isRunning {
-        p.terminate()
-        return 124
-    }
-    return p.terminationStatus
+    // 10초 안에 끝나지 않으면 SafeProcessRunner 가 끊는다(옛 코드는 없는 변수 p 를 기다려 컴파일되지 않았다).
+    SafeProcessRunner.run("/bin/launchctl", args, timeout: 10).exitCode
 }

@@ -204,6 +204,8 @@ struct PublishArgs {
     var cites: [LedgerObject.Cite] = []
     var observes: [String] = []
     var supersedes: String?
+    /// 두 번째 이후 `--supersedes`(병합 개정).
+    var supersedesAlso: [String] = []
     var retracts: String?
     /// scene-evidence 역링크 대상 결정 객체 id (`--of`).
     var ofDecision: String?
@@ -238,7 +240,8 @@ private func consumeFlag(
     case "--knowledge": args.classificationKnowledge = value
     case "--classification-reason": args.classificationReason = value
     case "--observes": args.observes.append(value)
-    case "--supersedes": args.supersedes = value
+    case "--supersedes":
+        if args.supersedes == nil { args.supersedes = value } else { args.supersedesAlso.append(value) }
     case "--retracts": args.retracts = value
     case "--of": args.ofDecision = value
     case "--batch": args.batch = value
@@ -287,10 +290,10 @@ private func resolveClassification(_ args: PublishArgs) -> LedgerClassificationI
 }
 
 private func validateReferences(
-    store: LedgerStore, supersedes: String?, retracts: String?, cites: [LedgerObject.Cite]
+    store: LedgerStore, supersedes: [String], retracts: String?, cites: [LedgerObject.Cite]
 ) {
     let existing = Set(store.scan().map(\.id))
-    for ref in ([supersedes, retracts].compactMap { $0 } + cites.map(\.id)) where !existing.contains(ref) {
+    for ref in (supersedes + [retracts].compactMap { $0 } + cites.map(\.id)) where !existing.contains(ref) {
         fail("없는 객체 참조: \(ref)")
     }
 }
@@ -342,7 +345,9 @@ public func runPublish(store: LedgerStore, author: String, arguments: [String]) 
     }
     applySceneEvidenceLink(args: &args, body: &body, store: store)
     let classification = resolveClassification(args)
-    validateReferences(store: store, supersedes: args.supersedes, retracts: args.retracts, cites: args.cites)
+    validateReferences(
+        store: store, supersedes: (args.supersedes.map { [$0] } ?? []) + args.supersedesAlso,
+        retracts: args.retracts, cites: args.cites)
     do {
         let derivedType = args.typeField ?? LedgerObject(
             id: "0", published: Date(), author: "x", title: args.title, body: "").effectiveType
@@ -355,7 +360,8 @@ public func runPublish(store: LedgerStore, author: String, arguments: [String]) 
             cites: args.cites, observes: args.observes,
             supersedes: args.supersedes, retracts: args.retracts,
             batch: args.batch, origin: args.origin,
-            tags: args.tags + args.aliases.map { "alias:" + $0 })
+            tags: args.tags + args.aliases.map { "alias:" + $0 },
+            supersedesAlso: args.supersedesAlso)
         let object = try store.publish(
             author: author, title: args.title,
             type: derivedType, body: body, extras: publishExtras)

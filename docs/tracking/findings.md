@@ -1,19 +1,5 @@
 # 미해결 문제
 
-## 저장소 HEAD에서 전역 CLI가 빌드되지 않는다
-
-- 증상: synchronizer 패키지의 `agent-wiki-synchronizer` 제품 빌드가 `CommandSchedule.swift` 165-172행의 정의되지 않은 `p` 때문에 실패한다(2026-09-30 확인). 첫 커밋부터 같은 상태다.
-- 영향: 사용자의 모든 에이전트가 쓰는 `agent-wiki`를 이 저장소에서 다시 만들 수 없다. 설치본(2026-09-24)은 이 저장소 커밋으로 만들 수 없는 코드에서 나왔으므로, 설치본과 저장소 코드가 얼마나 다른지 알 수 없다.
-- 지금 못 고치는 이유: 소스 코드 수정이 필요하다. 또한 설치본의 원천을 이 저장소로 옮길지, 설치본을 만든 원천 저장소를 정본으로 둘지는 소유자가 정해야 한다.
-- 접근: `launchctl` 함수를 `SafeProcessRunner.run` 결과의 종료 코드를 돌려주도록 다시 쓰고 빌드한 뒤, 설치본과 `capabilities` 출력을 비교한다.
-
-## `agent-wiki-kit` 테스트가 컴파일되지 않는다
-
-- 증상: `agent-wiki-kit` 테스트 실행이 `GujoBlobSyncTests.swift:109`에서 `GujoHubClient.defaultBaseURL`(현재 `URL?`)에 `.absoluteString`을 바로 붙인 줄 때문에 컴파일 단계에서 실패한다. 테스트 파일 29개가 하나도 실행되지 않는다.
-- 영향: 원장 엔진(정체성 해시, verify, 인용 게이트, 분류 기준선)을 바꿔도 회귀를 잡을 테스트가 돌지 않는다.
-- 지금 못 고치는 이유: 테스트 코드 수정이 필요하고, 그 테스트가 기대하는 고정 호스트가 현재도 정답인지는 소유자가 정해야 한다. 코드는 이미 호스트를 소스에 두지 않고 환경 변수와 EndpointRouterKit에서 얻는다.
-- 접근: 기본 주소 테스트를 "환경 변수가 있으면 그 값"으로 바꾸고 옵셔널을 풀어 쓴다.
-
 ## `agent-wiki-ui` 패키지가 커밋되어 있지 않다
 
 - 증상: 새 클론에서 `apps/agent-wiki-editor`와 `apps/agent-wiki-reader`를 빌드하면 `agent-wiki-ui doesn't exist in file system`으로 의존성 해석이 실패한다. 이 Mac의 메인 체크아웃에는 추적되지 않는 `agent-wiki-ui/`가 있다.
@@ -42,6 +28,7 @@
 
 - 증상: `apps/agent-wiki-editor/Sources/AgentWikiFullCLI`가 `agent-wiki`라는 같은 제품명으로 전체 명령을 구현하지만, `WikiCLIShared`·synchronizer 파일과 파일마다 수 줄에서 수백 줄씩 다르다.
 - 영향: editor를 설치하면 PATH의 `agent-wiki`가 다른 동작의 바이너리로 바뀔 수 있다. 한쪽에서 고친 결함이 다른 쪽에 남는다.
+- 병합 개정(`--supersedes` 반복, 결정 0005)은 synchronizer·`WikiCLIShared` 에만 들어갔다. editor 사본은 반복된 `--supersedes` 의 마지막 값만 쓴다.
 - 지금 못 고치는 이유: editor `DualEntryAdoption.swift`의 2026-08 정책 주석과 README는 Studio `AgentWikiFullCLI`를 CLI 소스 정본으로 선언하지만, 실제 설치본과 앱 레지스트리는 synchronizer를 원천으로 쓴다. 어느 쪽을 정본으로 할지 소유자가 정해야 한다.
 
 ## 원격 연결 기본값과 보안 관련 이슈

@@ -38,7 +38,7 @@ extension LedgerIndex {
         FROM fts JOIN objects o ON o.id = fts.id
         WHERE fts MATCH ? AND o.retracts IS NULL
           AND o.type NOT IN (\(LedgerObject.processTypesSQL))
-          AND o.id NOT IN (SELECT supersedes FROM objects WHERE supersedes IS NOT NULL)
+          AND o.id NOT IN (SELECT dst FROM supersedes_edges)
         """
         if domain != nil { sql += " AND o.domain=?" }
         if kind != nil { sql += " AND o.kind=?" }

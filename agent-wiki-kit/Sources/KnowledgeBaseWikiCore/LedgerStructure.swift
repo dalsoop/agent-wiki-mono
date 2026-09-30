@@ -135,7 +135,7 @@ public struct LedgerStructure: Sendable, Codable {
         // --- 분류 백로그 ------------------------------------------------------
         let policy = LedgerClassificationPolicy.current(objects: objects, store: store)
         let classified = Set(LedgerClassification(objects: objects).domain.keys)
-        let superseded = Set(objects.compactMap(\.supersedes))
+        let superseded = Set(objects.flatMap(\.allSupersedes))
         let retracted = Set(objects.compactMap(\.retracts))
         let knowledge = objects.filter {
             !$0.isProcess && $0.retracts == nil

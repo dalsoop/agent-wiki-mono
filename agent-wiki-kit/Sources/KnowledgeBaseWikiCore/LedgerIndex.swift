@@ -66,6 +66,17 @@ public final class LedgerIndex {
             """)
             db.setUserVersion(3)
         }
+        if db.userVersion < 4 {
+            // 개정 간선 — 한 객체가 여러 개정을 대체할 수 있다(병합 개정, `supersedes-also`). objects.supersedes
+            // 는 주 부모 하나라 head 판정(NOT IN)은 이 표를 본다. 기존 행은 주 부모로 채운다.
+            db.exec("""
+            CREATE TABLE IF NOT EXISTS supersedes_edges(src TEXT, dst TEXT);
+            CREATE INDEX IF NOT EXISTS idx_supersedes_edges_dst ON supersedes_edges(dst);
+            CREATE INDEX IF NOT EXISTS idx_supersedes_edges_src ON supersedes_edges(src);
+            INSERT INTO supersedes_edges(src, dst) SELECT id, supersedes FROM objects WHERE supersedes IS NOT NULL;
+            """)
+            db.setUserVersion(4)
+        }
     }
 
     /// 색인에 넣을 텍스트 blob 크기 상한. 원문 검색이 목적이지 전문 아카이브가 아니라,

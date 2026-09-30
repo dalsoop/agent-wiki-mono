@@ -35,6 +35,10 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
     /// 사실(fact)→해석(interpretation) 사슬이 여기로 이어진다(사건층은 별도 저장소).
     public let observes: [String]
     public let supersedes: String?
+    /// 병합 개정 — 이 개정이 `supersedes` 말고도 함께 대체하는 head 들(git 병합 커밋의 두 번째 부모 이후).
+    /// 같은 객체에서 갈라진 개정 둘을 한 개정으로 합칠 때 쓴다. frontmatter 키는 `supersedes-also:`(줄마다 하나)다.
+    /// 코어에는 옛 파서가 모르는 필드와 같은 자리(맨 뒤)에 들어가서, 옛 판 CLI 도 id 를 그대로 재계산한다.
+    public let supersedesAlso: [String]
     public let retracts: String?
     /// 출처 provenance — 파일/URL 수집물의 구조화 기원 정보(선택). frontmatter 에 `source: {json}` 한 줄로.
     /// 원본이 어디서 왔고(path/project), 언제 쓰였고(authoredAt), 어떤 형식이며(kind), 원본 바이트를
@@ -55,6 +59,7 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
         public var cites: [Cite] = []
         public var observes: [String] = []
         public var supersedes: String? = nil
+        public var supersedesAlso: [String] = []
         public var retracts: String? = nil
         public var source: Provenance? = nil
         public var authoring: Authoring? = nil
@@ -72,7 +77,8 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
             source: Provenance? = nil,
             authoring: Authoring? = nil,
             unknownFields: [String] = [],
-            ledger: Int = 2
+            ledger: Int = 2,
+            supersedesAlso: [String] = []
         ) {
             self.batch = batch
             self.origin = origin
@@ -80,6 +86,7 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
             self.cites = cites
             self.observes = observes
             self.supersedes = supersedes
+            self.supersedesAlso = supersedesAlso
             self.retracts = retracts
             self.source = source
             self.authoring = authoring
@@ -111,11 +118,17 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
         self.cites = extras.cites
         self.observes = extras.observes
         self.supersedes = extras.supersedes
+        self.supersedesAlso = extras.supersedesAlso
         self.retracts = extras.retracts
         self.source = extras.source
         self.authoring = extras.authoring
         self.unknownFields = extras.unknownFields
         self.body = body
+    }
+
+    /// 이 객체가 대체하는 모든 개정(`supersedes` + `supersedesAlso`). head·계보·참조 검사는 이것을 쓴다.
+    public var allSupersedes: [String] {
+        (supersedes.map { [$0] } ?? []) + supersedesAlso
     }
 
     public static func hash(_ body: String) -> String {
@@ -148,6 +161,9 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
         if let supersedes { lines.append("supersedes: \(supersedes)") }
         if let retracts { lines.append("retracts: \(retracts)") }
         if let source, let json = source.jsonLine { lines.append("source: \(json)") }
+        // 병합 부모는 옛 파서가 모르는 필드처럼 코어 맨 뒤(알 수 없는 필드 앞)에 둔다 — 옛 판 CLI 는 이 줄들을
+        // unknownFields 로 같은 순서 그대로 보존하므로 같은 id 를 재계산한다(verify 가 코어 변조로 보지 않는다).
+        for also in supersedesAlso { lines.append("supersedes-also: \(also)") }
         // authoring 은 **코어가 아니다.** 토큰 수·세션 id 는 주장에 대한 관찰이지 주장
         // 자체가 아니라서, 같은 지식을 더 비싸게 썼다고 다른 객체가 되면 안 된다.
         // (sha256 줄을 코어에서 빼는 것과 같은 이유 — 파생·부수 정보는 정체성 밖.)
@@ -185,6 +201,7 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
         var fields: [String: String] = [:]
         var cites: [Cite] = []
         var observes: [String] = []
+        var supersedesAlso: [String] = []
         var unknown: [String] = []
         for line in lines[1..<closing] {
             guard let colon = line.firstIndex(of: ":") else {
@@ -202,6 +219,8 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
                 // 사건 참조 — 값은 event id. 공백 뒤 부가정보가 붙어도 첫 토큰만 취한다.
                 if let eventID = value.split(separator: " ", maxSplits: 1).first.map(String.init),
                    !eventID.isEmpty { observes.append(eventID) }
+            case "supersedes-also":
+                if !value.isEmpty { supersedesAlso.append(value) }
             case "tags":
                 var inner = value
                 if inner.hasPrefix("[") && inner.hasSuffix("]") { inner = String(inner.dropFirst().dropLast()) }
@@ -238,7 +257,8 @@ public struct LedgerObject: Identifiable, Sendable, Equatable {
                 source: Provenance(jsonLine: fields["source"]),
                 authoring: Authoring(jsonLine: fields["authoring"]),
                 unknownFields: unknown,
-                ledger: fields["ledger"].flatMap(Int.init) ?? 1))  // 구 v1 파일은 1로 남는다
+                ledger: fields["ledger"].flatMap(Int.init) ?? 1,  // 구 v1 파일은 1로 남는다
+                supersedesAlso: supersedesAlso))
         return (object, storedSHA)
     }
 
@@ -439,7 +459,7 @@ public struct LedgerClassification: Sendable {
     public init(objects: [LedgerObject]) {
         var successorOf: [String: String] = [:]
         for object in objects {
-            if let old = object.supersedes { successorOf[old] = object.id }
+            for old in object.allSupersedes { successorOf[old] = object.id }
         }
         var domains: [String: String] = [:]
         var kinds: [String: String] = [:]
@@ -463,7 +483,7 @@ public struct LedgerClassification: Sendable {
     /// 선별 자체도 append-only 개정 대상이다. supersede·retract 된 옛 선별이 최신
     /// 분류를 덮어쓰지 않도록 현재 head 만 분류 투영에 사용한다.
     public static func activeScreenings(objects: [LedgerObject]) -> [LedgerObject] {
-        let superseded = Set(objects.compactMap(\.supersedes))
+        let superseded = Set(objects.flatMap(\.allSupersedes))
         let retracted = Set(objects.compactMap(\.retracts))
         return objects.filter {
             $0.effectiveType == "screening"

@@ -10,7 +10,7 @@ extension LedgerIndex {
         // 제목·태그 해석은 head(최신판)만 — "그 이름의 지금 것". 단 id 접두어는 **특정 객체 지목**이라
         let headFilter = """
             retracts IS NULL \
-            AND id NOT IN (SELECT supersedes FROM objects WHERE supersedes IS NOT NULL) \
+            AND id NOT IN (SELECT dst FROM supersedes_edges) \
             AND id NOT IN (SELECT retracts FROM objects WHERE retracts IS NOT NULL)
             """
 
@@ -82,7 +82,7 @@ extension LedgerIndex {
             : """
             SELECT id,title,author,published,supersedes,retracts,batch FROM objects \
             WHERE retracts IS NULL \
-            AND id NOT IN (SELECT supersedes FROM objects WHERE supersedes IS NOT NULL) \
+            AND id NOT IN (SELECT dst FROM supersedes_edges) \
             AND id NOT IN (SELECT retracts FROM objects WHERE retracts IS NOT NULL) \
             ORDER BY published, id;
             """
@@ -128,6 +128,18 @@ extension LedgerIndex {
         return chain
     }
 
+    /// 병합 개정의 나머지 부모 — 주 부모(objects.supersedes) 밖의 supersedes_edges. 파일 스캔 0.
+    public func mergeParents(of id: String) -> [String] {
+        let primary = metaRow(id)?.supersedes
+        let parents: [String] = db.prepared("SELECT dst FROM supersedes_edges WHERE src=?;") { s in
+            s.bind(1, id)
+            var out: [String] = []
+            while s.step() { if let dst = s.text(0) { out.append(dst) } }
+            return out
+        } ?? []
+        return parents.filter { $0 != primary }
+    }
+
     /// 역링크 — 이 객체를 인용한 것들(cites.dst=id). rel 은 콤마로 합침. 파일 스캔 0.
     public func citers(of dst: String) -> [Citer] {
         var relsBySrc: [String: [String]] = [:]
@@ -156,7 +168,7 @@ extension LedgerIndex {
         } ?? []
     }
     public func supersedesEdges() -> [(id: String, target: String)] {
-        db.prepared("SELECT id,supersedes FROM objects WHERE supersedes IS NOT NULL;") { s -> [(String,String)] in
+        db.prepared("SELECT src,dst FROM supersedes_edges;") { s -> [(String,String)] in
             var out: [(String,String)] = []
             while s.step() { out.append((s.text(0) ?? "", s.text(1) ?? "")) }
             return out
