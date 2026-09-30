@@ -4,6 +4,7 @@
   "name": "GujoAgentWikiIndexer",
   "bundle_id": "net.ranode.agent-wiki-indexer",
   "cli": "agent-wiki-indexer",
+  "distribution": "external",
   "object": "AgentWikiLocal",
   "display": "Agent Wiki Local",
   "program": "agent-wiki-indexer",

@@ -4,6 +4,7 @@
   "name": "GujoAgentWikiSynchronizer",
   "bundle_id": "net.ranode.agent-wiki-synchronizer",
   "cli": "agent-wiki-synchronizer",
+  "distribution": "external",
   "object": "AgentWikiGlobal",
   "display": "Agent Wiki Global",
   "program": "agent-wiki-synchronizer",

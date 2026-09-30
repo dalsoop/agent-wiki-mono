@@ -38,7 +38,6 @@
     "tagline": "내부용 Agent Wiki 클라이언트.",
     "body": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/full_cli_product.",
     "category": "개발자 도구",
-    "license_terms": "Gujo Pass 구독 멤버십",
     "features": [
       {
         "title": "구성",
@@ -72,7 +71,6 @@
   },
   "x-appraisal": {
     "source": "phase2-mechanical-fill-2026-08-15",
-    "draft": true,
-    "price_note": "Gujo Pass 구독 멤버십 포함"
+    "draft": true
   }
 }
