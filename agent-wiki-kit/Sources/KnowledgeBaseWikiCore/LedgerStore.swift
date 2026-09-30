@@ -64,6 +64,20 @@ public struct LedgerStore: Sendable {
         return object
     }
 
+    public func objectURL(for object: LedgerObject) -> URL {
+        let calendar = Calendar(identifier: .gregorian)
+        let utc = TimeZone(secondsFromGMT: 0) ?? TimeZone.current
+        let components = calendar.dateComponents(in: utc, from: object.published)
+        return objectsDir
+            .appendingPathComponent(String(format: "%04d", components.year ?? 0))
+            .appendingPathComponent(String(format: "%02d", components.month ?? 0))
+            .appendingPathComponent("\(object.id).md")
+    }
+
+    public func objectPath(for object: LedgerObject) -> String {
+        objectURL(for: object).path
+    }
+
     /// 하위호환 — 축을 직접 나열하는 옛 호출부(wiki-ui·wiki-reader 등)도 그대로
     /// 컴파일된다. 새 코드는 `extras:` 그룹형으로 쓴다. 둘 다 같은 곳에 쓴다.
     @discardableResult
@@ -451,7 +465,10 @@ public struct LedgerConfig: Codable, Sendable {
         tenantWikiWorld: String? = nil
     ) -> LedgerWorld? {
         if let explicitWorld {
-            return effectiveWorlds.first { $0.name == explicitWorld }
+            guard let found = effectiveWorlds.first(where: { $0.name == explicitWorld }) else {
+                return nil
+            }
+            return RepositoryWorldResolution.resolve(world: found, cwd: cwd)
         }
         let fm = FileManager.default
         var dir = URL(fileURLWithPath: cwd).standardizedFileURL
@@ -460,8 +477,10 @@ public struct LedgerConfig: Codable, Sendable {
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: wiki.path, isDirectory: &isDir), isDir.boolValue {
                 // 등록된 world 면 그 등록 정보를 쓰고(GUI 목록·display 일치), 아니면 repo 폴더명으로.
-                if let registered = effectiveWorlds.first(where: { $0.rootPath == wiki.path }) {
-                    return registered
+                if let registered = effectiveWorlds.first(where: {
+                    RepositoryWorldResolution.resolve(world: $0, cwd: cwd).rootPath == wiki.path || $0.rootPath == wiki.path
+                }) {
+                    return RepositoryWorldResolution.resolve(world: registered, cwd: cwd)
                 }
                 return LedgerWorld(name: dir.lastPathComponent, rootPath: wiki.path)
             }
@@ -470,7 +489,10 @@ public struct LedgerConfig: Codable, Sendable {
             dir = parent
         }
         if let tenantWikiWorld {
-            return effectiveWorlds.first { $0.name == tenantWikiWorld }
+            guard let found = effectiveWorlds.first(where: { $0.name == tenantWikiWorld }) else {
+                return nil
+            }
+            return RepositoryWorldResolution.resolve(world: found, cwd: cwd)
         }
         return nil
     }

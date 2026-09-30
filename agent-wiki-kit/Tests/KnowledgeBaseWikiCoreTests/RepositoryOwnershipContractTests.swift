@@ -252,6 +252,47 @@ import CommandKit
         #expect(broken.contains { $0.problem.contains("promotion target object 누락") })
     }
 
+    /// 원본 worktree 가 지워지고(경로 소실) 원격이 바뀌어(repoId 불일치) 영수증의 출처를
+    /// 경로·repoId 로 못 찾아도, 같은 내용 해시 id 를 가진 world 가 등록돼 있으면 출처다.
+    /// 2026-09-24 실측: 옛 내부 GitLab → gitlab.com 이관 뒤 옛 영수증 3건이 전부
+    /// "promotion source world 누락"으로 떨어져 `agent-wiki verify` 가 상시 실패했다.
+    @Test func verifyFindsMovedSourceWorldByContentID() throws {
+        let sourceRepository = try PromotionGitRepositoryFixture("promotion-moved-source")
+        let sourceStore = sourceRepository.store
+        let (targetStore, targetRoot) = temporaryStore("promotion-moved-target")
+        let movedRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("promotion-moved-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            sourceRepository.remove()
+            try? FileManager.default.removeItem(at: targetRoot)
+            try? FileManager.default.removeItem(at: movedRoot)
+        }
+        let now = Date(timeIntervalSince1970: 1_700_200_000)
+        let source = try sourceStore.publish(author: "owner", title: "Moved decision", type: "decision", body: "Survives a remote move.", now: now)
+        _ = try sourceRepository.commitAll("add moved source")
+        let repository = try sourceRepository.identity()
+        let targetWorld = LedgerWorld(name: "gujo-wiki", rootPath: targetRoot.path)
+        let preview = try PromotionService.preview(
+            sourceStore: sourceStore, source: source, repository: repository,
+            targetWorld: targetWorld, promotedBy: "agent:codex")
+        _ = try PromotionService.publish(PromotionPublishRequest(
+            sourceStore: sourceStore, targetStore: targetStore, source: source,
+            repository: repository, targetWorld: targetWorld, promotedBy: "agent:codex",
+            confirmationToken: preview.confirmationToken, now: now.addingTimeInterval(1)))
+
+        // 원본 world 를 git 밖 새 경로로 옮긴다 — 옛 경로도, 같은 repoId 도 더는 없다.
+        try FileManager.default.copyItem(at: sourceRepository.worldRoot, to: movedRoot)
+        sourceRepository.remove()
+        let peers = [LedgerWorld(name: "repo", rootPath: movedRoot.path), targetWorld]
+
+        let violations = PromotionVerifier.verify(store: targetStore, peerWorlds: peers)
+        #expect(violations.isEmpty, "\(violations.map(\.problem))")
+
+        // 대체 경로가 아무 world 나 출처로 받지 않는지 — id 가 없는 world 만 있으면 여전히 누락이다.
+        let unrelated = PromotionVerifier.verify(store: targetStore, peerWorlds: [targetWorld])
+        #expect(unrelated.contains { $0.problem.contains("promotion source world 누락") })
+    }
+
     @Test func publishRejectsUnconfirmedPreview() throws {
         let sourceRepository = try PromotionGitRepositoryFixture("promotion-reject-source")
         let sourceStore = sourceRepository.store

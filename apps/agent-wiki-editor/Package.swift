@@ -7,14 +7,12 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "agent-wiki-editor", targets: ["AgentWikiStudioCLI"]),
-        .executable(name: "agent-wiki", targets: ["AgentWikiFullCLI"]),
         .executable(name: "AgentWikiStudio", targets: ["AgentWikiStudio"]),
         .library(name: "AgentWikiStudioCore", targets: ["AgentWikiStudioCore"]),
     ],
     dependencies: [
         .package(path: "../../swiftkit"),
         .package(path: "../../swiftkit-appscaffold", traits: ["GujoManaged", "SelfUpdating", "Telemetry"]),
-        .package(path: "../../citationledgerkit"),
         .package(path: "../../agent-wiki-kit"),
         .package(path: "../../agent-wiki-ui"),
     ],
@@ -65,30 +63,6 @@ let package = Package(
                 "AgentWikiStudioCore",
                 .product(name: "InteropKit", package: "swiftkit"),
                 .product(name: "SingleInstanceKit", package: "swiftkit"),
-            ]
-        ),
-        .executableTarget(
-            name: "AgentWikiFullCLI",
-            dependencies: [
-                .product(name: "CommandKit", package: "swiftkit"),
-                .product(name: "EndpointRouterKit", package: "swiftkit"),
-                .product(name: "SelfTestKit", package: "swiftkit"),
-                .product(name: "InteropKit", package: "swiftkit"),
-                .product(name: "PluginKit", package: "swiftkit"),
-                .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),
-                .product(name: "AgentCLIKit", package: "swiftkit"),
-                .product(name: "KnowledgeBaseWikiCore", package: "agent-wiki-kit"),
-                .product(name: "WikiCLIShared", package: "agent-wiki-kit"),
-                .product(name: "CitationLedgerKit", package: "citationledgerkit"),
-                .product(name: "AgentSurfaceKit", package: "swiftkit"),
-                .product(name: "StateRootKit", package: "swiftkit"),
-                .product(name: "LocalizationKit", package: "swiftkit"),
-                .product(name: "SingleInstanceKit", package: "swiftkit"),
-            ],
-            path: "Sources/AgentWikiFullCLI",
-            resources: [
-                .copy("Resources/agents"),
-                .copy("Resources/plugin"),
             ]
         ),
         .testTarget(

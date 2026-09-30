@@ -36,7 +36,11 @@ private let wikiCommands: [Capabilities.Command] = [
                   json: true),
             .init(name: "orchestration capsule", summary: "deterministic bounded runtime/dispatch/knowledge/rules/stale/gate context", json: true),
             .init(name: "orchestration context", summary: "capsule과 동일한 machine-readable bounded context alias", json: true),
-            .init(name: "promotion", summary: "agent-wiki promotion preview|publish <object-id> --to gujo [--confirm] --json", json: true),
+            .init(
+                name: "promotion",
+                summary: "agent-wiki promotion preview|publish <object-id> --to gujo [--confirm] --json"
+                    + " | repair-receipts [--apply] [--json]",
+                json: true),
             .init(name: "promote", summary: "promotion 별칭", json: true),
             .init(name: "recent", summary: "지식층 최근 변경 피드", json: false),
             .init(name: "changes", summary: "recent 별칭 — 최근 변경", json: false),

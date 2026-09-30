@@ -235,9 +235,9 @@ final class VaultURIPipelineTests: XCTestCase {
             "https://ranode.net",
         ])
         XCTAssertFalse(VaultURIPipeline.shouldRehomeToNote(localNet))
-        let pve = VaultItem(id: "pve", type: 1, name: "192.168.2.50 root", uris: [
-            "https://192.168.2.50:8006",
-            "https://50.internal.kr",
+        let pve = VaultItem(id: "pve", type: 1, name: "192.168.100.20 root", uris: [
+            "https://192.168.100.20:8006",
+            "https://example.internal.kr",
             "https://internal.kr",
         ])
         XCTAssertFalse(VaultURIPipeline.shouldRehomeToNote(pve))

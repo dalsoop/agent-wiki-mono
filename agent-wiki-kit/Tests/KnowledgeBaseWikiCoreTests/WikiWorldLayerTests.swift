@@ -59,12 +59,14 @@ import Testing
             name: "person-silneobal",
             rootPath: "/Users/x/.tenants/silneobal/wiki"
         )
-        #expect(personSub.contains("GitLab 441에 안 올라감"))
+        #expect(personSub.contains("공유 위키로 안 올라감"))
         let remoteSub = WikiWorldPresentation.subtitle(
             name: "gujo-wiki",
             rootPath: "/Users/x/gujo-wiki"
         )
-        #expect(remoteSub.contains(GujoWikiWeb.projectURL))
+        // 원격 웹 주소는 없다 — 옛 내부 GitLab(프로젝트 441)은 2026-09-24 퇴역했다.
+        #expect(remoteSub.hasPrefix("공유 위키 · "))
+        #expect(!remoteSub.contains("gitlab"))
     }
 
     @Test func listItemsGroupLocalThenRemote() {

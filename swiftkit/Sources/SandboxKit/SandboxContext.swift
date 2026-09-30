@@ -1,6 +1,10 @@
 import Foundation
 import StateRootKit
 
+public enum SandboxContextError: Error, Equatable, Sendable {
+    case invalidRoomID(String)
+}
+
 /// `{home}/.sandboxes` · `{home}/.tenants/<slug>` 조립. 호출자가 준 home 을 루트로 고정한다
 /// (`SWIFT_APP_STATE_ROOT` 오버라이드로 테넌트 리맵·테스트 격리를 타지 않게).
 enum SandboxLayout {
@@ -55,8 +59,10 @@ public final class SandboxContext: Sendable {
         if cleanTenant.isEmpty { cleanTenant = "default" }
 
         let rawRoom = roomID ?? "room-\(cleanTenant)-\(UUID().uuidString.prefix(8).lowercased())"
-        var cleanRoomID = rawRoom.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
-        if cleanRoomID.isEmpty { cleanRoomID = "room-default" }
+        let cleanRoomID = rawRoom.filter { $0.isLetter || $0.isNumber || "-_".contains($0) }
+        if roomID != nil && cleanRoomID.isEmpty {
+            throw SandboxContextError.invalidRoomID(rawRoom)
+        }
 
         let sandboxesRoot = SandboxLayout.url(sandboxesDirectoryName, homeDirectory: homeDirectory)
         let roomDir = sandboxesRoot.appendingPathComponent(cleanRoomID, isDirectory: true)

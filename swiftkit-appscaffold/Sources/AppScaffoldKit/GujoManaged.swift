@@ -22,6 +22,7 @@ public enum GujoManaged {
     /// 설치본 번들 ID. 경로 문자열을 상수로 박지 않는다 — dual-entry Helpers
     /// (`…/Foo.app/Contents/Helpers/cli`) 나 다른 볼륨의 /Applications 가 있다.
     public static let cloudAppsBundleIDs: [String] = [
+        "net.ranode.cloud-app-launcher",
         "net.ranode.gujo-cloud-apps",
         "kr.gujo.gujo-cloud-apps",
     ]
@@ -137,6 +138,7 @@ public enum GujoManaged {
     /// 매니저를 포함해 전부 게이트한다. "이것도 운영 도구" 라는 이유로 목록을 늘리면
     /// 경계가 물러지고, 그러면 구조적 의존이 이름만 남는다.
     public static let bootstrapExemptBundleIDs: Set<String> = [
+        "net.ranode.cloud-app-launcher",
         "net.ranode.gujo-cloud-apps",
         "kr.gujo.gujo-cloud-apps",
         "net.ranode.appbuildmanager",

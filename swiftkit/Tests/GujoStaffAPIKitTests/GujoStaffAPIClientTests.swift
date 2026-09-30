@@ -55,7 +55,7 @@ let baseURL = URL(string: "https://gujo.example") ?? URL(fileURLWithPath: "/gujo
 /// 주어진 abilities 로 로그인된 클라이언트.
 func makeClient(_ http: StubHTTP, abilities: [StaffAbility]) -> GujoStaffAPIClient {
     let auth = GujoStaffAuth(
-        http: http, store: InMemorySessionStore(), fallback: NoStaffTokenFallback(),
+        http: http, store: InMemorySessionStore(), fallback: NoStaffTokenFallback(), machine: NoMachineStaffToken(),
         baseURL: baseURL, sleep: { _ in }, now: { Date(timeIntervalSince1970: 1_780_000_000) })
     auth.adopt(StaffSession(
         token: "gst_test", expiresAt: Date(timeIntervalSince1970: 1_800_000_000),
@@ -105,11 +105,55 @@ struct GujoStaffAPIClientTests {
     @Test("inquiries.close — 맨몸 리소스 응답도 받는다")
     func inquiriesClose() async throws {
         let http = StubHTTP([
-            "/api/support/staff/inquiries/5/close": (200, #"{"id":5,"subject":"s","status":"closed"}"#),
+            "/api/support/staff/inquiries/5/close": (
+                200, #"{"id":5,"subject":"s","status":"closed","user_id":3,"user_email":"b@example.com","messages":[]}"#
+            ),
         ])
         let inquiry = try await makeClient(http, abilities: [.inquiriesWrite]).support.inquiries.close(5)
         #expect(inquiry.status == "closed")
         #expect(http.last?.method == "POST")
+    }
+
+    @Test("inquiries — 게스트 문의·신고 메타·첨부 링크(계약 §5)")
+    func inquiriesContract() async throws {
+        let http = StubHTTP([
+            "GET /api/support/staff/inquiries": (
+                200,
+                #"{"data":[{"id":7,"subject":"영수증","category":"billing","kind":"general","status":"open","#
+                    + #""user_id":null,"user_email":"v@example.com","is_guest":true,"#
+                    + #""created_at":"2026-09-30T01:00:00+00:00","updated_at":"2026-09-30T01:00:00+00:00","message_count":1,"#
+                    + #""latest_body_preview":"영수증","latest_is_staff":false}],"meta":{"count":1,"limit":20}}"#
+            ),
+            "GET /api/support/staff/inquiries/9": (
+                200,
+                #"{"data":{"id":9,"subject":"앱이 닫힙니다","category":"bug","kind":"app_report","status":"open","#
+                    + #""user_id":3,"user_email":"b@example.com","guest_name":null,"is_guest":false,"#
+                    + #""report":{"app_bundle_id":"ai.gujo.demo","app_version":"1.4.2","macos_version":"15.6","#
+                    + #""device_id":"d-1","fingerprint":"abc"},"created_at":"2026-09-30T01:00:00+00:00","#
+                    + #""updated_at":"2026-09-30T01:00:00+00:00","messages":[{"id":1,"is_staff":false,"body":"본문","#
+                    + #""created_at":"2026-09-30T01:00:00+00:00","attachments":[{"id":5,"kind":"diagnostic_bundle","#
+                    + #""original_name":"diag.zip","size":14,"mime_type":"application/zip","#
+                    + #""download_url":"/api/support/staff/inquiries/9/attachments/5"}]}]}}"#
+            ),
+            "GET /api/support/staff/inquiries/9/attachments/5": (
+                200,
+                #"{"data":{"id":5,"original_name":"diag.zip","size":14,"mime_type":"application/zip","#
+                    + #""url":"https://bucket.example.invalid/x?sig=1","expires_at":"2026-09-30T01:05:00Z"}}"#
+            ),
+        ])
+        let client = makeClient(http, abilities: [.inquiriesRead])
+
+        let page = try await client.support.inquiries.index(status: "open", limit: 20)
+        #expect(page.data.first?.userId == nil)
+        #expect(page.data.first?.isGuest == true)
+        #expect(http.last?.url.query?.contains("limit=20") == true)
+
+        let detail = try await client.support.inquiries.show(9)
+        #expect(detail.report?.appBundleId == "ai.gujo.demo")
+        #expect(detail.messages.first?.attachments?.first?.downloadUrl == "/api/support/staff/inquiries/9/attachments/5")
+
+        let link = try await client.support.inquiries.attachmentLink(9, attachment: 5)
+        #expect(link.url.absoluteString == "https://bucket.example.invalid/x?sig=1")
     }
 
     @Test("ops.packages — list 는 배열 맨몸 응답, publish 는 POST /ops/v1/packages")
@@ -226,7 +270,7 @@ struct GujoStaffAPIClientTests {
     func notLoggedIn() async throws {
         let http = StubHTTP([:])
         let auth = GujoStaffAuth(
-            http: http, store: InMemorySessionStore(), fallback: NoStaffTokenFallback(), baseURL: baseURL)
+            http: http, store: InMemorySessionStore(), fallback: NoStaffTokenFallback(), machine: NoMachineStaffToken(), baseURL: baseURL)
         let client = GujoStaffAPIClient(auth: auth, http: http, baseURL: baseURL)
         await #expect(throws: GujoAuthError.notLoggedIn) { _ = try await client.commerce.products() }
         #expect(http.calls.isEmpty)

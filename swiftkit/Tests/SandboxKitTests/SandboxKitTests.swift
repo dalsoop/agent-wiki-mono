@@ -68,6 +68,22 @@ final class SandboxKitTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: context.sandboxDirectory.path))
     }
 
+    func testMissingRoomIDCreatesUniqueRoomAndExplicitInvalidIDFails() throws {
+        let home = temporaryTestHome()
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let first = try SandboxContext.allocate(tenant: "acme", homeDirectory: home.path)
+        let second = try SandboxContext.allocate(tenant: "acme", homeDirectory: home.path)
+        XCTAssertNotEqual(first.roomID, second.roomID)
+        XCTAssertTrue(first.roomID.hasPrefix("room-acme-"))
+
+        XCTAssertThrowsError(
+            try SandboxContext.allocate(tenant: "acme", roomID: ":::", homeDirectory: home.path)
+        ) { error in
+            XCTAssertEqual(error as? SandboxContextError, .invalidRoomID(":::"))
+        }
+    }
+
     func testPromotionEngineChecksumAndAtomicCopy() throws {
         let home = temporaryTestHome()
         defer { try? FileManager.default.removeItem(at: home) }

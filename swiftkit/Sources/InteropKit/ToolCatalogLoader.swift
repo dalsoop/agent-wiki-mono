@@ -12,6 +12,8 @@ struct SearchDocument: Sendable {
     let fields: [(field: String, snippet: String, normalized: String)]
     let blob: String
     let words: Set<String>
+    /// 영어·한글 표시명(앱만). 소비자가 별칭으로 쓴다.
+    var displayNames: [String] = []
 }
 
 // MARK: - Document Loading
@@ -46,7 +48,8 @@ extension CapabilitySearcher {
                 cli: doc.cli,
                 version: doc.version,
                 summary: summary,
-                commands: doc.commands
+                commands: doc.commands,
+                displayNames: doc.displayNames
             )
         }
     }
@@ -105,6 +108,8 @@ extension CapabilitySearcher {
         add("cli", caps.cli)
         add("cli", (caps.cli as NSString).lastPathComponent)
         add("purpose", caps.purpose)
+        add("displayName", caps.displayName ?? "")
+        add("displayNameKo", caps.displayNameKo ?? "")
 
         for cmd in caps.commands {
             add("command.name", cmd.name)
@@ -131,7 +136,8 @@ extension CapabilitySearcher {
             commands: caps.commands,
             fields: fields,
             blob: blob,
-            words: words
+            words: words,
+            displayNames: [caps.displayName, caps.displayNameKo].compactMap { $0 }
         )
     }
 

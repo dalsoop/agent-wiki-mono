@@ -1,6 +1,30 @@
 import XCTest
 @testable import SelfTestKit
 
+private func assertNoDifference<T>(_ expected: T, _ actual: T) {
+    if let diff = MiniDiff.diff(expected, actual) {
+        XCTFail("Found difference:\n\(diff)")
+    }
+}
+
+private func XCTAssertNoDifference<T>(_ expected: T, _ actual: T) {
+    assertNoDifference(expected, actual)
+}
+
+extension SelfTestCase {
+    fileprivate static func diff<T1, T2>(_ name: String, expected: T1, actual: T2) -> SelfTestCase {
+        let diffResult = MiniDiff.diff(expected, actual)
+        let passed = diffResult == nil
+        return SelfTestCase(
+            name: name,
+            passed: passed,
+            expected: MiniDiff.dump(expected),
+            actual: MiniDiff.dump(actual),
+            detail: diffResult ?? ""
+        )
+    }
+}
+
 final class DiffTests: XCTestCase {
     
     // MARK: - Test Models

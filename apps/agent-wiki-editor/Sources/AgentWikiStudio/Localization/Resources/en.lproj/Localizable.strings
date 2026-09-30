@@ -4,7 +4,7 @@
 "button.ledger_gui" = "Ledger GUI";
 "button.publish_run" = "Publish";
 "help.external_monolith" = "Open separate Agent Wiki.app as studio surface (debug)";
-"hint.full_cli" = "Full CLI canonical: PATH agent-wiki → Studio Helpers";
+"hint.full_cli" = "Full CLI: PATH agent-wiki (owned by Agent Wiki Synchronizer)";
 "label.internal_studio" = "Internal Studio";
 "menu.refresh" = "Refresh";
 "menu.settings" = "Settings…";
@@ -19,7 +19,7 @@
 "cli.remote_status" = "Remote status";
 "cli.remote_status.help" = "ahead/behind of the clone at the project URL";
 "common.title" = "Title";
-"MainWindowView.help" = "ahead/behind of the %1$@ clone";
+"MainWindowView.help" = "ahead/behind of the ~/gujo-wiki clone";
 "DualEntryAdoption.message" = "Already aligned with Studio Helpers: %1$@";
 "DualEntryAdoption.message-2" = "Copy succeeded but verification failed: %1$@";
 "DualEntryAdoption.message-3" = "%1$@ · install failed (%2$@): %3$@";

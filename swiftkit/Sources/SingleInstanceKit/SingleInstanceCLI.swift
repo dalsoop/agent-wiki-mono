@@ -260,7 +260,7 @@ public enum SingleInstanceCLI {
 
     // MARK: - Standard Informational Guard
 
-    /// 표준 정보 조회 플래그(`help`, `version`, `status`, `capabilities` 등)를 자동 바이패스하는 단일화된 CLI 가드 SSOT.
+    /// 표준 정보 조회 플래그(`help`, `version`, `status`, `capabilities` 등) 및 함대 공통 조회 동사를 자동 바이패스하는 단일화된 CLI 가드 SSOT.
     ///
     /// 모든 CLI `main.swift` 상단에서 반복 복제되던 10~15줄의 `isInformational` 검사를 1줄로 단일화한다.
     @discardableResult
@@ -270,7 +270,9 @@ public enum SingleInstanceCLI {
         arguments: [String] = CommandLine.arguments,
         extraInformational: Set<String> = [],
         message: String? = nil,
-        exitCode: Int32 = 0
+        exitCode: Int32 = 75,
+        stderrWriter: ((String) -> Void)? = nil,
+        exitHandler: ((Int32) -> Void)? = nil
     ) -> Token? {
         let args = Array(arguments.dropFirst())
         let cmd = args.first ?? "help"
@@ -280,22 +282,35 @@ public enum SingleInstanceCLI {
             "capabilities",
             "status",
             "doctor",
-            "open"
+            "open",
+            "list", "show", "get", "search", "find", "query", "view",
+            "inspect", "report", "tail", "log", "logs", "history",
+            "diff", "ledger", "jobs", "levels", "matrix", "spec"
         ]
-        let isInfo = baseInformational.union(extraInformational).contains(cmd)
-            || args.contains("--help")
-            || args.contains("-h")
+        let hasHelpFlag = args.contains("--help") || args.contains("-h")
+        let isInfo = baseInformational.union(extraInformational).contains(cmd) || hasHelpFlag
 
         if args.contains("--force") || isInfo {
             return nil
         }
 
+        let defaultMsg = "[\(name)] Another instance is already running for this \(scopeDescription(scope)). Skipping duplicate run."
+        let baseMsg = message ?? defaultMsg
+        let suffix = " (exit 75 — 같은 범위에서 다른 인스턴스가 실행 중)"
+        let finalMsg = baseMsg.contains(suffix) ? baseMsg : "\(baseMsg)\(suffix)"
+
         return exitIfAlreadyRunning(
             name: name,
             scope: scope,
-            message: message ?? "[\(name)] Another instance is already running for this \(scopeDescription(scope)). Skipping duplicate run.",
+            message: finalMsg,
             exitCode: exitCode,
-            arguments: arguments
+            arguments: arguments,
+            stderrWriter: stderrWriter ?? { msg in
+                FileHandle.standardError.write(Data((msg + "\n").utf8))
+            },
+            exitHandler: exitHandler ?? { code in
+                exit(code)
+            }
         )
     }
 
@@ -307,7 +322,9 @@ public enum SingleInstanceCLI {
         arguments: [String] = CommandLine.arguments,
         extraInformational: Set<String> = [],
         message: String? = nil,
-        exitCode: Int32 = 0
+        exitCode: Int32 = 75,
+        stderrWriter: ((String) -> Void)? = nil,
+        exitHandler: ((Int32) -> Void)? = nil
     ) -> Token? {
         let binaryName = URL(fileURLWithPath: arguments.first ?? "unknown-cli").lastPathComponent
         return guardStandard(
@@ -316,7 +333,9 @@ public enum SingleInstanceCLI {
             arguments: arguments,
             extraInformational: extraInformational,
             message: message,
-            exitCode: exitCode
+            exitCode: exitCode,
+            stderrWriter: stderrWriter,
+            exitHandler: exitHandler
         )
     }
 }

@@ -194,7 +194,7 @@ public struct AntiCorruptionGateVerifier: Sendable {
         }
 
         // Gate 2: Semantic Purity (빈 catch, disable 주석, unchecked Sendable 등 꼼수 차단)
-        let forbidden = ["swiftlint:disable", "@unchecked Sendable", "catch { /* handled */ _ = error }", "catch { /* handled */ _ = error }"]
+        let forbidden = ["swiftlint:disable", "@unchecked Sendable", "catch { }", "catch {}"]
         for pattern in forbidden {
             if patch.gitDiff.contains(pattern) {
                 reasons.append(.semanticPurityViolation(pattern: pattern))

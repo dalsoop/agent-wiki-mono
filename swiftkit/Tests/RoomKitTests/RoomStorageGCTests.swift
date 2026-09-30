@@ -10,15 +10,19 @@ struct RoomStorageGCTests {
     @Test("고객용 단일 룸 내 고아 임시 파일 및 사망한 세션 디렉터리 GC 정리 검증")
     func testCustomerRoomStorageGCPrunesOrphanFilesAndSessions() throws {
         let testRoomID = "room:test-gc-\(UUID().uuidString.prefix(8))"
-        let roomURL = StateRootKit.customerRoomRoot(roomID: testRoomID)
         let fm = FileManager.default
+        let tempHome = fm.temporaryDirectory.appendingPathComponent("room-gc-\(UUID().uuidString)")
+        let roomURL = StateRootKit.customerRoomRoot(roomID: testRoomID, homeDirectory: tempHome.path)
 
         defer {
-            try? fm.removeItem(at: roomURL)
+            try? fm.removeItem(at: tempHome)
         }
 
-        // 1. 기본 룸 환경 프로비저닝
-        let context = try CustomerRoomLayout.ensureDefaultRoom(roomID: testRoomID, performGC: false)
+        // 1. 명시적 룸 환경 프로비저닝
+        let context = try CustomerRoomLayout.createCustomerWorkspace(
+            roomID: testRoomID,
+            homeDirectory: tempHome.path
+        ).context
         #expect(fm.fileExists(atPath: context.roomURL.path))
 
         // 2. 임시 잔류 파일 및 고아 세션 생성
@@ -50,7 +54,11 @@ struct RoomStorageGCTests {
             bundleID: "com.apple.Terminal",
             title: "Zombie Editor"
         )
-        RoomWindowManager.registerWindow(zombieWindow, tenantID: "personal")
+        RoomWindowManager.registerWindow(
+            zombieWindow,
+            tenantID: "personal",
+            homeDirectory: tempHome.path
+        )
 
         // 4. RoomStorageGC 실행
         let options = FastStorageGCOptions(
@@ -61,7 +69,8 @@ struct RoomStorageGCTests {
         let report = try RoomStorageGC.runCustomerRoomGC(
             roomID: testRoomID,
             options: options,
-            fileManager: fm
+            fileManager: fm,
+            homeDirectory: tempHome.path
         )
 
         #expect(report.isClean)
@@ -78,16 +87,18 @@ struct RoomStorageGCTests {
     @Test("CustomerRoomLayout.createCustomerWorkspace — GC 연동 작업공간 생성 검증")
     func testCreateCustomerWorkspaceWithGC() throws {
         let testRoomID = "room:test-ws-\(UUID().uuidString.prefix(8))"
-        let roomURL = StateRootKit.customerRoomRoot(roomID: testRoomID)
         let fm = FileManager.default
+        let tempHome = fm.temporaryDirectory.appendingPathComponent("room-workspace-\(UUID().uuidString)")
+        let roomURL = StateRootKit.customerRoomRoot(roomID: testRoomID, homeDirectory: tempHome.path)
 
         defer {
-            try? fm.removeItem(at: roomURL)
+            try? fm.removeItem(at: tempHome)
         }
 
         let result = try CustomerRoomLayout.createCustomerWorkspace(
             roomID: testRoomID,
-            fileManager: fm
+            fileManager: fm,
+            homeDirectory: tempHome.path
         )
 
         #expect(result.context.roomID == testRoomID)

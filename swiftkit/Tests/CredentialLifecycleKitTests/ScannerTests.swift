@@ -183,14 +183,14 @@ struct KeychainScannerTests {
         "path"<blob>=<NULL>
         "port"<uint32>=0x00000000
         "ptcl"<uint32>="htps"
-        "srvr"<blob>="gitlab.internal.kr"
+        "srvr"<blob>="gitlab.com"
     """
 
     @Test("타입 태그가 달라도 속성을 읽는다 — blob 과 uint32 가 섞여 있다")
     func parsesMixedTags() {
         #expect(KeychainConsumerScanner.attribute("acct", in: Self.attrs) == "oauth2")
         #expect(KeychainConsumerScanner.attribute("ptcl", in: Self.attrs) == "htps")
-        #expect(KeychainConsumerScanner.attribute("srvr", in: Self.attrs) == "gitlab.internal.kr")
+        #expect(KeychainConsumerScanner.attribute("srvr", in: Self.attrs) == "gitlab.com")
         #expect(KeychainConsumerScanner.attribute("path", in: Self.attrs) == nil)  // <NULL>
         #expect(KeychainConsumerScanner.attribute("port", in: Self.attrs) == nil)  // 0x…
     }
@@ -198,21 +198,21 @@ struct KeychainScannerTests {
     @Test("Keychain 에 든 토큰을 소비처로 잡는다 — 파일 스캔으로는 안 보이는 자리")
     func findsInKeychain() async throws {
         let scanner = KeychainConsumerScanner(
-            servers: ["gitlab.internal.kr", "other.host"], pattern: try .gitLabPAT(),
+            servers: ["gitlab.com", "other.host"], pattern: try .gitLabPAT(),
             runner: { args in
-                guard args.contains("gitlab.internal.kr") else { return ("", 44) }
+                guard args.contains("gitlab.com") else { return ("", 44) }
                 return args.contains("-w") ? (sample + "\n", 0) : (Self.attrs, 0)
             })
         let found = try await scanner.scan()
         #expect(found.count == 1)
         #expect(found.first?.value == sample)
-        #expect(found.first?.consumer.location == "Keychain gitlab.internal.kr (oauth2)")
+        #expect(found.first?.consumer.location == "Keychain gitlab.com (oauth2)")
     }
 
     @Test("응답 없는 security 는 매달리지 않고 timedOut 으로 올라온다")
     func timeoutSurfacesInsteadOfHanging() async throws {
         let scanner = KeychainConsumerScanner(
-            servers: ["gitlab.internal.kr"], pattern: try .gitLabPAT(),
+            servers: ["gitlab.com"], pattern: try .gitLabPAT(),
             runner: { _ in ("", KeychainConsumerScanner.timedOutStatus) })
         await #expect(throws: ScannerError.self) { try await scanner.scan() }
     }
@@ -393,7 +393,7 @@ struct InfisicalScannerTests {
     @Test("URL 안에 박힌 토큰도 찾는다")
     func findsInsideURL() async throws {
         let output = row("prod", "/x", "DEPLOY_REPO_URL",
-                         "https://oauth2:\(sample)@gitlab.internal.kr/a/b.git")
+                         "https://oauth2:\(sample)@gitlab.com/a/b.git")
         let scanner = InfisicalConsumerScanner(pattern: try .gitLabPAT(), runner: { _, _ in output })
         #expect(try await scanner.scan().first?.value == sample)
     }
@@ -484,27 +484,27 @@ struct ScannerRotationTests {
 struct GitCredentialHelperScannerTests {
     /// helper 프로토콜 응답 한 벌.
     static func response(password: String) -> String {
-        "protocol=https\nhost=gitlab.internal.kr\nusername=devops\npassword=\(password)\n"
+        "protocol=https\nhost=gitlab.com\nusername=devops\npassword=\(password)\n"
     }
 
     @Test("helper 로 읽은 토큰을 소비처로 잡는다 — security ACL 승인이 필요 없는 경로")
     func findsViaHelper() async throws {
         let scanner = GitCredentialHelperScanner(
-            hosts: ["gitlab.internal.kr", "other.host"], pattern: try .gitLabPAT(),
+            hosts: ["gitlab.com", "other.host"], pattern: try .gitLabPAT(),
             runner: { _, stdin in
-                guard stdin.contains("gitlab.internal.kr") else { return ("", 0) }
+                guard stdin.contains("gitlab.com") else { return ("", 0) }
                 return (Self.response(password: sample), 0)
             })
         let found = try await scanner.scan()
         #expect(found.count == 1)
         #expect(found.first?.value == sample)
-        #expect(found.first?.consumer.location == "git credential helper gitlab.internal.kr (devops)")
+        #expect(found.first?.consumer.location == "git credential helper gitlab.com (devops)")
     }
 
     @Test("helper 를 실행하지 못하면 '없음'이 아니라 실패로 올린다")
     func executionFailureIsNotEmptiness() async throws {
         let scanner = GitCredentialHelperScanner(
-            hosts: ["gitlab.internal.kr"], pattern: try .gitLabPAT(),
+            hosts: ["gitlab.com"], pattern: try .gitLabPAT(),
             runner: { _, _ in ("", -1) })
         await #expect(throws: ScannerError.self) { try await scanner.scan() }
     }
@@ -514,7 +514,7 @@ struct GitCredentialHelperScannerTests {
         let newValue = "glpat-NEWNEWNEWNEWNEWNEWNEW"
         let stored = StoredBody()
         let scanner = GitCredentialHelperScanner(
-            hosts: ["gitlab.internal.kr"], pattern: try .gitLabPAT(),
+            hosts: ["gitlab.com"], pattern: try .gitLabPAT(),
             runner: { args, stdin in
                 if args.first == "store" {
                     await stored.set(stdin)
@@ -524,7 +524,7 @@ struct GitCredentialHelperScannerTests {
                 return (Self.response(password: current), 0)
             })
         let consumer = CredentialConsumer(
-            id: "git-credential:gitlab.internal.kr", kind: .secretStore, location: "x")
+            id: "git-credential:gitlab.com", kind: .secretStore, location: "x")
         #expect(try await scanner.replace(consumer, with: newValue))
         // 값은 stdin 본문에만 있어야 한다 — argv 에 실리면 교체 순간 ps 로 샌다.
         #expect(await stored.body?.contains("password=\(newValue)") == true)

@@ -173,6 +173,11 @@ public struct Capabilities: Codable, Equatable, Sendable {
     public let procedures: [Procedure]
     /// 이 CLI 가 내는 앱 연동 교환. 없으면 빈 배열. 소비자는 `AppCLIExchange` 만 부른다.
     public let exchanges: [AppCLIExchange.Advertised]
+    /// 사람에게 보이는 영어 앱 이름(`CFBundleDisplayName`). 앱이 적지 않는다 — 레지스트리
+    /// upsert 가 설치 번들에서 채운다(`AppDisplayNames`). 없으면 키를 인코딩하지 않는다.
+    public var displayName: String?
+    /// 한글 UI 이름(`ko.lproj` 번역). 채우는 쪽과 하위호환은 `displayName` 과 같다.
+    public var displayNameKo: String?
 
     public struct Owned: Sendable, Equatable {
         public var depends: [Dependency]
@@ -256,6 +261,7 @@ public struct Capabilities: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case name, purpose, bundleId, stateRoot, version, cli, commands, state, health
         case depends, documents, procedures, exchanges, facts
+        case displayName, displayNameKo
     }
 
     public init(from decoder: Decoder) throws {
@@ -292,6 +298,8 @@ public struct Capabilities: Codable, Equatable, Sendable {
         exchanges = try container.decodeIfPresent([AppCLIExchange.Advertised].self, forKey: .exchanges)
             ?? container.decodeIfPresent([AppCLIExchange.Advertised].self, forKey: .facts)
             ?? []
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
+        displayNameKo = try container.decodeIfPresent(String.self, forKey: .displayNameKo)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -309,6 +317,8 @@ public struct Capabilities: Codable, Equatable, Sendable {
         try container.encode(documents, forKey: .documents)
         try container.encode(procedures, forKey: .procedures)
         try container.encode(exchanges, forKey: .exchanges)
+        try container.encodeIfPresent(displayName, forKey: .displayName)
+        try container.encodeIfPresent(displayNameKo, forKey: .displayNameKo)
     }
 }
 
@@ -354,7 +364,7 @@ extension Capabilities {
     /// 앱 선언이 version/status/projects 여도 upsert 단일 choke 에서 강제한다.
     public func normalizedForRegistry() -> Capabilities {
         let absCLI = Self.resolveAbsoluteCLI(cli)
-        return Capabilities(
+        var normalized = Capabilities(
             name: name,
             // purpose 를 빠뜨리면 **저장 시점에 설명이 증발한다** — 앱이 아무리 잘 선언해도
             // 레지스트리에는 안 남아 검색이 다시 이름·명령만 훑게 된다(2026-08-10 실측: 이
@@ -376,6 +386,10 @@ extension Capabilities {
                 stateRoot: stateRoot
             )
         )
+        // 표시명도 purpose 처럼 다시 실어야 저장 시점에 증발하지 않는다. 설치 번들 값이 우선.
+        normalized.displayName = displayName
+        normalized.displayNameKo = displayNameKo
+        return normalized.resolvingDisplayNames()
     }
 
     /// `/opt/homebrew/bin/<name>` · `/usr/local/bin` · `~/.local/bin` · which 순.

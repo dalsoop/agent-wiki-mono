@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.16] - 2026-09-25
+### Changed
+- The CLI panel help no longer shows the retired shared-wiki web URL; the shared wiki has no remote git repository now. The internal GitLab (10.0.50.63) was retired on 2026-09-24.
+
+## [1.0.15] - 2026-09-25
+### Fixed
+- The CLI compiles again. 86c79a277e put `SingleInstanceCLI.autoGuard()` at the top level of a file with `@main`; it now runs as the first line of `main()`.
+
+## [1.0.14] - 2026-09-24
+### Fixed
+- Complete SafeProcessRunner migration broken by 86c79a277e.
+
 ## [1.0.13] - 2026-09-17
 ### Fixed
 - Localizable.strings 문자열 인자 포맷 지정자 불일치 수정 (`%d` 계열 -> `%@` 계열).

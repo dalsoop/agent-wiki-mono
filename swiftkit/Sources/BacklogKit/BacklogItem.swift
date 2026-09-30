@@ -232,6 +232,8 @@ public struct BacklogItem: Codable, Equatable, Identifiable, Sendable {
     }
 
     func replacing(
+        slug: String? = nil,
+        description: String? = nil,
         priority: BacklogPriority? = nil,
         status: BacklogStatus? = nil,
         kind: BacklogKind? = nil,
@@ -241,9 +243,9 @@ public struct BacklogItem: Codable, Equatable, Identifiable, Sendable {
         try BacklogItem(
             id: id,
             content: Content(
-                slug: slug,
+                slug: slug ?? self.slug,
                 title: title,
-                description: description,
+                description: description ?? self.description,
                 source: source,
                 kind: kind ?? self.kind
             ),

@@ -129,3 +129,45 @@ import Testing
         #expect(diag.issues.contains { $0.contains("GUI masquerade") })
     }
 }
+
+/// 스탬프가 앱 버전과 다르면 PATH CLI `version` 을 다시 확인한다. 스탬프·프로세스는 주입한다(실제 홈·PATH 미접촉).
+@Suite struct InstalledCLIVersionResolveTests {
+    @Test func matchingStampIsTrustedWithoutProbe() {
+        var probed = false
+        let v = DualEntry.resolveInstalledCLIVersion(
+            expected: "2.0", allowProcessProbe: true,
+            readStamp: { "2.0" }, probe: { probed = true; return "9" }, fallback: { "fb" })
+        #expect(v == "2.0")
+        #expect(!probed)
+    }
+
+    @Test func staleStampIsReplacedByLiveVersion() {
+        let v = DualEntry.resolveInstalledCLIVersion(
+            expected: "2.0", allowProcessProbe: true,
+            readStamp: { "1.0" }, probe: { "2.0" }, fallback: { "fb" })
+        #expect(v == "2.0")
+    }
+
+    @Test func failedProbeKeepsStamp() {
+        let v = DualEntry.resolveInstalledCLIVersion(
+            expected: "2.0", allowProcessProbe: true,
+            readStamp: { "1.0" }, probe: { nil }, fallback: { "fb" })
+        #expect(v == "1.0")
+    }
+
+    @Test func probeDisabledKeepsStamp() {
+        var probed = false
+        let v = DualEntry.resolveInstalledCLIVersion(
+            expected: "2.0", allowProcessProbe: false,
+            readStamp: { "1.0" }, probe: { probed = true; return "2.0" }, fallback: { "fb" })
+        #expect(v == "1.0")
+        #expect(!probed)
+    }
+
+    @Test func missingStampFallsBackToRules() {
+        let v = DualEntry.resolveInstalledCLIVersion(
+            expected: "2.0", allowProcessProbe: true,
+            readStamp: { nil }, probe: { "x" }, fallback: { "fb" })
+        #expect(v == "fb")
+    }
+}

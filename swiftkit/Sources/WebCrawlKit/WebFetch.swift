@@ -3,7 +3,7 @@ import HTTPClientKit
 
 // 공개 웹 페이지 비동기 fetch — HTTPClientKit(주입 가능, 테스트 목킹 가능) 위에
 // 브라우저형 User-Agent·Accept 를 얹는다(봇 차단 회피). 정적/서버렌더 페이지에 적합.
-// JS 렌더링 전용 사이트는 WebFetch 만으로는 안 되고 browserctl(AgentBrowser) 폴백이 필요하다.
+// JS 렌더링 전용 사이트는 WebFetch 만으로는 안 되고 WebRenderUIKit 렌더링이 필요하다.
 
 public enum WebFetch {
     public enum Error: Swift.Error, CustomStringConvertible {

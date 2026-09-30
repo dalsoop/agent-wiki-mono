@@ -109,7 +109,9 @@ public struct AgentPolicyStore: Sendable {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             try Data(reason.utf8).write(to: pausedURL, options: .atomic)
         } else {
-            try? FileManager.default.removeItem(at: pausedURL)
+            if FileManager.default.fileExists(atPath: pausedURL.path) {
+                try FileManager.default.removeItem(at: pausedURL)
+            }
         }
     }
 
@@ -181,42 +183,25 @@ extension AgentToolPolicy {
         let homeAbs = (home as NSString).standardizingPath
         let cmd = call.command
         let pathIsHome = isHomeRoot(call.path, home: homeAbs)
-        let cmdIsHomeSearch = isHomeRootFindOrGrep(cmd, home: homeAbs)
-        let homeHit = [pathIsHome, cmdIsHomeSearch].contains(true)
+        let cmdIsHomeSearch = SearchCommandInspector.isHomeRootSearch(command: cmd, home: homeAbs)
+        let homeHit = pathIsHome || cmdIsHomeSearch
         let hitsHomeRoot = denyHomeRootSearch && homeHit
         guard !hitsHomeRoot else {
             return .blocked("HOME 루트 검색 금지 — 소유 CLI로 조회하세요")
         }
         let minRoots = max(sessionHuntMinRoots, 1)
-        let hits = sessionHuntRoots.filter { root in
-            let rel = root.hasPrefix(".") ? root : "." + root
-            return cmd.contains(homeAbs + "/" + rel) || cmd.contains("$HOME/" + rel)
-        }
-        guard hits.count < minRoots || !isSearchCommand(cmd) else {
+        let hits = SearchCommandInspector.countSessionHuntHits(
+            command: cmd,
+            sessionRoots: sessionHuntRoots,
+            home: homeAbs
+        )
+        guard hits < minRoots else {
             return .blocked("세션 디렉터리 동시 훑기 금지 — 소유 CLI로 조회하세요")
         }
         return .allowed
     }
 
-    private func isSearchCommand(_ cmd: String) -> Bool {
-        cmd.range(of: #"\b(find|rg|grep)\b"#, options: .regularExpression) != nil
-    }
-
     private func isHomeRoot(_ path: String, home: String) -> Bool {
-        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "'\""))
-        if trimmed.isEmpty { return false }
-        if trimmed == "~" || trimmed == "$HOME" { return true }
-        let expanded = (trimmed as NSString).expandingTildeInPath
-        return (expanded as NSString).standardizingPath == (home as NSString).standardizingPath
-    }
-
-    private func isHomeRootFindOrGrep(_ cmd: String, home: String) -> Bool {
-        let escaped = NSRegularExpression.escapedPattern(for: home)
-        let findPat = "\\bfind\\s+(?:\\$HOME\\b|~(?=/|\\s|$)|" + escaped + ")(?!/)"
-        let grepPat = "\\b(?:rg|grep)\\s+[^\\n]*\\s(?:\\$HOME\\b|~(?=\\s|$)|" + escaped + ")(?!/)"
-        if cmd.range(of: findPat, options: .regularExpression) != nil { return true }
-        if cmd.range(of: grepPat, options: .regularExpression) != nil { return true }
-        return false
+        SearchCommandInspector.isHomeRootPath(path, home: home)
     }
 }

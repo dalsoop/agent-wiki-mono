@@ -23,19 +23,26 @@ public struct StaffSession: Codable, Equatable, Sendable {
     public var expiresAt: Date
     public var abilityNames: [String]
     public var staff: StaffIdentity
+    /// 회전형 갱신 토큰(계약 §7, `gsr_…`). 옛 로그인·기계 토큰은 nil. 세션과 함께 저장소(`GujoSessionStore`)에 둔다.
+    public var refreshToken: String?
+    public var refreshExpiresAt: Date?
 
     public init(
         token: String,
         tokenType: String = "Bearer",
         expiresAt: Date,
         abilityNames: [String],
-        staff: StaffIdentity
+        staff: StaffIdentity,
+        refreshToken: String? = nil,
+        refreshExpiresAt: Date? = nil
     ) {
         self.token = token
         self.tokenType = tokenType
         self.expiresAt = expiresAt
         self.abilityNames = abilityNames
         self.staff = staff
+        self.refreshToken = refreshToken
+        self.refreshExpiresAt = refreshExpiresAt
     }
 
     public init(
@@ -56,7 +63,7 @@ public struct StaffSession: Codable, Equatable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case token, tokenType, expiresAt, staff
+        case token, tokenType, expiresAt, staff, refreshToken, refreshExpiresAt
         /// 서버 토큰 응답·Keychain JSON 모두 `abilities`(계약 §1·§4).
         case abilityNames = "abilities"
     }
@@ -67,6 +74,12 @@ public struct StaffSession: Codable, Equatable, Sendable {
 
     public func isExpired(now: Date = Date()) -> Bool {
         expiresAt <= now
+    }
+
+    /// access token 이 만료됐어도 갱신할 수 있는가(계약 §7).
+    public func canRefresh(now: Date = Date()) -> Bool {
+        guard let refreshToken, !refreshToken.isEmpty else { return false }
+        return (refreshExpiresAt ?? .distantFuture) > now
     }
 
     /// `Authorization` 헤더 값.
@@ -91,15 +104,24 @@ public struct BuyerSession: Codable, Equatable, Sendable {
 public struct DeviceCodePrompt: Equatable, Sendable {
     public var userCode: String
     public var verificationURI: URL
+    /// 코드가 박힌 승인 주소(`verification_uri_complete`). 서버가 주지 않으면 nil.
+    public var verificationURIComplete: URL?
     public var expiresAt: Date
     public var pollInterval: TimeInterval
 
-    public init(userCode: String, verificationURI: URL, expiresAt: Date, pollInterval: TimeInterval) {
+    public init(
+        userCode: String, verificationURI: URL, verificationURIComplete: URL? = nil,
+        expiresAt: Date, pollInterval: TimeInterval
+    ) {
         self.userCode = userCode
         self.verificationURI = verificationURI
+        self.verificationURIComplete = verificationURIComplete
         self.expiresAt = expiresAt
         self.pollInterval = pollInterval
     }
+
+    /// 브라우저로 열 주소: 코드가 박힌 주소가 있으면 그것, 없으면 승인 화면.
+    public var browserURL: URL { verificationURIComplete ?? verificationURI }
 }
 
 /// 앱이 프롬프트를 표시하는 훅. 승인 대기 중 폴링은 킷이 한다.

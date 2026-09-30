@@ -10,28 +10,17 @@
   "prefix": "app",
   "gui_product": "AgentWikiStudio",
   "cli_product": "agent-wiki-editor",
-  "full_cli_product": "agent-wiki",
-  "extra_clis": [],
   "dual_entry": "helpers",
   "cli_helper_path": "Contents/Helpers/agent-wiki-editor",
-  "full_cli_helper_path": "Contents/Helpers/agent-wiki",
   "app_aliases": [
     "Agent Wiki Studio.app",
     "AgentWikiStudio.app"
   ],
-  "note": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). full CLI product agent-wiki in Helpers+PATH via ADM extra_clis/full_cli_product.",
+  "note": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). PATH CLI `agent-wiki` 는 agent-wiki-synchronizer 가 cli_aliases 로 소유한다(이 앱은 주장하지 않는다).",
   "distribution": "internal",
-  "agent_surface": {
-    "skills": [
-      "agent-wiki-studio-swift"
-    ],
-    "agents": [],
-    "attach_on": [
-      "skill-install",
-      "ship"
-    ],
-    "prefer_catalog_symlink": true
-  },
   "purpose": "Agent Wiki 객체를 발행하고 운영하는 내부용 스튜디오 클라이언트다",
-  "state_root_env": "SWIFT_APP_STATE_ROOT"
+  "state_root_env": "SWIFT_APP_STATE_ROOT",
+  "cli_aliases": [
+    "agent-wiki-studio"
+  ]
 }

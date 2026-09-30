@@ -28,7 +28,7 @@
 "CLIPanelView.textfield" = "id 또는 제목 검색/조회";
 "CLIPanelView.textfield-2" = "id (이웃/타임라인 조회)";
 "CLIPanelView.textfield-3" = "sha (blob info 조회)";
-"CLIPanelView.help" = "%1$@ clone 의 ahead/behind";
+"CLIPanelView.help" = "~/gujo-wiki clone 의 ahead/behind";
 "main.fputs" = "capabilities encode 실패: %1$@\n";
 "main.fputs-2" = "GUI 실행 실패: %1$@\n";
 "CLIPanelView.label" = "조회 결과가 여기 표시됩니다.";

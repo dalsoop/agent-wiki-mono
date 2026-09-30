@@ -36,7 +36,7 @@ let project = Project.dualEntryApp(
     ],
     guiResources: [
         "Packaging/AppIcon.icns",
-        "Sources/AgentWikiGraph/Localization/Resources/**"
+        "Sources/AgentWikiGrapher/Localization/Resources/**"
     ],
     infoPlist: .file(path: "Packaging/Info.plist"),
     entitlements: .file(path: "Packaging/AgentWikiGraph.entitlements")

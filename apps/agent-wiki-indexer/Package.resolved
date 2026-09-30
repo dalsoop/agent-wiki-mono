@@ -1,32 +1,42 @@
 {
-  "pins": [
+  "originHash" : "8abfe23fc20b1b4f27c784547a97aafbaaae0a2a0c888b16a178b25eb127b783",
+  "pins" : [
     {
-      "identity": "sparkle",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/sparkle-project/Sparkle.git",
-      "state": {
-        "revision": "ac2def288cbff5cfc7df3ffef6abdf45b72bcb0a",
-        "version": "2.9.6"
+      "identity" : "sparkle",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sparkle-project/Sparkle.git",
+      "state" : {
+        "revision" : "ac2def288cbff5cfc7df3ffef6abdf45b72bcb0a",
+        "version" : "2.9.6"
       }
     },
     {
-      "identity": "swift-asn1",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/apple/swift-asn1.git",
-      "state": {
-        "revision": "a9a5efd40eaf558a2bcd48d64b1d1646be686008",
-        "version": "1.7.1"
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+        "version" : "1.8.2"
       }
     },
     {
-      "identity": "swift-crypto",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/apple/swift-crypto.git",
-      "state": {
-        "revision": "95ba0316a9b733e92bb6b071255ff46263bbe7dc",
-        "version": "3.15.1"
+      "identity" : "swift-asn1",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-asn1.git",
+      "state" : {
+        "revision" : "a9a5efd40eaf558a2bcd48d64b1d1646be686008",
+        "version" : "1.7.1"
+      }
+    },
+    {
+      "identity" : "swift-crypto",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-crypto.git",
+      "state" : {
+        "revision" : "95ba0316a9b733e92bb6b071255ff46263bbe7dc",
+        "version" : "3.15.1"
       }
     }
   ],
-  "version": 2
+  "version" : 3
 }

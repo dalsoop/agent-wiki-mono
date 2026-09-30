@@ -33,10 +33,7 @@ public func runDualEntry(arguments: [String]) {
                 print("  - \(issue)") // allow:debug
             }
             print("fix:") // allow:debug
-            print("  \"/Applications/Agent Wiki.app/Contents/Helpers/agent-wiki\" install") // allow:debug
-            print("  # then surface → Studio:") // allow:debug
-            print("  agent-wiki-studio dual-entry adopt") // allow:debug
-            print("  # or: app-build-manager ship apps/knowledge-base-wiki-swift release") // allow:debug
+            print("  app-build-manager ship <앱>   # PATH 연결은 배포 도구가 유일한 쓰기 주체") // allow:debug
             print("Never: ln -s …/MacOS/KnowledgeBaseWiki /opt/homebrew/bin/agent-wiki") // allow:debug
         }
     }

@@ -7,9 +7,9 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         // helpers dual-entry: PATH CLI product (never MacOS GUI)
-        .executable(name: "agent-wiki-synchronizer", targets: ["AgentWikiGlobalCLI"]),
-        .executable(name: "AgentWikiGlobal", targets: ["AgentWikiGlobal"]),
-        .library(name: "AgentWikiGlobalCore", targets: ["AgentWikiGlobalCore"]),
+        .executable(name: "agent-wiki-synchronizer", targets: ["AgentWikiSynchronizerCLI"]),
+        .executable(name: "AgentWikiGlobal", targets: ["AgentWikiSynchronizer"]),
+        .library(name: "AgentWikiGlobalCore", targets: ["AgentWikiSynchronizerCore"]),
     ],
     dependencies: [
         .package(path: "../../swiftkit"),
@@ -20,7 +20,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AgentWikiGlobalCore",
+            name: "AgentWikiSynchronizerCore",
             dependencies: [
                 .product(name: "StateRootKit", package: "swiftkit"),
                 .product(name: "CommandKit", package: "swiftkit"),
@@ -31,10 +31,10 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "AgentWikiGlobal",
+            name: "AgentWikiSynchronizer",
             dependencies: [
                 .product(name: "MenuBarPopoverUIKit", package: "swiftkit"),
-                "AgentWikiGlobalCore",
+                "AgentWikiSynchronizerCore",
                 .product(name: "LocalizationKit", package: "swiftkit"),
                 .product(name: "SettingsUIKit", package: "swiftkit"),
                 .product(name: "LaunchAtLoginKit", package: "swiftkit"),
@@ -49,10 +49,10 @@ let package = Package(
         ),
         // Foundation-only PATH CLI — keep AppKit out (dual-entry hang 2026-07-25)
         .executableTarget(
-            name: "AgentWikiGlobalCLI",
+            name: "AgentWikiSynchronizerCLI",
             dependencies: [
                 .product(name: "SingleInstanceKit", package: "swiftkit"),
-                "AgentWikiGlobalCore",
+                "AgentWikiSynchronizerCore",
                 .product(name: "LocalizationKit", package: "swiftkit"),
                 .product(name: "WikiCLIShared", package: "agent-wiki-kit"),
                 .product(name: "KnowledgeBaseWikiCore", package: "agent-wiki-kit"),
@@ -69,9 +69,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "AgentWikiGlobalCoreTests",
+            name: "AgentWikiSynchronizerCoreTests",
             dependencies: [
-                "AgentWikiGlobalCore",
+                "AgentWikiSynchronizerCore",
                 .product(name: "CommandKit", package: "swiftkit"),
                 .product(name: "KnowledgeBaseWikiCore", package: "agent-wiki-kit"),
                 .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),

@@ -55,7 +55,7 @@ PATH CLI 는 Helpers 바이너리만. GUI MacOS 를 심링크 금지.
 
 ```bash
 agent-wiki dual-entry
-"/Applications/Agent Wiki.app/Contents/Helpers/agent-wiki" install
+# PATH 연결은 배포(app-build-manager ship <앱>)가 한다 — 이 CLI 는 PATH 에 쓰지 않는다
 ```
 
 ## 스킬 부착 (앱 생명주기)
@@ -65,8 +65,6 @@ agent-wiki skill-install    # ~/.codex|claude|grok|agents/skills 에 부착
 agent-wiki skill-status
 agent-wiki skill-uninstall  # 이 앱이 붙인 것만 제거
 ```
-
-install(PATH) 시 skill-install 도 자동 호출.
 
 ## 금지
 

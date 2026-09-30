@@ -4,7 +4,7 @@ import StateRootKit
 /// 위키 world 3층(+기타). GUI·CLI 가 같은 판정을 쓴다.
 ///
 /// `gujo-wiki` 는 git 저장소여도 **원격 공유**이지 코드 repo 원장이 아니다.
-/// `person-*` / `~/.tenants/<slug>/wiki` 는 **이 Mac 1인칭**이지 GitLab 441 이 아니다.
+/// `person-*` / `~/.tenants/<slug>/wiki` 는 **이 Mac 1인칭**이지 공유 위키가 아니다.
 public enum WikiWorldLayer: String, Codable, Sendable, CaseIterable, Identifiable {
     case localPerson
     case tenant
@@ -106,18 +106,6 @@ public struct WikiWorldListItem: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-/// 공유 위키를 **브라우저에서 여는** 주소.
-/// git SSH 호스트(`gitlab-ssh…`)와 같지 않다. 전송로 선택은 `gitlab-manager endpoint`.
-public enum GujoWikiWeb {
-    public static let projectHost = "gitlab.ranode.net"
-    public static var projectURL: String {
-        "https://\(projectHost)/workspace/contents/gujo-wiki"
-    }
-    public static var gitHTTPS: String {
-        "https://\(projectHost)/workspace/contents/gujo-wiki.git"
-    }
-}
-
 public enum WikiWorldPresentation: Sendable {
     public static func classify(name: String, rootPath: String) -> WikiWorldLayer {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -205,11 +193,11 @@ public enum WikiWorldPresentation: Sendable {
         let path = (rootPath as NSString).abbreviatingWithTildeInPath
         switch classify(name: name, rootPath: rootPath) {
         case .localPerson:
-            return "이 Mac만 · GitLab 441에 안 올라감 · \(path)"
+            return "이 Mac만 · 공유 위키로 안 올라감 · \(path)"
         case .tenant:
             return "공유 위키 하위 · \(path)"
         case .remoteShared:
-            return "\(GujoWikiWeb.projectURL) · \(path)"
+            return "공유 위키 · \(path)"
         case .repository:
             return "이 repo의 .wiki · \(path)"
         case .other:

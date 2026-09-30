@@ -34,6 +34,9 @@ public enum StaffAbility: String, Codable, CaseIterable, Sendable, Hashable {
     case mailConsentsWrite = "MailConsentsWrite"
     /// 예약, 미사용.
     case lectureWrite = "LectureWrite"
+    /// 조회 전용(계약 v1 §6). 기계 주체(agent 역할)가 오퍼·쿠폰·상품 목록을 읽는다.
+    case productsRead = "ProductsRead"
+    case offersRead = "OffersRead"
 
     /// 서버가 준 문자열 이름. 계약상 rawValue 와 같다.
     public var name: String { rawValue }

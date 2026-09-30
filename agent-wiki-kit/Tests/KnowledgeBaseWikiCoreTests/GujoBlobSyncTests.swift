@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import EndpointRouterKit
 @testable import KnowledgeBaseWikiCore
 
 /// gujo blobs 의 garage(S3) 왕복 계약. 서명은 고정 벡터로 검증한다 — 네트워크 없이
@@ -105,15 +106,17 @@ import Testing
 
     // MARK: - wiki-hub 응답 계약
 
-    @Test func hubUsesCanonicalWikiHostname() {
-        // defaultBaseURL 은 이제 환경 변수 → EndpointRouterKit 으로 푸는 옵셔널이다. 고정 호스트 기대는
-        // docs/tracking/findings.md 의 "agent-wiki-kit 테스트가 컴파일되지 않는다" 항목에서 다시 정한다.
-        withKnownIssue("wiki-hub 엔드포인트 해석 방식 변경 — findings.md") {
-            #expect(GujoHubClient.defaultBaseURL?.absoluteString == "https://wiki.50.internal.kr")
-        }
+    /// 허브 주소는 소스에 박지 않는다 — env `GUJO_HUB_URL`, 없으면 엔드포인트 원장 `wiki-hub` 다.
+    /// 옛 판은 호스트를 테스트에 하드코딩했고(`.absoluteString` 을 옵셔널에 불러 컴파일조차 안 됐다),
+    /// 원장에 `wiki-hub` 가 없는 환경에서는 nil 이 정답이다.
+    @Test func hubBaseURLComesFromEnvironmentOrEndpointLedger() {
+        let env = ProcessInfo.processInfo.environment["GUJO_HUB_URL"] ?? ""
+        let ledger = EndpointRouter.string("wiki-hub")
+        let expected = env.isEmpty ? (ledger.isEmpty ? nil : ledger) : env
+        #expect(GujoHubClient.defaultBaseURL?.absoluteString == expected)
     }
 
-    /// wiki-hub(wiki.50.internal.kr)가 내보내는 JSON 이 FleetPullResult 로 그대로
+    /// wiki-hub 가 내보내는 JSON 이 FleetPullResult 로 그대로
     /// 디코드돼야 한다 — 서버는 파이썬, 클라이언트는 Swift 지만 계약은 하나다.
     @Test func hubSearchResponseDecodesAsFleetPullResult() throws {
         let json = """

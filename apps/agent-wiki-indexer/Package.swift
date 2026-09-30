@@ -7,9 +7,9 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         // helpers dual-entry: PATH CLI product (never MacOS GUI)
-        .executable(name: "agent-wiki-indexer", targets: ["AgentWikiLocalCLI"]),
-        .executable(name: "AgentWikiLocal", targets: ["AgentWikiLocal"]),
-        .library(name: "AgentWikiLocalCore", targets: ["AgentWikiLocalCore"]),
+        .executable(name: "agent-wiki-indexer", targets: ["AgentWikiIndexerCLI"]),
+        .executable(name: "AgentWikiLocal", targets: ["AgentWikiIndexer"]),
+        .library(name: "AgentWikiLocalCore", targets: ["AgentWikiIndexerCore"]),
     ],
     dependencies: [
         .package(path: "../../swiftkit"),
@@ -20,7 +20,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AgentWikiLocalCore",
+            name: "AgentWikiIndexerCore",
             dependencies: [
                 .product(name: "StateRootKit", package: "swiftkit"),
                 .product(name: "CommandKit", package: "swiftkit"),
@@ -30,10 +30,10 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "AgentWikiLocal",
+            name: "AgentWikiIndexer",
             dependencies: [
                 .product(name: "MenuBarPopoverUIKit", package: "swiftkit"),
-                "AgentWikiLocalCore",
+                "AgentWikiIndexerCore",
                 .product(name: "LocalizationKit", package: "swiftkit"),
                 .product(name: "SettingsUIKit", package: "swiftkit"),
                 .product(name: "LaunchAtLoginKit", package: "swiftkit"),
@@ -48,10 +48,10 @@ let package = Package(
         ),
         // Foundation-only PATH CLI — keep AppKit out (dual-entry hang 2026-07-25)
         .executableTarget(
-            name: "AgentWikiLocalCLI",
+            name: "AgentWikiIndexerCLI",
             dependencies: [
                 .product(name: "SingleInstanceKit", package: "swiftkit"),
-                "AgentWikiLocalCore",
+                "AgentWikiIndexerCore",
                 .product(name: "LocalizationKit", package: "swiftkit"),
                 .product(name: "InteropKit", package: "swiftkit"),
                 .product(name: "AppPathsKit", package: "swiftkit"),
@@ -66,9 +66,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "AgentWikiLocalCoreTests",
+            name: "AgentWikiIndexerCoreTests",
             dependencies: [
-                "AgentWikiLocalCore",
+                "AgentWikiIndexerCore",
                 .product(name: "CommandKit", package: "swiftkit"),
                 .product(name: "KnowledgeBaseWikiCore", package: "agent-wiki-kit"),
                 .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),

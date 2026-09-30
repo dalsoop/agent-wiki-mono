@@ -173,6 +173,30 @@ public struct BacklogStore: Sendable {
         return updated
     }
 
+    /// 다른 제품으로 옮긴다(제품 경계가 바뀌어 항목의 주인이 달라졌을 때). 옮긴 이유는 설명 끝에 남긴다.
+    @discardableResult
+    public func move(id: UUID, toSlug slug: String, note: String) throws -> BacklogItem {
+        let item = try show(id: id)
+        let updated = try item.replacing(slug: slug, description: Self.appending(note: note, to: item.description))
+        try write(updated)
+        return updated
+    }
+
+    /// 설명 끝에 한 줄을 덧붙인다(상태를 바꾼 이유 등). 설명을 덮어쓰지 않는다.
+    @discardableResult
+    public func appendNote(id: UUID, note: String) throws -> BacklogItem {
+        let item = try show(id: id)
+        let updated = try item.replacing(description: Self.appending(note: note, to: item.description))
+        try write(updated)
+        return updated
+    }
+
+    static func appending(note: String, to description: String) throws -> String {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw BacklogError.invalidField("note") }
+        return description + "\n\n" + trimmed
+    }
+
     /// 상태를 안 바꾸고 점유만 잡는다.
     @discardableResult
     public func claim(id: UUID, agent: String, force: Bool = false, now: Date = Date()) throws -> BacklogItem {

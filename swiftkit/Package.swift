@@ -11,7 +11,6 @@ let package = Package(
         .library(name: "PluginKit", targets: ["PluginKit"]),
         .library(name: "CommandKit", targets: ["CommandKit"]),
         .library(name: "JSONLJournalKit", targets: ["JSONLJournalKit"]),
-        .library(name: "HostGovernanceKit", targets: ["HostGovernanceKit"]),
         .library(name: "CommandKitTesting", targets: ["CommandKitTesting"]),
         .library(name: "TestingAdapterKit", targets: ["TestingAdapterKit"]),
         .library(name: "StoreAssetKit", targets: ["StoreAssetKit"]),
@@ -67,10 +66,6 @@ let package = Package(
         // "설치본이 소스 대비 최신인지" 진단 도구. 업데이터가 아니다.
         // 자동업데이트는 swiftkit-sparkle(Sparkle)로 이관됐고, UpdateKit 모듈은 제거됐다.
         .library(name: "FreshnessKit", targets: ["FreshnessKit"]),
-        .library(name: "StealthKit", targets: ["StealthKit"]),
-        .library(name: "CDPCredentialFilterKit", targets: ["CDPCredentialFilterKit"]),
-        .library(name: "ChromiumCDPEndpointKit", targets: ["ChromiumCDPEndpointKit"]),
-        .library(name: "BehaviorSimulatorKit", targets: ["BehaviorSimulatorKit"]),
         // 파일 id — 내용은 안 읽고 size+mtime(+상대경로). DirectoryFingerprint 와 같은 철학.
         .library(name: "FileIdentityKit", targets: ["FileIdentityKit"]),
         // Swift 소스 주석/문자열 공백 치환. UTF-8 O(N). agent-lint-catalog · batch-codemod 공유.
@@ -329,6 +324,7 @@ let package = Package(
         // online-opportunity-radar 의 SourceFetch/BotBlockedHosts 와 money-source 크롤러의
         // HTML 파서를 일반화해 한 곳으로(각 앱이 따로 정의하던 것의 통합).
         .library(name: "WebCrawlKit", targets: ["WebCrawlKit"]),
+        .library(name: "WebRenderUIKit", targets: ["WebRenderUIKit"]),
         // 순수 Swift YAML 파서/이미터 — 외부 Yams 의존을 대체.
         .library(name: "YamlKit", targets: ["YamlKit"]),
         // 순수 Swift 선언형 기획 스펙 및 FSM 도달가능성·컴파일 엔진 (PC 1440px SSOT).
@@ -392,8 +388,6 @@ let package = Package(
         .testTarget(name: "ConcurrencyKitTests", dependencies: ["ConcurrencyKit"]),
         .target(name: "CommandKit", dependencies: ["InteropKit", "JSONLJournalKit", "StateRootKit"]),
         .target(name: "JSONLJournalKit", dependencies: ["FastDiskIOKit"]),
-        .target(name: "HostGovernanceKit"),
-        .testTarget(name: "HostGovernanceKitTests", dependencies: ["HostGovernanceKit"]),
         .target(name: "CommandKitTesting", dependencies: ["CommandKit"]),
         .target(name: "StoreAssetKit"),
         .testTarget(name: "StoreAssetKitTests", dependencies: ["StoreAssetKit"]),
@@ -471,7 +465,7 @@ let package = Package(
         // 러너 폴백은 AgentVaultClientKit(tenant:gujo / staff-token). env 는 읽지 않는다.
         .target(
             name: "GujoAuthKit",
-            dependencies: ["HTTPClientKit", "EndpointRouterKit", "KeychainKit", "AgentVaultClientKit"]
+            dependencies: ["HTTPClientKit", "EndpointRouterKit", "KeychainKit", "AgentVaultClientKit", "CommandKit", "StateRootKit"]
         ),
         .testTarget(name: "GujoAuthKitTests", dependencies: ["GujoAuthKit", "HTTPClientKit"]),
         // 스태프 API 타입 클라이언트. 모든 호출이 GujoAuthKit 세션 토큰을 쓰고 403 에 부족 ability 를 싣는다.
@@ -483,6 +477,9 @@ let package = Package(
         // 공개 웹 크롤링 공용 기반(HTTP fetch + HTML 파싱 + 봇차단). HTTPClientKit 위.
         .target(name: "WebCrawlKit", dependencies: ["HTTPClientKit"]),
         .testTarget(name: "WebCrawlKitTests", dependencies: ["WebCrawlKit"]),
+        // 로그인 없는 공개 페이지를 WKWebView 로 렌더링(Agent Browser 대체, 8BFEE0F4 · B).
+        .target(name: "WebRenderUIKit"),
+        .testTarget(name: "WebRenderUIKitTests", dependencies: ["WebRenderUIKit"]),
         // business-api-swift 에 유관한 typed CRUD + 동기화 클라이언트. 서버 계약(엔드포인트·봉투·
         // content_hash·커서) 에 고정 — generic 은 HTTPClientKit/InteropKit/MoneyLedgerModels 의존만.
         .target(
@@ -1434,14 +1431,6 @@ let package = Package(
             name: "AppPersistenceKitTests",
             dependencies: ["AppPersistenceKit"]
         ),
-        .target(
-            name: "StealthKit",
-            dependencies: ["StateRootKit", "LocalizationKit"],
-            resources: [.process("Resources")]
-        ),
-        .target(name: "CDPCredentialFilterKit"),
-        .target(name: "ChromiumCDPEndpointKit"),
-        .target(name: "BehaviorSimulatorKit"),
         // Git Tree OID 추출 및 SQLite WAL 기반 5ms 영수증 원장
         .target(
             name: "GitMerkleReceiptKit",

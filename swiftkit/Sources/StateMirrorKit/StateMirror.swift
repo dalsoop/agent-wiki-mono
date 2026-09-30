@@ -71,21 +71,19 @@ public enum StateMirror {
 
     // MARK: - Room-Scoped StateMirror SSOT
 
-    /// 특정 앱의 고객용 단일 룸 격리 저장소 URL.
-    /// `~/Library/Application Support/net.ranode.shared/rooms/<room-id>/<slug>/`
+    /// 특정 앱의 고객용 저장소 URL. `nil`은 룸 없는 앱 저장소를 뜻한다.
     public static func roomStorageURL(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil
     ) -> URL {
         StateRootKit.customerAppStorageURL(slug: app, roomID: roomID, homeDirectory: homeDirectory)
     }
 
-    /// 특정 앱의 고객용 단일 룸 격리 미러 파일 URL.
-    /// `~/Library/Application Support/net.ranode.shared/rooms/<room-id>/<slug>/state.json`
+    /// 특정 앱의 고객용 미러 파일 URL. `nil`은 룸 없는 앱 저장소를 뜻한다.
     public static func roomMirrorURL(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil
     ) -> URL {
         StateRootKit.customerStateMirrorURL(slug: app, roomID: roomID, homeDirectory: homeDirectory)
@@ -108,8 +106,11 @@ public enum StateMirror {
                 .appendingPathComponent("swift-app-state-tests"))
                 .appendingPathComponent("\(app).json")
         }
-        if let room = roomID ?? environment["ROOM_ID"] ?? environment["CUSTOMER_ROOM_ID"] ?? environment["SANDBOX_ROOM_ID"], !room.isEmpty {
-            return roomMirrorURL(app: app, roomID: room, homeDirectory: homeDirectory)
+        // 빈 값은 방 지정이 없는 것이다 — 예전처럼 표준 상태 폴더로 간다. 옛 기본 방 별칭만 "방 없음" 저장소로 보낸다.
+        if let room = roomID ?? environment["ROOM_ID"] ?? environment["CUSTOMER_ROOM_ID"] ?? environment["SANDBOX_ROOM_ID"],
+           !room.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let normalizedRoom: String? = StateRootKit.isLegacyDefaultRoomID(room) ? nil : room
+            return roomMirrorURL(app: app, roomID: normalizedRoom, homeDirectory: homeDirectory)
         }
         return URL(fileURLWithPath: directory(environment: environment, homeDirectory: homeDirectory))
             .appendingPathComponent("\(app).json")
@@ -118,10 +119,11 @@ public enum StateMirror {
     /// 특정 룸 스코프의 상태를 게시한다.
     public static func publishRoom<T: Encodable>(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID,
+        roomID: String? = nil,
+        homeDirectory: String? = nil,
         _ state: T
     ) {
-        let url = roomMirrorURL(app: app, roomID: roomID)
+        let url = roomMirrorURL(app: app, roomID: roomID, homeDirectory: homeDirectory)
         try? withExclusiveLock(for: url) {
             try write(app: app, state: state, to: url)
         }
@@ -131,18 +133,26 @@ public enum StateMirror {
     /// 특정 룸 스코프의 상태를 읽는다.
     public static func readRoom<State: Decodable & Sendable>(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID,
+        roomID: String? = nil,
+        homeDirectory: String? = nil,
         as type: State.Type
     ) throws -> StateMirrorEnvelope<State> {
-        try read(url: roomMirrorURL(app: app, roomID: roomID), as: type)
+        if StateRootKit.isLegacyDefaultRoomID(roomID ?? "") {
+            StateRootKit.promoteLegacyNoRoomStorage(slug: app, homeDirectory: homeDirectory)
+        }
+        return try read(
+            url: roomMirrorURL(app: app, roomID: roomID, homeDirectory: homeDirectory),
+            as: type
+        )
     }
 
     /// 특정 룸 스코프의 상태 미러를 정리한다.
     public static func clearRoom(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID
+        roomID: String? = nil,
+        homeDirectory: String? = nil
     ) {
-        let url = roomMirrorURL(app: app, roomID: roomID)
+        let url = roomMirrorURL(app: app, roomID: roomID, homeDirectory: homeDirectory)
         try? withExclusiveLock(for: url) {
             if FileManager.default.fileExists(atPath: url.path) {
                 try FileManager.default.removeItem(at: url)
@@ -154,7 +164,7 @@ public enum StateMirror {
     /// 특정 룸 스코프의 자가 치유 저장소를 반환한다.
     public static func selfHealingStore<State: Codable & Sendable>(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil
     ) -> StateMirrorSelfHealingStore<State> {
         StateMirrorSelfHealingStore<State>(

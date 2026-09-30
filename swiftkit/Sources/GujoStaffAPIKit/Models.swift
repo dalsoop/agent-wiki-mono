@@ -256,22 +256,76 @@ public struct SubscriptionGrant: Encodable, Equatable, Sendable {
     }
 }
 
-// MARK: - support
+// MARK: - support (계약 §5)
 
-public struct Inquiry: Codable, Equatable, Sendable {
+/// 문의 목록 한 줄. 게스트 문의(로그인 없이 support 폼)는 `userId == nil`, `isGuest == true` 이고
+/// `userEmail` 이 폼에 적은 이메일이다. `kind` 는 general·app_report·refund_request.
+public struct InquirySummary: Codable, Equatable, Sendable {
     public var id: Int
-    public var subject: String?
-    public var status: String?
-    public var customerId: Int?
+    public var subject: String
+    public var category: String?
+    public var kind: String?
+    public var status: String
+    public var userId: Int?
+    public var userEmail: String
+    public var isGuest: Bool?
     public var createdAt: Date?
     public var updatedAt: Date?
+    public var messageCount: Int?
+    public var latestBodyPreview: String?
+    public var latestIsStaff: Bool?
+}
+
+/// 문의 상세. 앱 신고·환불 요청은 `report` 에 앱 환경과 서버가 계산한 중복 지문을 싣는다.
+public struct InquiryDetail: Codable, Equatable, Sendable {
+    public var id: Int
+    public var subject: String
+    public var category: String?
+    public var kind: String?
+    public var status: String
+    public var userId: Int?
+    public var userEmail: String
+    public var guestName: String?
+    public var isGuest: Bool?
+    public var report: InquiryReportMeta?
+    public var createdAt: Date?
+    public var updatedAt: Date?
+    public var messages: [InquiryMessage]
+}
+
+public struct InquiryReportMeta: Codable, Equatable, Sendable {
+    public var appBundleId: String?
+    public var appVersion: String?
+    public var macosVersion: String?
+    public var deviceId: String?
+    public var fingerprint: String?
 }
 
 public struct InquiryMessage: Codable, Equatable, Sendable {
     public var id: Int
-    public var author: String?
-    public var body: String?
+    public var isStaff: Bool
+    public var body: String
     public var createdAt: Date?
+    public var attachments: [InquiryAttachment]?
+}
+
+/// 메시지 첨부. `downloadUrl` 은 스태프 토큰으로 부르는 링크 발급 경로(호스트 없음)다.
+public struct InquiryAttachment: Codable, Equatable, Sendable {
+    public var id: Int
+    public var kind: String?
+    public var originalName: String
+    public var size: Int
+    public var mimeType: String
+    public var downloadUrl: String
+}
+
+public struct InquiryAttachmentLink: Codable, Equatable, Sendable {
+    public var id: Int
+    public var originalName: String
+    public var size: Int
+    public var mimeType: String
+    public var url: URL
+    public var expiresAt: Date
 }
 
 public struct InquiryMessageDraft: Encodable, Equatable, Sendable {

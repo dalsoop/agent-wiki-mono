@@ -11,8 +11,15 @@ import Testing
         return (root, LedgerStore(root: root), root.appendingPathComponent("objects"))
     }
 
+    private struct Fork {
+        let base: LedgerObject
+        let left: LedgerObject
+        let right: LedgerObject
+        let merge: LedgerObject
+    }
+
     /// base → (left, right) 로 갈라진 뒤 merge 가 둘을 대체한다.
-    private func forked(_ store: LedgerStore) throws -> (base: LedgerObject, left: LedgerObject, right: LedgerObject, merge: LedgerObject) {
+    private func forked(_ store: LedgerStore) throws -> Fork {
         let base = try store.publish(author: "t", title: "결정: 병합 시험", type: "decision", body: "원본")
         let left = try store.publish(author: "a", title: "결정: 병합 시험", type: "decision", body: "왼쪽",
                                      extras: LedgerPublishExtras(supersedes: base.id))
@@ -20,13 +27,16 @@ import Testing
                                       extras: LedgerPublishExtras(supersedes: base.id))
         let merge = try store.publish(author: "c", title: "결정: 병합 시험", type: "decision", body: "왼쪽+오른쪽",
                                       extras: LedgerPublishExtras(supersedes: right.id, supersedesAlso: [left.id]))
-        return (base, left, right, merge)
+        return Fork(base: base, left: left, right: right, merge: merge)
     }
 
     @Test func aMergeRevisionLeavesOneHead() throws {
         let world = makeWorld()
         defer { try? FileManager.default.removeItem(at: world.root) }
-        let (_, left, right, merge) = try forked(world.store)
+        let fork = try forked(world.store)
+        let left = fork.left
+        let right = fork.right
+        let merge = fork.merge
 
         let heads = world.store.heads(world.store.scan()).filter { $0.title == "결정: 병합 시험" }
         #expect(heads.map(\.id) == [merge.id])
@@ -41,14 +51,16 @@ import Testing
     @Test func verifyAcceptsMultipleParentsAndCatchesAMissingOne() throws {
         let world = makeWorld()
         defer { try? FileManager.default.removeItem(at: world.root) }
-        let (base, left, _, merge) = try forked(world.store)
+        let fork = try forked(world.store)
+        let left = fork.left
+        let merge = fork.merge
         #expect(world.store.verify().isEmpty)
 
         // 병합 부모 줄도 코어라 바꾸면 코어 변조, 없는 부모를 가리키면 참조 오류다.
         let enumerator = FileManager.default.enumerator(at: world.objectsDir, includingPropertiesForKeys: nil)
         let url = try #require((enumerator?.allObjects as? [URL])?.first { $0.lastPathComponent == "\(merge.id).md" })
         let text = try String(contentsOf: url, encoding: .utf8)
-        try text.replacingOccurrences(of: "supersedes-also: \(left.id)", with: "supersedes-also: \(base.id.dropLast())0")
+        try text.replacingOccurrences(of: "supersedes-also: \(left.id)", with: "supersedes-also: \(String(repeating: "f", count: 64))")
             .write(to: url, atomically: true, encoding: .utf8)
         let problems = world.store.verify().map(\.problem)
         #expect(problems.contains { $0.hasPrefix("코어 변조") })
@@ -58,7 +70,11 @@ import Testing
     @Test func historyFollowsBothBranches() throws {
         let world = makeWorld()
         defer { try? FileManager.default.removeItem(at: world.root) }
-        let (base, left, right, merge) = try forked(world.store)
+        let fork = try forked(world.store)
+        let base = fork.base
+        let left = fork.left
+        let right = fork.right
+        let merge = fork.merge
         let objects = world.store.scan()
 
         #expect(world.store.lineage(objects, of: merge.id).map(\.id) == [merge.id, right.id, base.id])
@@ -72,7 +88,10 @@ import Testing
     @Test func olderParsersSeeTheSameIdentity() throws {
         let world = makeWorld()
         defer { try? FileManager.default.removeItem(at: world.root) }
-        let (_, left, right, merge) = try forked(world.store)
+        let fork = try forked(world.store)
+        let left = fork.left
+        let right = fork.right
+        let merge = fork.merge
 
         let asOldParserSees = LedgerObject(
             id: merge.id, published: merge.published, author: merge.author,

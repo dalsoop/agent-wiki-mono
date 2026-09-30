@@ -55,7 +55,7 @@ struct MainWindowView: View {
             }
             if WikiWorldPresentation.classify(name: model.world, rootPath: "") == .remoteShared {
                 Button(model.L(.cliRemoteStatus)) { Task { await model.loadRemoteStatus() } }
-                    .help(model.L(.MainWindowViewHelp, GujoWikiWeb.projectURL))
+                    .help(model.L(.MainWindowViewHelp))
             }
             Button {
                 Task { await model.reloadCurrentArea() }
