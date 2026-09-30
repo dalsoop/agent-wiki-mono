@@ -38,7 +38,6 @@
     "tagline": "일반 창 앱(독 앱 — 메뉴바 없음).",
     "body": "Agent Wiki 원장을 읽기 전용으로 인덱싱해 파생 그래프를 만든다. 고아 노드·중심성·영향·경로 질의를 창과 PATH CLI `agent-wiki-graph`에서 같은 Core로 돌린다. 원장은 쓰지 않으며 그래프 수학은 GraphEngineKit, 파싱은 WikiLedgerKit에 맡긴다.",
     "category": "개발자 도구",
-    "license_terms": "Gujo Pass 구독 멤버십",
     "features": [
       {
         "title": "구성",
@@ -72,7 +71,6 @@
   },
   "x-appraisal": {
     "source": "phase2-mechanical-fill-2026-08-15",
-    "draft": true,
-    "price_note": "Gujo Pass 구독 멤버십 포함"
+    "draft": true
   }
 }

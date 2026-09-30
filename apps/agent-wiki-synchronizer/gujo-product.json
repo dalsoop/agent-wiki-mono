@@ -37,8 +37,6 @@
     "tagline": "분산 지식 베이스의 변경 내역을 안전하게 맞추고 최신성을 보장하는 동기화기",
     "body": "Agent Knowledge Wiki Synchronizer는 다중 작업 환경이나 원격 저장소 사이에 존재하는 지식 문서의 동기화를 책임지는 유틸리티입니다. 분산 환경에서 발생하는 문서 수정 충돌을 감지하고, 불변 식별자 기반의 병합 정책을 적용하여 팀과 에이전트가 항상 단일 진실의 지식을 공유하도록 만듭니다.",
     "category": "생산성",
-    "price_krw": 14900,
-    "license_terms": "Gujo Pass 구독 멤버십",
     "requirements": "macOS 14 이상 · Apple Silicon",
     "release_note": "초기 릴리스 및 표준 메타데이터 명세 적용",
     "features": [
@@ -72,7 +70,6 @@
   },
   "x-appraisal": {
     "approved_verdict_run_id": "a93f99f0-0cb9-4017-b7f6-aa93600191c6",
-    "draft": true,
-    "price_note": "Gujo Pass 구독 멤버십 포함"
+    "draft": true
   }
 }

@@ -37,8 +37,6 @@
     "tagline": "방대한 지식 문서와 런북을 초고속으로 검색할 수 있도록 색인하는 엔진",
     "body": "Agent Knowledge Wiki Indexer는 로컬 및 팀 지식 저장소에 분산된 수천 건의 마크다운 문서와 결정 이력을 초고속 검색이 가능하도록 색인하는 인덱싱 엔진입니다. 형태소 분석과 키워드 추출을 통해 자연어 질의에 가장 적합한 문서를 수 밀리초 내에 찾아낼 수 있도록 돕습니다.",
     "category": "생산성",
-    "price_krw": 14900,
-    "license_terms": "Gujo Pass 구독 멤버십",
     "requirements": "macOS 14 이상 · Apple Silicon",
     "release_note": "초기 릴리스 및 표준 메타데이터 명세 적용",
     "features": [
@@ -72,7 +70,6 @@
   },
   "x-appraisal": {
     "approved_verdict_run_id": "86e98ea3-cd2a-4101-a10a-9a81280899a2",
-    "draft": true,
-    "price_note": "Gujo Pass 구독 멤버십 포함"
+    "draft": true
   }
 }

@@ -17,7 +17,7 @@
     "AgentWikiStudio.app"
   ],
   "note": "Ops surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=studio). PATH CLI `agent-wiki` 는 agent-wiki-synchronizer 가 cli_aliases 로 소유한다(이 앱은 주장하지 않는다).",
-  "distribution": "internal",
+  "distribution": "external",
   "purpose": "Agent Wiki 객체를 발행하고 운영하는 내부용 스튜디오 클라이언트다",
   "state_root_env": "SWIFT_APP_STATE_ROOT",
   "cli_aliases": [

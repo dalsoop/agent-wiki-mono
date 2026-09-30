@@ -38,7 +38,6 @@
     "tagline": "보고용 Agent Wiki 클라이언트.",
     "body": "Agent Wiki Reader는 Agent Wiki 원장을 읽기 전용으로 조회하는 보고용 클라이언트다. list·show·search·context·path·world·graph·verify 같은 읽기 명령만 프록시하고 publish·task·rollback 등 쓰기·운영 명령은 거절한다. 메뉴바 GUI와 PATH CLI `agent-wiki-reader`가 같은 Core를 쓰며, 데이터는 gujo-wiki 등 로컬 world를 읽는다.",
     "category": "개발자 도구",
-    "license_terms": "Gujo Pass 구독 멤버십",
     "features": [
       {
         "title": "구성",
@@ -72,7 +71,6 @@
   },
   "x-appraisal": {
     "source": "phase2-mechanical-fill-2026-08-15",
-    "draft": true,
-    "price_note": "Gujo Pass 구독 멤버십 포함"
+    "draft": true
   }
 }
