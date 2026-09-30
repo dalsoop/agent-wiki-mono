@@ -34,7 +34,7 @@ public struct LedgerStore: Sendable {
         let objectExtras = LedgerObject.Extras(
             batch: extras.batch, origin: extras.origin, tags: nfcTags, cites: extras.cites,
             observes: extras.observes, supersedes: extras.supersedes, retracts: extras.retracts,
-            source: extras.source)
+            source: extras.source, supersedesAlso: extras.supersedesAlso)
         // 신규 발행은 제목·태그를 NFC 로 정규화 — NFD 유입(파일계 경유)로 검색이 갈라지지 않게.
         // id 는 content-addressed: sha256(canonicalCore). 코어가 id 를 안 쓰므로 빈 id 로
         // 만들어 contentID 를 구한 뒤 그 값으로 다시 봉인한다(제1조 — 정체성=주소=무결성).
@@ -174,7 +174,7 @@ public struct LedgerStore: Sendable {
 
     /// head = 아무도 supersede 하지 않았고 retract 되지 않았으며, 자신이 철회 발행이 아닌 객체.
     public func heads(_ objects: [LedgerObject]) -> [LedgerObject] {
-        let superseded = Set(objects.compactMap(\.supersedes))
+        let superseded = Set(objects.flatMap(\.allSupersedes))
         let retracted = Set(objects.compactMap(\.retracts))
         return objects.filter {
             !superseded.contains($0.id) && !retracted.contains($0.id) && $0.retracts == nil
@@ -191,6 +191,14 @@ public struct LedgerStore: Sendable {
             current = object.supersedes.flatMap { byID[$0] }
         }
         return chain
+    }
+
+    /// 병합 개정의 갈래 — 이 계보에서 `supersedesAlso` 로 합쳐진 각 부모의 계보(부모 id → 그 계보).
+    /// `history` 가 두 갈래를 함께 보여 줄 때 쓴다. 주 계보(`lineage`)는 `supersedes` 만 따른다.
+    public func mergedBranches(_ objects: [LedgerObject], of id: String) -> [(parent: String, chain: [LedgerObject])] {
+        lineage(objects, of: id).flatMap { object in
+            object.supersedesAlso.map { (parent: $0, chain: lineage(objects, of: $0)) }
+        }
     }
 
     /// 이 객체를 인용한 것들(역링크).
@@ -247,7 +255,7 @@ public struct LedgerStore: Sendable {
         let crossWorldRelations: Set<String> = ["promotes", "promoted-as"]
         for (object, _) in all {
             let localCites = object.cites.filter { !crossWorldRelations.contains($0.rel) }.map(\.id)
-            for ref in [object.supersedes, object.retracts].compactMap({ $0 }) + localCites
+            for ref in object.allSupersedes + [object.retracts].compactMap({ $0 }) + localCites
             where !seen.contains(ref) {
                 violations.append(Violation(id: object.id, problem: "없는 객체 참조: \(ref)"))
             }
@@ -343,6 +351,8 @@ public struct LedgerPublishExtras: Sendable, Equatable {
     public var cites: [LedgerObject.Cite] = []
     public var observes: [String] = []
     public var supersedes: String? = nil
+    /// 병합 개정의 나머지 부모(`LedgerObject.supersedesAlso`).
+    public var supersedesAlso: [String] = []
     public var retracts: String? = nil
     public var batch: String? = nil
     public var origin: String? = nil
@@ -359,11 +369,13 @@ public struct LedgerPublishExtras: Sendable, Equatable {
         origin: String? = nil,
         tags: [String] = [],
         source: Provenance? = nil,
-        authoring: Authoring? = nil
+        authoring: Authoring? = nil,
+        supersedesAlso: [String] = []
     ) {
         self.cites = cites
         self.observes = observes
         self.supersedes = supersedes
+        self.supersedesAlso = supersedesAlso
         self.retracts = retracts
         self.batch = batch
         self.origin = origin

@@ -7,7 +7,7 @@
 | world | 독립 원장 하나. 이름(`gujo-wiki`, `person-yun-jeonghan` 등)과 루트 디렉터리 경로로 등록된다 |
 | 객체(object) | world에 발행된 불변 마크다운 기록 하나. 프런트매터 + 본문 |
 | head | 아무도 supersede하지 않았고, 철회되지 않았으며, 스스로 철회 기록도 아닌 객체. 목록·검색의 기본 대상이다 |
-| 개정 | 새 객체가 `supersedes: <옛 id>`를 달고 발행되는 것. 옛 객체는 그대로 남고 head에서만 빠진다 |
+| 개정 | 새 객체가 `supersedes: <옛 id>`를 달고 발행되는 것. 옛 객체는 그대로 남고 head에서만 빠진다. 갈라진 개정 여럿은 병합 개정 하나가 `supersedes-also: <id>` 줄로 함께 대체한다(결정 0005) |
 | 철회 | 새 객체가 `retracts: <id>`를 달고 발행되는 것. 대상과 철회 기록 둘 다 head가 아니다 |
 | 인용(cite) | `cite: <id> <rel>` 줄. rel을 생략하면 `cites`다 |
 | 선별(screening) | 다른 객체를 `screens` 관계로 인용하고 본문에 `domain`·`kind`·`knowledge`를 적은 분류 기록 |
@@ -19,7 +19,7 @@
 ## 객체 정체성
 
 - 새 객체의 `ledger`는 2이고, id는 `sha256(canonicalCore)`의 64자리 소문자 16진수다.
-- canonicalCore는 다음 순서의 줄을 `\n`으로 이은 뒤 `\n---\n`과 본문을 붙인 문자열이다: `ledger`, `published`(ms 정밀 ISO8601 UTC), `author`, 있으면 `title`, `type`, `batch`, `origin`, `tags`, 각 `cite`, 각 `observes`, `supersedes`, `retracts`, `source`(JSON 한 줄), 그리고 모르는 필드 줄.
+- canonicalCore는 다음 순서의 줄을 `\n`으로 이은 뒤 `\n---\n`과 본문을 붙인 문자열이다: `ledger`, `published`(ms 정밀 ISO8601 UTC), `author`, 있으면 `title`, `type`, `batch`, `origin`, `tags`, 각 `cite`, 각 `observes`, `supersedes`, `retracts`, `source`(JSON 한 줄), 각 `supersedes-also`, 그리고 모르는 필드 줄. `supersedes-also` 는 옛 파서가 모르는 필드로 보존하는 자리에 두어 옛 판도 같은 id 를 계산한다.
 - `id`, `sha256`(본문 해시), `authoring`(저작 런타임·비용 정보)은 코어에 들어가지 않는다. 같은 내용을 다른 비용으로 썼다고 다른 객체가 되지 않는다.
 - 제목과 태그는 발행 시 NFC로 정규화된다. 본문은 정규화하지 않는다.
 - 같은 id의 파일이 이미 있을 때 바이트가 완전히 같으면 발행은 성공하고 기존 객체를 돌려준다(멱등). 바이트가 다르면 `duplicateID`로 실패한다.
@@ -29,7 +29,7 @@
 ## 발행 규칙
 
 - 본문은 표준 입력으로 받는다. 본문이 비어 있으면 거부한다. 단 `--retracts`가 있는 발행은 본문이 비어도 된다.
-- `--supersedes`, `--retracts`, `--cite`가 가리키는 id는 발행 시점에 존재해야 한다. 없으면 "없는 객체 참조"로 거부한다.
+- `--supersedes`(반복 포함), `--retracts`, `--cite`가 가리키는 id는 발행 시점에 존재해야 한다. 없으면 "없는 객체 참조"로 거부한다.
 - 인용은 같은 world 또는 그 상위 world(parent → parent의 parent …)의 객체만 허용한다. 하위 world, 형제 테넌트 world, 관계없는 world의 객체를 인용하면 거부한다.
 - 승격 대상 world(`--to`)는 현재 world의 parent 사슬에 있어야 한다. parent가 없는 world(예: parent 미설정 repo world)는 등록된 대상 world면 허용한다. `--to gujo`는 `gujo-wiki`로 읽는다.
 - `--kind scene-evidence`(또는 `--type scene-evidence`) 발행은 `--of <결정 id>`가 반드시 있어야 하고, 결정 객체를 인용하는 줄이 자동으로 붙는다. `--of`는 scene-evidence 발행 전용이다.

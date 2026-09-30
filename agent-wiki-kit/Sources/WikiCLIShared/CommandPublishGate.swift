@@ -143,7 +143,7 @@ private func runScopedPublish(
     }
     applyScopedSceneEvidenceLink(fields: &fields, body: &body, store: store)
     let allowed = scopedObjectIDs(currentWorld: worldName, catalog: catalog)
-    for ref in ([fields.supersedes, fields.retracts].compactMap { $0 } + fields.cites.map(\.id))
+    for ref in (fields.allSupersedes + [fields.retracts].compactMap { $0 } + fields.cites.map(\.id))
     where !allowed.contains(ref) {
         fail(copy.missingRef(ref))
     }
@@ -159,7 +159,8 @@ private func runScopedPublish(
                 supersedes: fields.supersedes,
                 retracts: fields.retracts,
                 origin: fields.origin,
-                tags: fields.tags + fields.aliases.map { "alias:" + $0 }))
+                tags: fields.tags + fields.aliases.map { "alias:" + $0 },
+                supersedesAlso: fields.supersedesAlso))
         syncIndexAfterWrite(store)
         print(object.id) // allow:debug
     } catch {

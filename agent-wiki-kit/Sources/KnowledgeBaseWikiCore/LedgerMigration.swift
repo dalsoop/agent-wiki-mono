@@ -27,7 +27,7 @@ public struct LedgerMigration {
         let byID = Dictionary(input.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         func objectRefs(_ object: LedgerObject) -> [String] {
-            (object.cites.map(\.id) + [object.supersedes, object.retracts].compactMap { $0 })
+            (object.cites.map(\.id) + object.allSupersedes + [object.retracts].compactMap { $0 })
                 .filter { objIDs.contains($0) }
         }
 
@@ -52,7 +52,7 @@ public struct LedgerMigration {
                 let newSupersedes = object.supersedes.map { remap[$0] ?? $0 }
                 let newRetracts = object.retracts.map { remap[$0] ?? $0 }
                 func build(id: String) -> LedgerObject {
-                    LedgerObject(id: id, published: object.published, author: object.author, title: object.title, type: object.type, body: object.body, extras: LedgerObject.Extras(batch: object.batch, origin: object.origin, tags: object.tags, cites: newCites, observes: object.observes, supersedes: newSupersedes, retracts: newRetracts, source: object.source, unknownFields: object.unknownFields))
+                    LedgerObject(id: id, published: object.published, author: object.author, title: object.title, type: object.type, body: object.body, extras: LedgerObject.Extras(batch: object.batch, origin: object.origin, tags: object.tags, cites: newCites, observes: object.observes, supersedes: newSupersedes, retracts: newRetracts, source: object.source, unknownFields: object.unknownFields, supersedesAlso: object.supersedesAlso.map { remap[$0] ?? $0 }))
                 }
                 let newID = build(id: "").contentID()
                 remap[oldID] = newID

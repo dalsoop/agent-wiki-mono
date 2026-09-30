@@ -31,7 +31,7 @@ public struct LedgerClassificationPolicy: Sendable {
 
     /// 원장에서 현재 유효한 기준선을 읽는다 — 최신 head policy 객체 하나.
     public static func current(objects: [LedgerObject], store: LedgerStore) -> LedgerClassificationPolicy {
-        let superseded = Set(objects.compactMap(\.supersedes))
+        let superseded = Set(objects.flatMap(\.allSupersedes))
         let retracted = Set(objects.compactMap(\.retracts))
         let head = objects
             .filter {
@@ -98,7 +98,7 @@ public struct LedgerClassificationPolicy: Sendable {
 
     /// 게이트 대상 중 분류가 없는 것들. `classified` 는 인덱스가 투영한 분류 보유 id 집합.
     public func unclassified(objects: [LedgerObject], classified: Set<String>) -> [LedgerObject] {
-        let superseded = Set(objects.compactMap(\.supersedes))
+        let superseded = Set(objects.flatMap(\.allSupersedes))
         let retracted = Set(objects.compactMap(\.retracts))
         return objects
             .filter { requiresClassification($0, retracted: retracted) && !superseded.contains($0.id) }

@@ -26,7 +26,7 @@
 | `--title <t>` | 제목. `근거:`, `결정:`, `개념:` 같은 접두어가 있고 `--type`이 없으면 type이 접두어에서 정해진다 |
 | `--type <t>` | 객체 type |
 | `--cite <id> [rel]` | 인용. rel을 생략하면 `cites`. 여러 번 줄 수 있다 |
-| `--supersedes <id>` / `--retracts <id>` | 개정 / 철회. 철회는 본문을 생략할 수 있다 |
+| `--supersedes <id>` / `--retracts <id>` | 개정 / 철회. 철회는 본문을 생략할 수 있다. `--supersedes` 를 반복하면 병합 개정이다(첫째가 주 부모, 나머지는 `supersedes-also:`, 결정 0005) |
 | `--observes <event id>` | 사건 로그 참조. 여러 번 줄 수 있다 |
 | `--tag <t>`, `--alias <a>` | 태그, `alias:<a>` 태그 |
 | `--origin <url|path>` | 출처 |
@@ -48,7 +48,7 @@
 | `status [--json]` | 없음 | world 이름, 객체 수, 최근 발행 |
 | `search <질의> [--json] [--fleet]` | 검색어 | 현재 world와 조상 world의 검색 결과. `--fleet`/`--remote`면 여러 world 또는 wiki-hub |
 | `context <질의>` | 질문 | 에이전트에 넣을 계층 컨텍스트 블록(텍스트) |
-| `history <id>` | id | supersedes 사슬(최신 → 과거) |
+| `history <id>` | id | supersedes 사슬(최신 → 과거). 병합 개정을 만나면 `↳ 병합: <id> 갈래` 아래에 그 부모의 계보를 들여 쓴다 |
 | `cited-by <id>` | id | 이 객체를 인용한 객체들 |
 | `path <id1> <id2>` | 두 id | 인용 경로(BFS) |
 | `root` | 없음 | world 루트 절대 경로 |

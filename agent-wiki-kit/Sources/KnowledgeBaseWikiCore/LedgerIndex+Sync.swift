@@ -115,11 +115,17 @@ extension LedgerIndex {
                 s.bind(1, o.id); s.bind(2, cite.id); s.bind(3, cite.rel); s.step()
             }
         }
+        for target in o.allSupersedes {
+            db.prepared("INSERT INTO supersedes_edges(src,dst) VALUES(?,?);") { s in
+                s.bind(1, o.id); s.bind(2, target); s.step()
+            }
+        }
     }
 
     private func deleteByID(_ id: String) {
         for sql in ["DELETE FROM objects WHERE id=?;", "DELETE FROM fts WHERE id=?;",
-                    "DELETE FROM cites WHERE src=?;", "DELETE FROM files WHERE id=?;"] {
+                    "DELETE FROM cites WHERE src=?;", "DELETE FROM files WHERE id=?;",
+                    "DELETE FROM supersedes_edges WHERE src=?;"] {
             db.prepared(sql) { $0.bind(1, id); $0.step() }
         }
     }
@@ -137,7 +143,7 @@ extension LedgerIndex {
         db.exec("UPDATE objects SET domain=NULL, kind=NULL, knowledge=NULL;")
         // successor 맵
         var successor: [String: String] = [:]
-        db.prepared("SELECT id, supersedes FROM objects WHERE supersedes IS NOT NULL;") { stmt in
+        db.prepared("SELECT src, dst FROM supersedes_edges;") { stmt in
             while stmt.step() {
                 if let sup = stmt.text(1), let id = stmt.text(0) { successor[sup] = id }
             }
@@ -150,7 +156,7 @@ extension LedgerIndex {
             WHERE c.rel='screens'
               AND s.type='screening'
               AND s.retracts IS NULL
-              AND s.id NOT IN (SELECT supersedes FROM objects WHERE supersedes IS NOT NULL)
+              AND s.id NOT IN (SELECT dst FROM supersedes_edges)
               AND s.id NOT IN (SELECT retracts FROM objects WHERE retracts IS NOT NULL);
             """) { stmt in
             while stmt.step() { if let id = stmt.text(0) { stampIDs.append(id) } }

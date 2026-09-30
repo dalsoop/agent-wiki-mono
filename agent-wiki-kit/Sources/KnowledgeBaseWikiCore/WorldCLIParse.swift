@@ -133,10 +133,15 @@ public struct WorldScopedPublishFields: Equatable, Sendable {
     public var cites: [LedgerObject.Cite]
     public var observes: [String]
     public var supersedes: String?
+    /// `--supersedes` 를 두 번 이상 주면 두 번째부터 여기에 쌓인다(병합 개정, `LedgerObject.supersedesAlso`).
+    public var supersedesAlso: [String] = []
     public var retracts: String?
     /// scene-evidence 역링크 대상 결정 객체 id (`--of`).
     public var ofDecision: String?
     public var unknownOption: String?
+
+    /// 이 발행이 대체하는 모든 개정.
+    public var allSupersedes: [String] { (supersedes.map { [$0] } ?? []) + supersedesAlso }
 
     public init(
         title: String? = nil,
@@ -185,7 +190,8 @@ public enum WorldScopedPublishArgs {
             case "--tag": fields.tags.append(value)
             case "--alias": fields.aliases.append(value)
             case "--observes": fields.observes.append(value)
-            case "--supersedes": fields.supersedes = value
+            case "--supersedes":
+                if fields.supersedes == nil { fields.supersedes = value } else { fields.supersedesAlso.append(value) }
             case "--retracts": fields.retracts = value
             case "--of": fields.ofDecision = value
             case "--batch": break

@@ -27,7 +27,7 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
   init <경로>                      원장 루트 지정·생성
   capture <url> [--title <제목>]   웹 원자료 수집 → 수집함(트리아지 대기)으로 발행. 본문은 stdin(발췌)
   publish [--title <제목>] [--type <유형>] [--origin <url>] [--tag <tag>|--alias <별칭>]...
-          [--cite <id> [rel]]... [--observes <event-id>]... [--supersedes <id>]
+          [--cite <id> [rel]]... [--observes <event-id>]... [--supersedes <id>]...
           [--retracts <id>] [--batch <id>] [--domain <d> --kind <k> --knowledge <n>
           --classification-reason <근거>] [--allow-unclassified]
                                   stdin 본문으로 새 객체 발행. 3축+근거를 주면 선별 객체도 같은 batch에 자동 발행
@@ -35,7 +35,7 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
                                   기존 객체에 선별 객체를 발행. 기존 선별은 개정해 최신 분류만 투영
   show <id접두어|제목>             객체 출력(본문 포함) — id 접두어 또는 제목 부분일치
   list [--all] [--json]           head 목록(--all 이면 전체, 시간순)
-  history <id접두어>               개정 계보(supersedes 사슬)
+  history <id접두어>               개정 계보(supersedes 사슬, 병합 개정은 갈래도)
   cited-by <id접두어>              이 객체를 인용한 객체들
   rollback <batch-id>             작업 묶음 일괄 롤백(재발행/철회 — 역사에 남음)
   search <질의어> [--fleet] [--as-agent <id>] [--domain <d>] [--kind <k>] [--knowledge <tech|domain|preference>] [--limit N] [--json]

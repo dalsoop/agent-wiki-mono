@@ -29,7 +29,7 @@ extension LedgerStore {
         let byID = Dictionary(uniqueKeysWithValues: objects.map { ($0.id, $0) })
 
         // 1. 이미 supersede되었거나 retract된 객체, 또는 본인이 철회 객체인 것은 제외
-        let superseded = Set(objects.compactMap(\.supersedes))
+        let superseded = Set(objects.flatMap(\.allSupersedes))
         let retracted = Set(objects.compactMap(\.retracts))
 
         // 2. targetAuthor가 작성한 유효 객체 필터링 (since 조건 포함)

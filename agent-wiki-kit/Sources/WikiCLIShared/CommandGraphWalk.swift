@@ -23,7 +23,7 @@ private func buildAdjacency(
                 adjacency[object.id, default: []].append((cite.id, cite.rel + " →"))
                 adjacency[cite.id, default: []].append((object.id, "← " + cite.rel))
             }
-            if let target = object.supersedes {
+            for target in object.allSupersedes {
                 adjacency[object.id, default: []].append((target, "supersedes →"))
                 adjacency[target, default: []].append((object.id, "← supersedes"))
             }
@@ -76,14 +76,31 @@ public func runHistory(store: LedgerStore, arguments: [String]) {
     guard arguments.count >= 2 else { fail(usage) }
     let target = resolve(store, arguments[1])
     if let index = freshIndex(store) {   // 인덱스로 supersedes 사슬 순회(파일 스캔 0)
-        for (i, r) in index.lineage(of: target.id).enumerated() {
-            print("\(i == 0 ? "→" : " ")\(r.id.prefix(8))  \(r.published)  \(r.author)  \(r.title ?? "")") // allow:debug
-        }
+        printIndexHistory(index, from: target.id, indent: "", marker: "→")
         return
     }
     let objects = store.scan()
-    for (index, object) in store.lineage(objects, of: target.id).enumerated() {
-        print("\(index == 0 ? "→" : " ")\(object.id.prefix(8))  \(LedgerObject.iso.string(from: object.published))  \(object.author)  \(object.title ?? "")") // allow:debug
+    printScanHistory(store, objects, from: target.id, indent: "", marker: "→")
+}
+
+/// 주 계보(supersedes)를 한 줄씩, 병합 개정(supersedes-also)을 만나면 그 부모 계보를 들여 써서 함께 보인다.
+private func printIndexHistory(_ index: LedgerIndex, from id: String, indent: String, marker: String) {
+    for (i, r) in index.lineage(of: id).enumerated() {
+        print("\(indent)\(i == 0 ? marker : " ")\(r.id.prefix(8))  \(r.published)  \(r.author)  \(r.title ?? "")") // allow:debug
+        for parent in index.mergeParents(of: r.id) {
+            print("\(indent)   ↳ 병합: \(parent.prefix(8)) 갈래") // allow:debug
+            printIndexHistory(index, from: parent, indent: indent + "     ", marker: " ")
+        }
+    }
+}
+
+private func printScanHistory(_ store: LedgerStore, _ objects: [LedgerObject], from id: String, indent: String, marker: String) {
+    for (i, object) in store.lineage(objects, of: id).enumerated() {
+        print("\(indent)\(i == 0 ? marker : " ")\(object.id.prefix(8))  \(LedgerObject.iso.string(from: object.published))  \(object.author)  \(object.title ?? "")") // allow:debug
+        for parent in object.supersedesAlso {
+            print("\(indent)   ↳ 병합: \(parent.prefix(8)) 갈래") // allow:debug
+            printScanHistory(store, objects, from: parent, indent: indent + "     ", marker: " ")
+        }
     }
 }
 
