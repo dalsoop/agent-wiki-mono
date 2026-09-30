@@ -18,7 +18,7 @@ import Observation
 public final class VPNGateModel {
     /// 켜야 하는 터널(이름/ID). nil 이면 프롬프트 없음.
     public private(set) var pendingTunnel: String?
-    /// 프롬프트에 보여줄 대상 호스트 설명(예: "proxmox (root@10.0.50.1)").
+    /// 프롬프트에 보여줄 대상 호스트 설명(예: "db-host (root@db.example.internal)").
     public private(set) var hostLabel: String = ""
     public private(set) var connecting = false
     public private(set) var lastError: String?

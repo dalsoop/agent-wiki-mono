@@ -132,9 +132,130 @@ final class StateRootKitTests: XCTestCase {
     func testCustomerRoomStorageSSOT() {
         let tempHome = NSTemporaryDirectory() + "state-root-customer-test-\(UUID().uuidString)"
         let storageURL = StateRootKit.ensureCustomerRoomStorage(slug: "test-app", homeDirectory: tempHome)
-        XCTAssertTrue(storageURL.path.contains("net.ranode.shared/rooms/room-default/test-app"))
+        XCTAssertTrue(storageURL.path.contains("net.ranode.shared/test-app"))
+        XCTAssertFalse(storageURL.path.contains("/rooms/"))
         XCTAssertTrue(FileManager.default.fileExists(atPath: storageURL.path))
         try? FileManager.default.removeItem(atPath: tempHome)
+    }
+
+    func testNoRoomAliasesAndExplicitRoomPaths() {
+        let tempHome = NSTemporaryDirectory() + "state-root-paths-\(UUID().uuidString)"
+        let expected = tempHome + "/Library/Application Support/net.ranode.shared/test-app"
+
+        XCTAssertEqual(StateRootKit.customerAppStorageURL(slug: "test-app", homeDirectory: tempHome).path, expected)
+        for alias in ["room:default", "room-default", "default", "", "   \n"] {
+            XCTAssertTrue(StateRootKit.isLegacyDefaultRoomID(alias))
+            XCTAssertEqual(
+                StateRootKit.customerAppStorageURL(slug: "test-app", roomID: alias, homeDirectory: tempHome).path,
+                expected
+            )
+        }
+        XCTAssertEqual(
+            StateRootKit.customerAppStorageURL(
+                slug: "test-app",
+                roomID: "BD400651-BA69-4607-A9EA-7A91E3C5DC6E",
+                homeDirectory: tempHome
+            ).path,
+            tempHome + "/Library/Application Support/net.ranode.shared/rooms/BD400651-BA69-4607-A9EA-7A91E3C5DC6E/test-app"
+        )
+    }
+
+    func testPromotesEachLegacyNoRoomDirectory() throws {
+        for legacyRoom in ["room-default", "room:default"] {
+            let home = FileManager.default.temporaryDirectory
+                .appendingPathComponent("state-root-promote-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: home) }
+            let source = legacyStorageURL(home: home, room: legacyRoom)
+            try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+            try Data("legacy".utf8).write(to: source.appendingPathComponent("marker"))
+
+            let result = StateRootKit.promoteLegacyNoRoomStorage(slug: "test-app", homeDirectory: home.path)
+            let destination = StateRootKit.noRoomAppStorageURL(slug: "test-app", homeDirectory: home.path)
+            XCTAssertEqual(result, .promoted(from: source, to: destination, leftBehind: nil))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("marker").path))
+            // 옛 경로는 새 저장소를 가리키는 호환 심링크다 — 옛 빌드가 옛 경로로 써도 새 저장소에 들어간다.
+            let linkTarget = try FileManager.default.destinationOfSymbolicLink(atPath: source.path)
+            XCTAssertEqual(URL(fileURLWithPath: linkTarget).standardizedFileURL.path, destination.path)
+            try Data("from-old-build".utf8).write(to: source.appendingPathComponent("written-by-old-build"))
+            XCTAssertTrue(FileManager.default.fileExists(
+                atPath: destination.appendingPathComponent("written-by-old-build").path))
+            XCTAssertEqual(
+                StateRootKit.promoteLegacyNoRoomStorage(slug: "test-app", homeDirectory: home.path),
+                .noLegacyStorage
+            )
+        }
+    }
+
+    func testPromotionChoosesNewerStateAndLeavesOlderLegacy() throws {
+        let home = FileManager.default.temporaryDirectory
+            .appendingPathComponent("state-root-newer-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: home) }
+        let older = legacyStorageURL(home: home, room: "room-default")
+        let newer = legacyStorageURL(home: home, room: "room:default")
+        try FileManager.default.createDirectory(at: older, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: newer, withIntermediateDirectories: true)
+        let oldState = older.appendingPathComponent("state.json")
+        let newState = newer.appendingPathComponent("state.json")
+        try Data("old".utf8).write(to: oldState)
+        try Data("new".utf8).write(to: newState)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 100)], ofItemAtPath: oldState.path)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 200)], ofItemAtPath: newState.path)
+
+        let destination = StateRootKit.noRoomAppStorageURL(slug: "test-app", homeDirectory: home.path)
+        XCTAssertEqual(
+            StateRootKit.promoteLegacyNoRoomStorage(slug: "test-app", homeDirectory: home.path),
+            .promoted(from: newer, to: destination, leftBehind: older)
+        )
+        XCTAssertEqual(try Data(contentsOf: destination.appendingPathComponent("state.json")), Data("new".utf8))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: older.path))
+        XCTAssertEqual(
+            StateRootKit.promoteLegacyNoRoomStorage(slug: "test-app", homeDirectory: home.path),
+            .destinationAlreadyExists(destination)
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: older.path))
+    }
+
+    func testPromotionDoesNothingWhenNoRoomDestinationExists() throws {
+        let home = FileManager.default.temporaryDirectory
+            .appendingPathComponent("state-root-existing-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: home) }
+        let source = legacyStorageURL(home: home, room: "room-default")
+        let destination = StateRootKit.noRoomAppStorageURL(slug: "test-app", homeDirectory: home.path)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+
+        XCTAssertEqual(
+            StateRootKit.promoteLegacyNoRoomStorage(slug: "test-app", homeDirectory: home.path),
+            .destinationAlreadyExists(destination)
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    func testPromotionRefusesInjectedRealHomeBoundaryDuringTests() throws {
+        let simulatedRealHome = FileManager.default.temporaryDirectory
+            .appendingPathComponent("state-root-simulated-real-home-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: simulatedRealHome) }
+        let source = legacyStorageURL(home: simulatedRealHome, room: "room-default")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        let destination = StateRootKit.noRoomAppStorageURL(slug: "test-app", homeDirectory: simulatedRealHome.path)
+
+        let result = StateRootKit.promoteLegacyNoRoomStorage(
+            slug: "test-app",
+            homeDirectory: simulatedRealHome.path,
+            environment: ["SWIFT_TESTING_ENABLED": "1"],
+            processName: "fixture",
+            realHomeDirectory: simulatedRealHome.path
+        )
+
+        XCTAssertEqual(result, .refusedUnsafeTestHome(destination))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    private func legacyStorageURL(home: URL, room: String) -> URL {
+        home.appendingPathComponent("Library/Application Support/net.ranode.shared/rooms", isDirectory: true)
+            .appendingPathComponent(room, isDirectory: true)
+            .appendingPathComponent("test-app", isDirectory: true)
     }
 
     func testStandardUrlAndPathLabeled() {
@@ -167,7 +288,11 @@ final class StateRootKitTests: XCTestCase {
     func testEnsureStateDirectory() throws {
         let tempHome = NSTemporaryDirectory() + "state-root-ensure-\(UUID().uuidString)"
         defer { try? FileManager.default.removeItem(atPath: tempHome) }
-        let dir = try StateRootKit.ensureStateDirectory(for: "sample-tool", homeDirectory: tempHome)
+        let dir = try StateRootKit.ensureStateDirectory(
+            for: "sample-tool",
+            environment: [:],
+            homeDirectory: tempHome
+        )
         XCTAssertTrue(FileManager.default.fileExists(atPath: dir.path))
         XCTAssertEqual(dir.path, tempHome + "/.sample-tool")
     }
@@ -203,4 +328,3 @@ final class StateRootKitTests: XCTestCase {
         XCTAssertEqual(configPath, home + "/.config/tool.json")
     }
 }
-

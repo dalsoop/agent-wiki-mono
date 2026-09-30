@@ -64,15 +64,16 @@ private func resolveWhisperModel(_ override: String?) -> String? {
     return firstExisting(candidates)
 }
 
-/// 원격 whisper 서버 URL — 환경변수 override, 없으면 gujo 50서버(faster-whisper-large-v3, OpenAI 호환).
-/// health(GET /health)가 200 이면 쓸 수 있다고 본다.
-private var defaultWhisperHost: String {
-    ProcessInfo.processInfo.environment["MEMO_WHISPER_URL"]
-        ?? ["http://", "whisper.50", ".internal.kr"].joined() // allow:gujo-endpoint
+/// 원격 whisper 서버 URL(OpenAI 호환) — `MEMO_WHISPER_URL` 로만 정한다. 기본 서버는 없다
+/// (옛 내부망 whisper 서버는 2026-09-25 퇴역). health(GET /health)가 200 이면 쓸 수 있다고 본다.
+private var configuredWhisperHost: String? {
+    let value = ProcessInfo.processInfo.environment["MEMO_WHISPER_URL"]?
+        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return value.isEmpty ? nil : value
 }
 
 private func remoteWhisperURL() -> String? {
-    let base = defaultWhisperHost
+    guard let base = configuredWhisperHost else { return nil }
     let code = runTool("/usr/bin/curl", ["-s", "-m", "4", "-o", "/dev/null", "-w", "%{http_code}", base + "/health"], timeout: 8)
     return code.out.trimmingCharacters(in: .whitespaces) == "200" ? base : nil
 }
@@ -167,18 +168,19 @@ func extractFromFile(_ path: String, whisperModel: String?) -> Extracted {
         let text = String(data: raw, encoding: .utf8) ?? ""
         return Extracted(text: text, kind: "text", authoredAt: fileModifiedDay(path), rawBytes: raw)
     case "mp3", "m4a", "wav", "aac", "mp4", "mov", "m4v", "flac", "ogg", "webm":
-        // 1순위: 원격 whisper 서버(gujo 50서버 faster-whisper-large-v3). 2순위: 로컬 whisper-cli+모델.
+        // 1순위: 원격 whisper 서버(MEMO_WHISPER_URL, 기본 없음). 2순위: 로컬 whisper-cli+모델.
         let text: String
         if let base = remoteWhisperURL() {
             text = transcribeRemote(path, base: base)
         } else if let model = resolveWhisperModel(whisperModel) {
             text = transcribeAudio(path, model: model)
         } else {
+            let remoteReason = configuredWhisperHost.map { "whisper 서버가 안 닿음(MEMO_WHISPER_URL=\($0))" }
+                ?? "MEMO_WHISPER_URL 미설정(기본 서버 없음)"
             fail("""
             오디오/영상 전사 수단이 없습니다:
-              · 원격: whisper 서버가 안 닿음(MEMO_WHISPER_URL, 기본 \(defaultWhisperHost))
+              · 원격: \(remoteReason)
               · 로컬: whisper 모델 없음(--model <경로> 또는 MEMO_WHISPER_MODEL)
-            50서버가 켜져 있으면 자동으로 원격 전사합니다.
             """)
         }
         return Extracted(text: text, kind: "audio", authoredAt: fileModifiedDay(path), rawBytes: raw)

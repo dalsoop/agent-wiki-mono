@@ -8,10 +8,11 @@
 | 축 | 정본 |
 |---|---|
 | 호스트 | EndpointRouterKit `gujo-core` 키(`EndpointRouter.gujoCore`). 앱은 하드코딩 금지, `GUJO_ENDPOINT_GUJO_CORE` env 로 재지정 |
-| 스태프 세션 | Keychain service `net.ranode.gujo` · account `staff` (토큰·abilities·expires_at JSON) |
-| 구매자 세션 | 같은 service · account `buyer` |
+| 기계 주체 토큰 | 계약 §6. sops 암호문 `value` 를 `sops decrypt` 로 읽는다. 경로는 `GUJO_STAFF_TOKEN_SOPS_FILE`, 없으면 environment-secret-broker 전용 클론(상태 루트 `.environment-secret-broker/principal-secrets-mono`)과 사람 작업 사본(`~/Documents/…/principal-secrets-mono/main`) 중 최근에 바뀐 쪽. **사람 세션보다 먼저**, 파일이 바뀔 때만 다시 복호화, 원문은 메모리에만. 로테이션(`rotateMachineToken`)은 일회용 X25519 키로 봉인된 응답(`SealedTokenBox`)만 받는다 |
+| 스태프 세션 | **Keychain 에 두지 않는다**(결정 7). Secure Enclave 키(age-plugin-se, 이 맥의 macbook 주체)로 `age -a` 암호화한 파일 `<상태 루트>/.gujo-auth/sessions/staff.json.age`(0600, 폴더 0700). 토큰·abilities·expires_at·refresh_token JSON. 옛 Keychain(`net.ranode.gujo`/`staff`) 항목은 첫 읽기에서 옮기고 지운다 |
+| 구매자 세션 | **의도적 차이**: 운영자 맥(SE 식별자가 있는 맥)은 같은 파일 저장소 · account `buyer`, 구매자 맥은 Keychain `net.ranode.gujo`/`buyer`(gh CLI 등 상용 클라이언트와 같은 표준). 키체인 미사용은 운영자 자신의 비밀 규칙이다. 운영자 맥의 내부 도구는 이 파일에서 배포 v1 기기 키를 읽는다 |
 | 러너·CI 폴백 | agent-vault 카드 `tenant:gujo` 필드 `staff-token` — Keychain 이 비었을 때만, GUI 는 항상 device-code 우선 |
-| env | **읽지 않는다.** `GUJO_STAFF_TOKEN`·`GUJO_OPS_TOKEN`·`GUJO_INTAKE_TOKEN`·`GUJO_SKILL_STORE_TOKEN` 은 `importLegacy()` 일회성 이관에서만 본다 |
+| env | 토큰 원문은 **읽지 않는다**(`GUJO_STAFF_TOKEN_SOPS_FILE`·`SOPS_AGE_KEY_FILE` 은 암호문·식별자 경로). `GUJO_STAFF_TOKEN`·`GUJO_OPS_TOKEN`·`GUJO_INTAKE_TOKEN`·`GUJO_SKILL_STORE_TOKEN` 은 `importLegacy()` 일회성 이관에서만 본다 |
 | 사용자 프롬프트 | `user_code`·`verification_uri` 는 `present` 훅으로 앱에 전달. 킷은 터미널에 출력하지 않는다 |
 
 ## GujoAuthKit
@@ -24,7 +25,9 @@ let session = try await GujoAuth.staff.login(client: "gujo-commerce-desk") { pro
     await MainActor.run { model.deviceCodePrompt = prompt }   // userCode · verificationURI · expiresAt
 }
 
-let current = try await GujoAuth.staff.current()             // Keychain → agent-vault 폴백
+let current = try await GujoAuth.staff.current()             // 기계 주체 토큰 → Keychain → agent-vault 폴백
+let bearer = GujoAuth.staff.bearerToken()                    // 네트워크 없이 요청에 붙일 토큰(기계 주체 → 사람 세션)
+let fresh = try await GujoAuth.staff.freshBearerToken()      // 만료된 사람 세션은 갱신 토큰으로 먼저 갱신(계약 §7)
 try await GujoAuth.staff.require(.ordersRefund)              // 없으면 .missingAbility(.ordersRefund)
 await GujoAuth.staff.logout()                                // 로컬 삭제 + POST /api/staff/logout(204)
 let report = await GujoAuth.staff.importLegacy()             // env/파일 → Keychain, 삭제 안내 반환
@@ -32,7 +35,7 @@ let report = await GujoAuth.staff.importLegacy()             // env/파일 → K
 
 - 서버 경로: `POST /api/staff/device/authorize` → `POST /api/staff/device/token` 폴링
   (200 승인 · 428 대기 · 429 slow_down · 410 expired_token · 403 access_denied), `GET /api/staff/me`, `POST /api/staff/logout`.
-- `StaffAbility` 는 서버 ability 이름과 1:1(PascalCase 30개). 새 ability 는 서버·킷을 같은 MR 에서 올린다.
+- `StaffAbility` 는 서버 ability 이름과 1:1(PascalCase 32개, 조회 전용 `ProductsRead`·`OffersRead` 포함). 새 ability 는 서버·킷을 같은 MR 에서 올린다.
 - `GujoAuthError.missingAbility` 의 설명문은 ability 이름을 포함한다 — 앱 오류 표면이 그대로 보여준다.
 - 구매자 흐름(`/api/cli/device/*`)은 `GujoAuth.buyer` 로 같은 모양이다.
 - `importLegacy()` 는 `gst_` 토큰만 `/api/staff/me` 로 검증해 받아들이고, 옛 토큰(`ops`·`intake`·`skill-store`)은
@@ -57,7 +60,7 @@ try await api.intake.storeReleasesIntake(ReleaseIntake(slug: "s", version: "1.0.
 try await api.skills.publish(SkillPublish(slug: "my-skill", version: "2.0.0", manifest: manifest))
 ```
 
-- 네임스페이스: `commerce`(customers·products·orders·subscriptions·events) · `support`(inquiries·reports) ·
+- 네임스페이스: `commerce`(customers·products·orders·subscriptions·events) · `support`(inquiries: index·show·reply·close·reopen·attachmentLink — core 계약 §5) ·
   `ops`(health·packages·devices·installJobs·runners·receiptsIngest·audit) · `intake`(store·lecture) ·
   `skills`(publish·delete·deprecate).
 - 라우트 정본은 `GujoStaffRoutes` 한 곳(`/api/commerce/staff`, `/api/support/staff`, `/ops/v1`,

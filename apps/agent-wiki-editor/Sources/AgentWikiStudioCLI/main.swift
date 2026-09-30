@@ -9,6 +9,7 @@ import CommandKit
 @main
 enum AgentWikiStudioCLIMain {
     static func main() async {
+        SingleInstanceCLI.autoGuard()
         let args = Array(CommandLine.arguments.dropFirst())
         let cmd = args.first ?? "help"
 
@@ -19,13 +20,12 @@ enum AgentWikiStudioCLIMain {
 
                 full agent-wiki 프록시 + dual-entry 승계.
                 Built-in: capabilities | version | help | open | status
-                          dual-entry status|adopt [--dry-run] [--no-install]
+                          dual-entry status  (adopt 는 안내만 — PATH 연결은 배포 도구)
                           list | search | show | task | promotion | publish | unpublish | archive | delete
 
                 agent-wiki-studio status
                 agent-wiki-studio dual-entry status
                 agent-wiki-studio dual-entry status --json
-                agent-wiki-studio dual-entry adopt --dry-run
                 agent-wiki-studio list
                 agent-wiki-studio search <query>
                 agent-wiki-studio show <id>
@@ -38,8 +38,6 @@ enum AgentWikiStudioCLIMain {
                 """
             )
         }
-
-SingleInstanceCLI.autoGuard()
 
         switch cmd {
         case "help", "-h", "--help":
@@ -117,17 +115,34 @@ SingleInstanceCLI.autoGuard()
         }
     }
 
-    /// dual-entry status | adopt [--dry-run] [--no-install] [--json]
+    /// dual-entry status [--json]. adopt 는 옛 호출자 호환용 안내이며 --dry-run·--no-install 은 받되 무시한다.
     static func runDualEntrySubcommand(_ args: [String]) {
         let parsed = parseDualEntryArgs(args)
         switch parsed.sub {
         case "status":
             emitDualEntryStatus(json: parsed.json)
         case "adopt":
-            emitDualEntryAdopt(dryRun: parsed.dryRun, runPathInstall: !parsed.noInstall, json: parsed.json)
+            // PATH 쓰기는 배포 도구가 유일한 주체 — 안내만 하고 0 으로 끝난다(옛 호출자 호환).
+            let message = "dual-entry adopt is a no-op: PATH linking is done only by the deploy tool (app-build-manager)"
+            if parsed.json {
+                emitAdoptNoticeJSON(message)
+            } else {
+                print(message)
+            }
+            exit(0)
         default:
-            fputs("usage: agent-wiki-studio dual-entry status|adopt [--dry-run] [--no-install] [--json]\n", stderr)
+            fputs("usage: agent-wiki-studio dual-entry status [--json]\n", stderr)
             exit(64)
+        }
+    }
+
+    private static func emitAdoptNoticeJSON(_ message: String) {
+        let obj: [String: Any] = ["ok": true, "message": message]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: obj, options: [.sortedKeys])
+            print(String(data: data, encoding: .utf8) ?? "{}")
+        } catch {
+            fputs("warning: dual-entry adopt encode: \(error.localizedDescription)\n", stderr)
         }
     }
 
@@ -141,7 +156,7 @@ SingleInstanceCLI.autoGuard()
     private static func dualEntryUsage() -> String {
         """
         agent-wiki-studio dual-entry status [--json]
-        agent-wiki-studio dual-entry adopt [--dry-run] [--no-install] [--json]
+        (adopt: no-op notice only; PATH linking is done by the deploy tool)
         """
     }
 
@@ -213,31 +228,5 @@ SingleInstanceCLI.autoGuard()
             if let p = st.paths.pathCLI { print("  PATH:    \(p)") }
         }
         exit(st.adopted ? 0 : 2)
-    }
-
-    private static func emitDualEntryAdopt(dryRun: Bool, runPathInstall: Bool, json: Bool) {
-        let r = DualEntryAdoption.adopt(dryRun: dryRun, runPathInstall: runPathInstall)
-        if json {
-            let obj: [String: Any] = [
-                "ok": r.ok,
-                "message": r.message,
-                "studioHelper": r.studioHelper as Any,
-                "pathCLI": r.pathCLI as Any,
-                "dryRun": r.dryRun,
-            ]
-            do {
-                let data = try JSONSerialization.data(
-                    withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]
-                )
-                if let text = String(data: data, encoding: .utf8) {
-                    print(text)
-                }
-            } catch {
-                fputs("warning: dual-entry adopt encode: \(error.localizedDescription)\n", stderr)
-            }
-        } else {
-            print(r.ok ? "OK \(r.message)" : "FAIL \(r.message)")
-        }
-        exit(r.ok ? 0 : 1)
     }
 }

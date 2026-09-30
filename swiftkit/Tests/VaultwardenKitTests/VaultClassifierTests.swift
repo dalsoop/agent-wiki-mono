@@ -18,7 +18,7 @@ struct VaultClassifierTests {
 
     @Test("주소 호스트로 태그를 붙인다")
     func hostBecomesTag() {
-        let item = VaultItem(id: "1", name: "회사 저장소", uri: "https://gitlab.ranode.net/x")
+        let item = VaultItem(id: "1", name: "회사 저장소", uri: "https://gitlab.com/gujoai/x")
         #expect(VaultClassifier.propose(items: [item], folders: folders).first?.proposedTags.contains("개발") == true)
     }
 

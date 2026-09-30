@@ -1,3 +1,4 @@
+import CommandKit
 import DualEntryKit
 import Foundation
 
@@ -82,15 +83,48 @@ public enum DualEntry: Sendable {
         DualEntryRules.readInstallStamp(profile: profile)
     }
 
+    /// 스탬프가 앱 버전과 같으면 스탬프를 쓴다. 다르면(배포 도구는 스탬프를 쓰지 않으므로 ship 직후 흔하다)
+    /// PATH CLI 의 `version` 을 한 번 다시 물어 실제 값을 쓴다. 스탬프 갱신은 CLI `version` 쪽 몫이라 여기서 쓰지 않는다.
     public static func installedCLIVersion(
         expected: String = LedgerVersion.current,
         allowProcessProbe: Bool = true
     ) -> String {
-        DualEntryRules.installedCLIVersion(
-            profile: profile,
+        resolveInstalledCLIVersion(
             expected: expected,
-            allowProcessProbe: allowProcessProbe
+            allowProcessProbe: allowProcessProbe,
+            readStamp: { readInstallStamp() },
+            probe: { probeCLIVersion() },
+            fallback: {
+                DualEntryRules.installedCLIVersion(
+                    profile: profile, expected: expected, allowProcessProbe: allowProcessProbe)
+            }
         )
+    }
+
+    /// 순수 판정부(프로세스·스탬프 파일은 주입). 테스트가 실제 홈을 건드리지 않게 분리했다.
+    static func resolveInstalledCLIVersion(
+        expected: String,
+        allowProcessProbe: Bool,
+        readStamp: () -> String?,
+        probe: () -> String?,
+        fallback: () -> String
+    ) -> String {
+        guard let stamp = readStamp(), !stamp.isEmpty else { return fallback() }
+        if stamp == expected || !allowProcessProbe { return stamp }
+        if let live = probe(), !live.isEmpty { return live }
+        return stamp
+    }
+
+    /// PATH CLI `version` 1회(2초 제한). 안전한 실 CLI 가 아니거나 실패하면 nil.
+    static func probeCLIVersion() -> String? {
+        guard let path = resolveCLIPath() else { return nil }
+        var env = ProcessInfo.processInfo.environment
+        if env[profile.versionProbeEnvKey] == "1" { return nil }
+        env[profile.versionProbeEnvKey] = "1"
+        let result = SafeProcessRunner.run(path, ["version"], environment: env, timeout: 2)
+        guard result.exitCode == 0 else { return nil }
+        let out = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return out.isEmpty || out.contains("error") ? nil : out
     }
 
     public typealias Diagnosis = DualEntryRules.Diagnosis

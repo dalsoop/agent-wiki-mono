@@ -1,7 +1,10 @@
 import Foundation
 import StateRootKit
 
-/// Attach / detach coding-agent skills for an app surface.
+/// Coding-agent skill surface rules.
+///
+/// **attach / detach 는 no-op 이다** (앱은 스킬·에이전트를 홈에 싣지 않는다 — 정본은 스킬 카탈로그).
+/// 시그니처만 호출부 호환용으로 남았다. status / resolve* / manifest IO 는 읽기 전용 조회다.
 ///
 /// - **SSOT for skill text**: host-skills-mono catalog when present.
 /// - **Seed fallback**: app-bundled `plugin/<skill>/SKILL.md` (or directory).
@@ -15,7 +18,7 @@ public enum AgentSurfaceRules {
         public var attached: [AttachedSkillRecord]
         public var skipped: [String]
         public var errors: [String]
-        public var ok: Bool { errors.isEmpty && !attached.isEmpty || (errors.isEmpty && skipped.isEmpty == false && attached.isEmpty == false) || (errors.isEmpty && !attached.isEmpty) }
+        public var ok: Bool { errors.isEmpty }
 
         public init(attached: [AttachedSkillRecord] = [], skipped: [String] = [], errors: [String] = []) {
             self.attached = attached
@@ -279,121 +282,11 @@ public enum AgentSurfaceRules {
         catalogRoots: [URL]?,
         home: URL
     ) throws -> AttachResult {
-        let fm = FileManager.default
-        let present = profile.homes.filter { $0.isPresent(home: home) }
-        var attached: [AttachedSkillRecord] = []
-        var skipped: [String] = []
-        var errors: [String] = []
-
-        if present.isEmpty {
-            return AttachResult(skipped: ["no agent homes present (~/.codex|claude|grok|agents)"])
-        }
-
-        var agentAttached: [AttachedSkillRecord] = []
-
-        for skill in profile.skills {
-            let catalog = resolveCatalogSkill(name: skill, catalogRoots: catalogRoots, home: home)
-            let bundled = resolveBundledSkill(
-                name: skill, bundle: seedBundle, seedRoot: seedRoot, seedRoots: seedRoots
-            )
-            let sourceURL: URL?
-            let modePreferred: String
-            if profile.preferCatalogSymlink, let catalog {
-                sourceURL = catalog
-                modePreferred = "symlink"
-            } else if let bundled {
-                sourceURL = bundled
-                modePreferred = "copy"
-            } else if let catalog {
-                sourceURL = catalog
-                modePreferred = "symlink"
-            } else {
-                errors.append("skill '\(skill)': no catalog or bundled seed")
-                continue
-            }
-            guard let sourceURL else { continue }
-            let skillMD = sourceURL.appendingPathComponent("SKILL.md")
-            guard fm.fileExists(atPath: skillMD.path) else {
-                errors.append("skill '\(skill)': missing SKILL.md at \(sourceURL.path)")
-                continue
-            }
-
-            for h in present where AgentCLILayout.forHome(h).attachesSkills {
-                let layout = AgentCLILayout.forHome(h)
-                let skillFile = layout.skillFile(name: skill, userHome: home)
-                let dest = skillFile.deletingLastPathComponent()
-                do {
-                    try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-                    if fm.fileExists(atPath: skillFile.path) {
-                        let isLink = (try? fm.destinationOfSymbolicLink(atPath: dest.path)) != nil
-                            || (try? fm.destinationOfSymbolicLink(atPath: skillFile.path)) != nil
-                        if isLink || bundled == nil {
-                            attached.append(AttachedSkillRecord(
-                                skill: skill, homeId: h.id, path: dest.path,
-                                mode: "preexisting", source: sourceURL.path))
-                            continue
-                        }
-                        // Leftover directory copy — refresh from this owner's seed.
-                        try fm.removeItem(at: dest)
-                    }
-                    if modePreferred == "symlink" {
-                        try fm.createSymbolicLink(at: dest, withDestinationURL: sourceURL)
-                        attached.append(AttachedSkillRecord(
-                            skill: skill, homeId: h.id, path: dest.path,
-                            mode: "symlink", source: sourceURL.path))
-                    } else {
-                        try fm.copyItem(at: sourceURL, to: dest)
-                        attached.append(AttachedSkillRecord(
-                            skill: skill, homeId: h.id, path: dest.path,
-                            mode: "copy", source: sourceURL.path))
-                    }
-                } catch {
-                    errors.append("\(h.id)/\(skill): \(error.localizedDescription)")
-                }
-            }
-        }
-
-        for agent in profile.agents {
-            guard let source = resolveAgentDefinition(name: agent, seedRoots: agentRoots) else {
-                errors.append("agent '\(agent)': no definition seed")
-                continue
-            }
-            for h in present where AgentCLILayout.forHome(h).attachesAgents {
-                let dest = AgentCLILayout.forHome(h).agentFile(name: agent, userHome: home)
-                do {
-                    try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-                    if fm.fileExists(atPath: dest.path) {
-                        let isLink = (try? fm.destinationOfSymbolicLink(atPath: dest.path)) != nil
-                        if isLink {
-                            agentAttached.append(AttachedSkillRecord(
-                                skill: agent, homeId: h.id, path: dest.path,
-                                mode: "preexisting", source: source.path))
-                            continue
-                        }
-                        try fm.removeItem(at: dest)
-                    }
-                    try fm.copyItem(at: source, to: dest)
-                    agentAttached.append(AttachedSkillRecord(
-                        skill: agent, homeId: h.id, path: dest.path,
-                        mode: "copy", source: source.path))
-                } catch {
-                    errors.append("\(h.id)/agent/\(agent): \(error.localizedDescription)")
-                }
-            }
-        }
-
-        let manifest = AgentSurfaceManifest(
-            ownerCLI: profile.ownerCLI,
-            skills: attached,
-            agents: agentAttached
-        )
-        attached.append(contentsOf: agentAttached)
-        try writeManifest(manifest, home: home)
-
-        if attached.isEmpty && errors.isEmpty {
-            skipped.append("nothing attached")
-        }
-        return AttachResult(attached: attached, skipped: skipped, errors: errors)
+        // 앱은 스킬·에이전트를 싣지 않는다. 홈 폴더 연결은 카탈로그 도구와 연결 담당 앱만 한다.
+        // 시그니처는 호출부 호환을 위해 남기고, 아무것도 쓰지 않고 성공을 돌려준다.
+        _ = profile; _ = seedBundle; _ = seedRoot; _ = seedRoots
+        _ = agentRoots; _ = catalogRoots; _ = home
+        return AttachResult(skipped: ["agent surface attach disabled: apps do not install skills or agents into agent homes"])
     }
 
     // MARK: - Detach
@@ -403,37 +296,9 @@ public enum AgentSurfaceRules {
         profile: AgentSurfaceProfile,
         home: URL = StateRootKit.url(for: "")
     ) throws -> AttachResult {
-        let fm = FileManager.default
-        guard let manifest = readManifest(ownerCLI: profile.ownerCLI, home: home) else {
-            return AttachResult(skipped: ["no manifest for \(profile.ownerCLI)"])
-        }
-        var removed: [AttachedSkillRecord] = []
-        var errors: [String] = []
-        for rec in manifest.skills + manifest.agents {
-            // host-skills / 사용자가 이미 둔 것은 건드리지 않음
-            if rec.mode == "preexisting" { continue }
-            let url = URL(fileURLWithPath: rec.path)
-            guard fm.fileExists(atPath: url.path) else { continue }
-            let isSkill = rec.path.contains("/skills/\(rec.skill)")
-                || rec.path.hasSuffix("/skills/\(rec.skill)")
-                || url.lastPathComponent == rec.skill
-            let isAgent = rec.path.contains("/agents/\(rec.skill).md")
-                || url.lastPathComponent == "\(rec.skill).md"
-            guard isSkill || isAgent else {
-                errors.append("refuse detach odd path: \(rec.path)")
-                continue
-            }
-            do {
-                try fm.removeItem(at: url)
-                removed.append(rec)
-            } catch {
-                errors.append("\(rec.path): \(error.localizedDescription)")
-            }
-        }
-        // Clear or rewrite empty manifest
-        let empty = AgentSurfaceManifest(ownerCLI: profile.ownerCLI, skills: [], agents: [])
-        try writeManifest(empty, home: home)
-        return AttachResult(attached: removed, errors: errors)
+        // 부착이 없으니 떼어낼 것도 없다. 예전 부착본 정리는 카탈로그 도구 몫이다.
+        _ = profile; _ = home
+        return AttachResult(skipped: ["agent surface detach disabled: nothing is attached by apps"])
     }
 
     // MARK: - Manifest IO

@@ -84,18 +84,18 @@ final class AgentSessionKitTests: XCTestCase {
         let u: [String: Any] = [
             "rawOutput": [
                 "command": "git remote -v",
-                "output_for_prompt": "origin\tgit@gitlab-ssh.internal.kr:x.git (fetch)\norigin push",
+                "output_for_prompt": "origin\tgit@gitlab.com:x.git (fetch)\norigin push",
             ],
             "content": [[
                 "type": "content",
-                "content": ["type": "text", "text": "origin\tgit@gitlab-ssh.internal.kr:x.git (fetch)\nnext"],
+                "content": ["type": "text", "text": "origin\tgit@gitlab.com:x.git (fetch)\nnext"],
             ]],
         ]
         AgentSessionKit.GrokSessionReader.absorbToolResult(u, into: &d)
         XCTAssertEqual(d.commands, ["git remote -v"])
         XCTAssertEqual(
             d.commandOutputs.first?.stdoutLine,
-            "origin\tgit@gitlab-ssh.internal.kr:x.git (fetch)"
+            "origin\tgit@gitlab.com:x.git (fetch)"
         )
     }
 

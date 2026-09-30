@@ -212,6 +212,7 @@ public enum PromotionError: Error, CustomStringConvertible, Equatable {
     case sameWorld
     case confirmationMismatch
     case malformedReceipt
+    case sourceReceiptWriteFailed(String)
 
     public var description: String {
         switch self {
@@ -224,6 +225,7 @@ public enum PromotionError: Error, CustomStringConvertible, Equatable {
         case .sameWorld: return "repo 원장과 공유 원장은 서로 달라야 함"
         case .confirmationMismatch: return "preview 확인 토큰 불일치 — preview를 다시 실행하세요"
         case .malformedReceipt: return "프로모션 영수증 JSON 생성 실패"
+        case .sourceReceiptWriteFailed(let reason): return "프로모션 원본 영수증 쓰기 실패: \(reason)"
         }
     }
 }
@@ -238,6 +240,7 @@ public struct PromotionPublishRequest: Sendable {
     public var promotedBy: String
     public var confirmationToken: String
     public var now: Date = Date()
+    public var simulateSourceReceiptFailure: Bool = false
 
     public init(
         sourceStore: LedgerStore,
@@ -248,7 +251,8 @@ public struct PromotionPublishRequest: Sendable {
         targetWorld: LedgerWorld,
         promotedBy: String,
         confirmationToken: String,
-        now: Date = Date()
+        now: Date = Date(),
+        simulateSourceReceiptFailure: Bool = false
     ) {
         self.sourceStore = sourceStore
         self.targetStore = targetStore
@@ -259,6 +263,7 @@ public struct PromotionPublishRequest: Sendable {
         self.promotedBy = promotedBy
         self.confirmationToken = confirmationToken
         self.now = now
+        self.simulateSourceReceiptFailure = simulateSourceReceiptFailure
     }
 }
 
@@ -364,6 +369,9 @@ public enum PromotionService {
             guard targetObjects.contains(where: { $0.id == existing.receipt.targetObjectId }) else {
                 throw PromotionError.malformedReceipt
             }
+            if request.simulateSourceReceiptFailure {
+                throw PromotionError.sourceReceiptWriteFailed("시뮬레이션된 원본 영수증 쓰기 실패")
+            }
             let sourceReceipt = try ensureSourceReceipt(
                 existing.receipt, sourceStore: sourceStore, promotedBy: promotedBy, now: now)
             return PromotionResult(
@@ -383,6 +391,7 @@ public enum PromotionService {
         case .world(let name):
             origin = "kbw-world://\(name)/objects/\(source.id)"
         }
+        let targetExistedBefore = targetStore.hasObject(id: source.id)
         let promoted = try targetStore.publish(
             author: promotedBy,
             title: source.title,
@@ -407,18 +416,47 @@ public enum PromotionService {
             promotedAt: now,
             promotedBy: promotedBy))
         let body = try receipt.json()
-        let targetReceipt = try targetStore.publish(
-            author: promotedBy,
-            title: "프로모션 영수증: \(source.title ?? String(source.id.prefix(12)))",
-            type: "promotion-receipt",
-            body: body,
-            now: now,
-            extras: LedgerPublishExtras(cites: [
-                .init(id: source.id, rel: "promotes"),
-                .init(id: promoted.id, rel: "receipts"),
-            ]))
-        let sourceReceipt = try ensureSourceReceipt(
-            receipt, sourceStore: sourceStore, promotedBy: promotedBy, now: now)
+
+        if request.simulateSourceReceiptFailure {
+            if !targetExistedBefore {
+                try targetStore.rollbackUncommittedObject(id: promoted.id, published: promoted.published)
+            }
+            throw PromotionError.sourceReceiptWriteFailed("시뮬레이션된 원본 영수증 쓰기 실패")
+        }
+
+        // 1. 원본 영수증 먼저 쓰기 — 실패 시 대상에 방금 쓴 promoted 객체를 롤백하여 반쪽 상태를 남기지 않음
+        let sourceReceipt: LedgerObject
+        do {
+            sourceReceipt = try ensureSourceReceipt(
+                receipt, sourceStore: sourceStore, promotedBy: promotedBy, now: now)
+        } catch {
+            if !targetExistedBefore {
+                try targetStore.rollbackUncommittedObject(id: promoted.id, published: promoted.published)
+            }
+            throw error
+        }
+
+        // 2. 대상 영수증 쓰기 — 실패 시 원본 영수증과 대상 promoted 객체를 롤백
+        let targetReceipt: LedgerObject
+        do {
+            targetReceipt = try targetStore.publish(
+                author: promotedBy,
+                title: "프로모션 영수증: \(source.title ?? String(source.id.prefix(12)))",
+                type: "promotion-receipt",
+                body: body,
+                now: now,
+                extras: LedgerPublishExtras(cites: [
+                    .init(id: source.id, rel: "promotes"),
+                    .init(id: promoted.id, rel: "receipts"),
+                ]))
+        } catch {
+            try sourceStore.rollbackUncommittedObject(id: sourceReceipt.id, published: sourceReceipt.published)
+            if !targetExistedBefore {
+                try targetStore.rollbackUncommittedObject(id: promoted.id, published: promoted.published)
+            }
+            throw error
+        }
+
         return PromotionResult(
             schemaVersion: PromotionResult.schemaVersion,
             promotedObjectId: promoted.id,
@@ -499,7 +537,7 @@ public enum PromotionService {
         }
     }
 
-    private static func ensureSourceReceipt(
+    static func ensureSourceReceipt(
         _ receipt: PromotionReceipt,
         sourceStore: LedgerStore,
         promotedBy: String,
@@ -572,10 +610,12 @@ public enum PromotionVerifier {
                             == receipt.sourceRepoId else { return nil }
                     return LedgerStore(root: URL(fileURLWithPath: world.rootPath))
                 }.first
+            let sourceFoundByContent = sourceStore == nil
+            let resolvedSource = sourceStore ?? storeHoldingObject(receipt.sourceObjectId, in: peerWorlds)
             let targetStore = storesByRoot[targetRoot]
                 ?? worldRootsByName[receipt.targetWorld].flatMap { storesByRoot[$0] }
                 ?? existingStore(root: targetRoot)
-            guard let sourceStore else {
+            guard let sourceStore = resolvedSource else {
                 violations.append(.init(id: object.id, problem: "promotion source world 누락: \(receipt.sourceWorldRoot)"))
                 continue
             }
@@ -615,6 +655,9 @@ public enum PromotionVerifier {
             }
             switch receipt.sourceKind {
             case "repository":
+                // 출처를 내용 id 로 찾았으면 증명은 content-addressing 이다(아래 "world" 와 같다).
+                // repoId 는 origin 원격 URL 에서 나오므로 원격을 옮긴 뒤엔 git 신원을 다시 맞출 수 없다.
+                if sourceFoundByContent { break }
                 guard let repoId = receipt.sourceRepoId, let commit = receipt.sourceCommit,
                       !repoId.isEmpty, !commit.isEmpty else {
                     violations.append(.init(id: object.id, problem: "promotion immutable provenance 필드 누락"))
@@ -662,11 +705,24 @@ public enum PromotionVerifier {
 
     /// 심볼릭 링크까지 푼 실경로. 링크 경로와 실경로가 같은 디렉터리를 가리키는데도
     /// 다른 문자열이라 비교가 어긋나는 걸 막는다(bare+worktree 배치에서 상시 발생).
-    private static func canonical(_ path: String) -> String {
+    static func canonical(_ path: String) -> String {
         URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
     }
 
-    private static func existingStore(root: String) -> LedgerStore? {
+    /// 원본 world 를 경로·repoId 로 못 찾을 때의 마지막 대체 — 객체 id 는 내용 해시라서
+    /// 같은 id 가 든 world 가 곧 출처다. repoId 는 origin 원격 URL 로 계산하므로 원격을
+    /// 옮기면(2026-09 온프레미스 GitLab → gitlab.com) 옛 영수증이 전부 어긋났고, 원본
+    /// worktree 를 지우면 경로도 사라진다. 그 둘에 흔들리지 않는 증거는 id 뿐이다.
+    static func storeHoldingObject(_ id: String, in worlds: [LedgerWorld]) -> LedgerStore? {
+        guard !id.isEmpty else { return nil }
+        for world in worlds {
+            let store = LedgerStore(root: URL(fileURLWithPath: world.rootPath))
+            if store.scan().contains(where: { $0.id == id }) { return store }
+        }
+        return nil
+    }
+
+    static func existingStore(root: String) -> LedgerStore? {
         let objects = URL(fileURLWithPath: root).appendingPathComponent("objects").path
         guard FileManager.default.fileExists(atPath: objects) else { return nil }
         return LedgerStore(root: URL(fileURLWithPath: root))

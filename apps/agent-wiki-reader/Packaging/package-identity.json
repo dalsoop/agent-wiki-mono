@@ -18,17 +18,6 @@
   ],
   "note": "Report surface. In-process KnowledgeBaseWikiUI Ledger (fixedSurface=reader). CLI panel secondary. Server: wiki-server-mono.",
   "distribution": "internal",
-  "agent_surface": {
-    "skills": [
-      "agent-wiki-reader-swift"
-    ],
-    "agents": [],
-    "attach_on": [
-      "skill-install",
-      "ship"
-    ],
-    "prefer_catalog_symlink": true
-  },
   "purpose": "Agent Wiki를 읽기·검색·world 조회만 하는 보고용 클라이언트",
   "state_root_env": "SWIFT_APP_STATE_ROOT"
 }

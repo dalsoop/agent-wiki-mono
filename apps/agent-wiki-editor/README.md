@@ -2,9 +2,8 @@
 
 **내부용** Agent Wiki 클라이언트. 발행·운영.
 
-- CLI: `agent-wiki-studio` → 현재 full `agent-wiki` 프록시
-- **full dual-entry 정본**은 이관 완료 전까지 monlith `knowledge-base-wiki-swift` 의 `agent-wiki`  
-  (Helpers PATH install · 별칭 `knowledge-base-wiki` / `memo-citation-ledger`). Studio 가 이후 승계.
+- CLI: `agent-wiki-editor`(별칭 `agent-wiki-studio`) → PATH 의 `agent-wiki` 프록시
+- PATH CLI `agent-wiki` 는 `agent-wiki-synchronizer` 가 소유한다(`cli_aliases`). 이 앱 번들에는 `agent-wiki` 를 싣지 않는다.
 - GUI: 자체 창(내 기록·수집 안내·최근·world·간단 발행) + monlith studio 표면 폴백
 
 ```bash
@@ -12,22 +11,15 @@ agent-wiki-studio --world person-personal list
 # publish 등 agent-wiki 와 동일 인자
 ```
 
-### 설치
+### PATH 연결
+
+이 앱은 PATH 에 아무것도 쓰지 않는다. PATH 명령(`agent-wiki-editor`, 별칭 `agent-wiki-studio`) 연결은 배포 도구만 한다.
 
 ```bash
-app-build-manager ship apps/agent-wiki-studio-swift release --no-launch
+app-build-manager ship apps/agent-wiki-editor release --no-launch
 ```
 
-### dual-entry 승계 (full CLI 표면)
+### dual-entry
 
-- **CLI 소스 정본**: `Sources/AgentWikiFullCLI` (38 files)
-- **Studio 빌드**: `swift build --product agent-wiki`
-- **Core**: monlith `KnowledgeBaseWikiCore` 라이브러리 의존 (다음 이전 대상)
-- **monlith**: `KnowledgeBaseWikiCLI` 는 Studio 로 역 symlink — 호환 product 유지
-- **설치 표면**: `dual-entry adopt` / monlith `install` 자동 adopt
-
-```bash
-swift build --package-path apps/agent-wiki-studio-swift --product agent-wiki
-agent-wiki-studio dual-entry adopt
-agent-wiki dual-entry --json
-```
+- `agent-wiki-studio dual-entry status [--json]` 는 읽기 전용 진단이다.
+- `dual-entry adopt` 는 옛 호출자 호환용 안내다(아무것도 쓰지 않고 0 으로 끝난다. `--json` 이면 `{"ok":true,"message":"..."}`).

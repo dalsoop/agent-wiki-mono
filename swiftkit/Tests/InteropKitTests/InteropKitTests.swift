@@ -278,14 +278,17 @@ final class RegistryTests: XCTestCase {
     func testSavedSchemaShape() throws {
         // 스키마 {"apps": {...}, "updatedAt": "..."} — 정본과 1:1 확인.
         let store = RegistryStore(fileURL: tempDir.appendingPathComponent("apps.json"))
-        try store.upsert(makeCapabilities(name: "hermes"))
+        // 설치되지 않은 이름을 쓴다. "hermes" 는 이 맥에 Hermes.app 이 있어 upsert 가 설치 번들의
+        // 표시명(displayName)을 실었고, 정확한 키 집합 비교가 호스트에 따라 갈렸다.
+        let name = "interop-schema-fixture-\(UUID().uuidString.prefix(8).lowercased())"
+        try store.upsert(makeCapabilities(name: name))
         let data = try Data(contentsOf: store.fileURL)
         let object = try XCTUnwrap(
             try JSONSerialization.jsonObject(with: data) as? [String: Any]
         )
         XCTAssertEqual(Set(object.keys), ["apps", "updatedAt"])
         let apps = try XCTUnwrap(object["apps"] as? [String: Any])
-        let hermes = try XCTUnwrap(apps["hermes"] as? [String: Any])
+        let hermes = try XCTUnwrap(apps[name] as? [String: Any])
         // `purpose`(무엇을 하는 앱인가)가 스키마에 들어왔는데 이 기대값이 안 따라와
         // main 이 빨갛게 남아 있었다(실측 2026-08-11). 스키마를 늘릴 때 이 줄이 같이
         // 늘어야 한다 — 그러라고 **정확한 집합**으로 비교한다.

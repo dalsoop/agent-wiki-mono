@@ -13,7 +13,7 @@ struct EmulatorControlClientTests {
               "name":"desktop-emu-2",
               "type":"desktop",
               "release":"desktop-emu-2",
-              "host":"desktop-emu-2.50.internal.kr",
+              "host":"desktop-emu-2.example.internal",
               "power":"running",
               "ready":true,
               "readinessReason":"DeploymentAvailable",
@@ -48,7 +48,7 @@ struct EmulatorControlClientTests {
          "power":"running","ready":false,"desiredReplicas":1,"managementKind":"helm","pvcs":[]}
         """.utf8))
         let console = try decoder.decode(FleetConsole.self, from: Data("""
-        {"name":"desktop-emu-1","type":"desktop","url":"https://desktop-emu-1.50.internal.kr/vnc.html",
+        {"name":"desktop-emu-1","type":"desktop","url":"https://desktop-emu-1.example.internal/vnc.html",
          "mode":"novnc","readiness":"notReady","readinessReason":"PodCrashLoopBackOff","capabilities":["keyboard"]}
         """.utf8))
 

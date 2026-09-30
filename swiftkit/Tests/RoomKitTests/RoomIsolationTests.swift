@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import RoomKit
+import StateRootKit
 
 @Suite("RoomIsolation 및 WindowPolicy 단위 검증")
 struct RoomIsolationTests {
@@ -112,8 +113,8 @@ struct RoomIsolationTests {
         #expect(env["ROOM_APP_SQLITE"] == "/Users/tester/.tenants/company/rooms/ROOM-101/apps/vscode/app.sqlite")
     }
 
-    @Test("CustomerRoomLayout — 기기 로컬 단일 정본 경로 및 ensureDefaultRoom 자동 프로비저닝 검증")
-    func testCustomerRoomLayoutAndDefaultRoomAutoProvisioning() throws {
+    @Test("CustomerRoomLayout — 명시적 실제 룸만 프로비저닝하고 레거시 기본방은 역산하지 않음")
+    func testCustomerRoomLayoutRequiresRealRoom() throws {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("customer-room-test-\(UUID().uuidString)", isDirectory: true)
         defer {
@@ -121,19 +122,20 @@ struct RoomIsolationTests {
         }
 
         let customerRoom = CustomerRoomLayout.makeCustomerRoomContext(
-            roomID: "room:default"
+            roomID: "room:customer-a",
+            homeDirectory: tempDir.path
         )
-        #expect(customerRoom.roomID == "room:default")
-        #expect(customerRoom.roomSlug == "default")
+        #expect(customerRoom.roomID == "room:customer-a")
+        #expect(customerRoom.roomSlug == "customer-a")
         #expect(customerRoom.tenant.tenantSlug == "personal")
-        #expect(customerRoom.roomURL.path.contains("net.ranode.shared/rooms/room-default"))
+        #expect(customerRoom.roomURL.path.contains("net.ranode.shared/rooms/room-customer-a"))
         #expect(customerRoom.specURL.lastPathComponent == "spec.json")
         #expect(customerRoom.windowsURL.lastPathComponent == "windows.json")
 
-        // ensureDefaultRoom 실행 검증
-        let ensured = try CustomerRoomLayout.ensureDefaultRoom(
-            roomID: "room:default"
-        )
+        let ensured = try CustomerRoomLayout.createCustomerWorkspace(
+            roomID: "room:customer-a",
+            homeDirectory: tempDir.path
+        ).context
         #expect(FileManager.default.fileExists(atPath: ensured.roomURL.path))
         #expect(FileManager.default.fileExists(atPath: ensured.specURL.path))
         #expect(FileManager.default.fileExists(atPath: ensured.windowsURL.path))
@@ -141,7 +143,11 @@ struct RoomIsolationTests {
         // 역산 검증: 고객용 로컬 경로로부터 RoomContext 복원
         let resolvedCustomer = RoomContext.resolve(fromPath: ensured.roomURL.appendingPathComponent("apps/monorepo/state.json").path)
         #expect(resolvedCustomer != nil)
-        #expect(resolvedCustomer?.roomID == "room:default")
+        #expect(resolvedCustomer?.roomID == "room-customer-a")
         #expect(resolvedCustomer?.tenant.tenantSlug == "personal")
+
+        let legacy = StateRootKit.customerApplicationSupportDirectory(homeDirectory: tempDir.path)
+            .appendingPathComponent("rooms/room-default/apps/monorepo/state.json")
+        #expect(RoomContext.resolve(fromPath: legacy.path) == nil)
     }
 }

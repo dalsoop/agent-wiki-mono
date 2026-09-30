@@ -82,7 +82,7 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
   schedule [list]                 틱 launchd 스케줄 관리(누락 등록) — CLI 가 소유
   dual-entry [--json]             PATH dual-entry 자가진단 (GUI 심링크/가장 탐지, 원장 불필요)
   skill-install|skill-uninstall|skill-status [--json]
-                                  coding-agent skills 부착/해제/상태 (원장 불필요, install 시 자동 부착)
+                                  coding-agent skills 부착/해제/상태 (원장 불필요)
   recent [N]                      지식층 최근 변경 피드(신규·개정·철회) — 나무위키 RecentChanges
   discuss                         위키 토론(이의·질문·수정요청) — 미답변 우선
   diff <id> [<id2>]               개정 비교(라인 diff) — 나무위키 비교/역사

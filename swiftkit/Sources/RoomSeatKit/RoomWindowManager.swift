@@ -10,8 +10,8 @@ public enum RoomWindowManager {
     private static let cacheLock = NSLock()
     nonisolated(unsafe) private static var snapshotCache: [String: RoomWindowsSnapshot] = [:]
 
-    private static func cacheKey(roomID: String, tenantID: String?) -> String {
-        "\(tenantID ?? ""):\(roomID)"
+    private static func cacheKey(roomID: String, tenantID: String?, homeDirectory: String?) -> String {
+        "\(homeDirectory ?? ""):\(tenantID ?? ""):\(roomID)"
     }
 
     /// 메모리 스냅샷 캐시 전체 초기화 (테스트 및 격리 검증용)
@@ -38,15 +38,20 @@ public enum RoomWindowManager {
     public static func loadSnapshot(
         roomID: String,
         tenantID: String? = nil,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) -> RoomWindowsSnapshot {
-        let key = cacheKey(roomID: roomID, tenantID: tenantID)
+        let key = cacheKey(roomID: roomID, tenantID: tenantID, homeDirectory: homeDirectory)
         let isDefaultManager = (fileManager == .default)
         if isDefaultManager, let cached = getCachedSnapshot(forKey: key) {
             return cached
         }
 
-        let url = RoomPaths.windowsURL(roomID: roomID, tenant: tenantID)
+        let url = RoomPaths.windowsURL(
+            roomID: roomID,
+            tenant: tenantID,
+            homeDirectory: homeDirectory ?? NSHomeDirectory()
+        )
         guard fileManager.fileExists(atPath: url.path) else {
             let empty = RoomWindowsSnapshot(roomID: roomID, generatedAt: Date(), windows: [])
             storeCachedSnapshot(empty, forKey: key, shouldCache: isDefaultManager)
@@ -72,10 +77,19 @@ public enum RoomWindowManager {
     public static func saveSnapshot(
         _ snapshot: RoomWindowsSnapshot,
         tenantID: String? = nil,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) throws {
-        let key = cacheKey(roomID: snapshot.roomID, tenantID: tenantID)
-        let url = RoomPaths.windowsURL(roomID: snapshot.roomID, tenant: tenantID)
+        let key = cacheKey(
+            roomID: snapshot.roomID,
+            tenantID: tenantID,
+            homeDirectory: homeDirectory
+        )
+        let url = RoomPaths.windowsURL(
+            roomID: snapshot.roomID,
+            tenant: tenantID,
+            homeDirectory: homeDirectory ?? NSHomeDirectory()
+        )
         let parentDir = url.deletingLastPathComponent()
         if !fileManager.fileExists(atPath: parentDir.path) {
             try fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
@@ -98,14 +112,25 @@ public enum RoomWindowManager {
     public static func registerWindow(
         _ identity: WindowIdentity,
         tenantID: String? = nil,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) -> Bool {
-        var snapshot = loadSnapshot(roomID: identity.roomID, tenantID: tenantID, fileManager: fileManager)
+        var snapshot = loadSnapshot(
+            roomID: identity.roomID,
+            tenantID: tenantID,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
+        )
         snapshot.windows.removeAll { $0.cgWindowID == identity.cgWindowID }
         snapshot.windows.append(identity)
         snapshot.generatedAt = Date()
         do {
-            try saveSnapshot(snapshot, tenantID: tenantID, fileManager: fileManager)
+            try saveSnapshot(
+                snapshot,
+                tenantID: tenantID,
+                fileManager: fileManager,
+                homeDirectory: homeDirectory
+            )
             return true
         } catch {
             return false
@@ -138,15 +163,27 @@ public enum RoomWindowManager {
     public static func pruneZombieWindows(
         roomID: String,
         tenantID: String? = nil,
-        activePIDs: Set<pid_t>
+        activePIDs: Set<pid_t>,
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) throws -> Int {
-        var snapshot = loadSnapshot(roomID: roomID, tenantID: tenantID)
+        var snapshot = loadSnapshot(
+            roomID: roomID,
+            tenantID: tenantID,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
+        )
         let beforeCount = snapshot.windows.count
         snapshot.windows.removeAll { !activePIDs.contains($0.pid) }
         let pruned = beforeCount - snapshot.windows.count
         if pruned > 0 {
             snapshot.generatedAt = Date()
-            try saveSnapshot(snapshot, tenantID: tenantID)
+            try saveSnapshot(
+                snapshot,
+                tenantID: tenantID,
+                fileManager: fileManager,
+                homeDirectory: homeDirectory
+            )
         }
         return pruned
     }

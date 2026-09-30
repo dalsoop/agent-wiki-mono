@@ -4,7 +4,7 @@
 "button.ledger_gui" = "원장 GUI";
 "button.publish_run" = "발행 실행";
 "help.external_monolith" = "별도 Agent Wiki.app 을 studio 표면으로 (디버그)";
-"hint.full_cli" = "full CLI 정본: PATH agent-wiki → Studio Helpers";
+"hint.full_cli" = "full CLI: PATH agent-wiki (Agent Wiki Synchronizer 소유)";
 "label.internal_studio" = "내부용 Studio";
 "menu.refresh" = "새로고침";
 "menu.settings" = "설정…";
@@ -19,7 +19,7 @@
 "cli.remote_status" = "원격 상태";
 "cli.remote_status.help" = "clone 의 ahead/behind";
 "common.title" = "제목";
-"MainWindowView.help" = "%1$@ clone 의 ahead/behind";
+"MainWindowView.help" = "~/gujo-wiki clone 의 ahead/behind";
 "DualEntryAdoption.message" = "이미 Studio Helpers 정합: %1$@";
 "DualEntryAdoption.message-2" = "복사 후 검증 실패: %1$@";
 "DualEntryAdoption.message-3" = "%1$@ · install 실패(%2$@): %3$@";

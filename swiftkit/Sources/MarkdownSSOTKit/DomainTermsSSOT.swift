@@ -5,14 +5,15 @@ import Foundation
 public struct DomainTermsSSOT: Codable, Sendable, Equatable, AlignRuleProvider {
     public struct Service: Codable, Sendable, Equatable {
         public let canonicalName: String
-        public let devDomain: String
+        /// 개발 환경 도메인. 없으면 nil 이다(키 생략) — 개발 클러스터(k3s-dev)는 2026-09-25 퇴역했다.
+        public let devDomain: String?
         public let localUrl: String
         public let deprecated: [String]
         public let replacements: [String: String]?
 
         public init(
             canonicalName: String,
-            devDomain: String,
+            devDomain: String? = nil,
             localUrl: String,
             deprecated: [String] = [],
             replacements: [String: String]? = nil
@@ -109,7 +110,7 @@ public struct DomainTermsSSOT: Codable, Sendable, Equatable, AlignRuleProvider {
     private func emptyFieldIssues(key: String, service: Service) -> [String] {
         [
             service.canonicalName.isEmpty ? "[\(key)] canonicalName이 비어있습니다." : nil,
-            service.devDomain.isEmpty ? "[\(key)] devDomain이 비어있습니다." : nil,
+            service.devDomain?.isEmpty == true ? "[\(key)] devDomain이 비어있습니다(개발 도메인이 없으면 키를 뺀다)." : nil,
             service.localUrl.isEmpty ? "[\(key)] localUrl이 비어있습니다." : nil,
         ].compactMap { $0 }
     }

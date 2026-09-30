@@ -19,32 +19,24 @@ struct BackupConfig: Codable {
 
     static var path: String { StateRootKit.path(".memo-citation-ledger/backup.json") }
 
-    static let defaultRepository = "sftp:pve:/var/backups/gujo-wiki-restic"
-
-    /// 설정 파일(backup.json)이 우선이고, 없으면 기본 저장소 + 환경 변수 RESTIC_PASSWORD.
-    /// 비밀번호 기본값은 두지 않는다. 공개 저장소에 적힌 값은 비밀이 아니기 때문이다.
-    /// 어디서도 비밀번호를 못 얻으면 nil — 호출측이 실패로 끝낸다.
-    static func load(
-        environment: [String: String] = ProcessInfo.processInfo.environment
-    ) -> BackupConfig? {
-        if let data = FileManager.default.contents(atPath: path) {
-            do {
-                let config = try JSONDecoder().decode(BackupConfig.self, from: data)
-                if !config.password.isEmpty { return config }
-            } catch {
-                // fall through to environment
-            }
+    /// 저장소 기본값은 없다 — 옛 sftp 저장소 호스트는 50 대역과 함께 퇴역했다(2026-09-25).
+    /// 설정이 없거나 읽을 수 없으면 restic 을 부르지 않고 설정 방법을 알린다.
+    static func load() -> BackupConfig {
+        guard let data = FileManager.default.contents(atPath: path) else {
+            fail("restic 백업 저장소가 설정되지 않았다(기본값 없음). \(path) 에 "
+                + "{\"repository\": \"sftp:<host>:<path>\", \"password\": \"<restic 비밀번호>\"} 를 써라.")
         }
-        guard let password = environment["RESTIC_PASSWORD"], !password.isEmpty else { return nil }
-        return BackupConfig(repository: defaultRepository, password: password)
+        do {
+            return try JSONDecoder().decode(BackupConfig.self, from: data)
+        } catch {
+            fail("백업 설정(\(path))을 읽지 못했다 — repository·password 가 필요하다: \(error.localizedDescription)")
+        }
     }
 }
 
 public func runBackup(arguments: [String]) {
     let wikiRoot = StateRootKit.path("gujo-wiki")
-    guard let config = BackupConfig.load() else {
-        fail("백업 비밀번호가 없습니다: \(BackupConfig.path) 의 password 또는 환경 변수 RESTIC_PASSWORD 를 설정하세요")
-    }
+    let config = BackupConfig.load()
     func restic(_ resticArguments: [String]) -> Int32 {
         // TODO(commandkit): migrate raw Process() to ProcessCommandRunner — see swiftkit/Documentation/command-kit.md
         let process = Process()

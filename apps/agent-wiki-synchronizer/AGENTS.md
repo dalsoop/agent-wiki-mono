@@ -2,9 +2,9 @@
 
 ## 범위
 
-- 전역 CLI 타깃 `AgentWikiGlobalCLI`(제품 `agent-wiki-synchronizer`, 런타임 슬러그 `agent-wiki-global`). 설치되면 `AgentWikiGlobal.app/Contents/Helpers/agent-wiki-synchronizer`가 되고 `/opt/homebrew/bin/agent-wiki`, `agent-wiki-global`, `agent-wiki-synchronizer`가 모두 이 파일을 가리킨다.
+- 전역 CLI 타깃 `AgentWikiSynchronizerCLI`(제품 `agent-wiki-synchronizer`, 런타임 슬러그 `agent-wiki-global`). 설치되면 `AgentWikiGlobal.app/Contents/Helpers/agent-wiki-synchronizer`가 되고 `/opt/homebrew/bin/agent-wiki`, `agent-wiki-global`, `agent-wiki-synchronizer`가 모두 이 파일을 가리킨다.
 - 명령 분기(`main.swift`), 허용 옵션 목록, 전역 CLI 전용 명령: `fleet`, `gujo`(sync·peer·blob), `promotion`, `schedule`(LaunchAgent 등록), `task`/`orchestration`, `world`, 테넌트 world 바인딩(`TenantWikiBinding`).
-- 메뉴바 앱 `AgentWikiGlobal`과 `AgentWikiGlobalCore`(상태 조회, StateMirror 게시, world 표시 이름).
+- 메뉴바 앱 `AgentWikiSynchronizer`과 `AgentWikiSynchronizerCore`(상태 조회, StateMirror 게시, world 표시 이름).
 
 범위 밖: 발행·조회·verify 등 공용 명령의 동작(`agent-wiki-kit`의 `WikiCLIShared`), 원장 모델과 게이트(`KnowledgeBaseWikiCore`). 그 로직을 이 패키지에 복사하지 않는다. repo `.wiki` 원장 처리는 `apps/agent-wiki-indexer` 담당이다.
 

@@ -1,7 +1,7 @@
 # agent-wiki-mono
 
 AI 에이전트 함대가 공유하는 append-only 지식 원장(Agent Wiki)의 엔진과 macOS 앱·CLI를 담은 Swift 모노레포다.
-이 Mac에 설치된 `agent-wiki` CLI(`/opt/homebrew/bin/agent-wiki` → `AgentWikiGlobal.app`)가 `apps/agent-wiki-synchronizer`의 산출물이고, 사용자의 모든 에이전트 세션이 이 CLI로 `gujo-wiki`·`person-*` 원장을 읽고 쓴다.
+이 Mac에 설치된 `agent-wiki` CLI(`/opt/homebrew/bin/agent-wiki` → `AgentWikiGlobal.app`)가 이 저장소 `apps/agent-wiki-synchronizer`의 산출물이고(정본 저장소, 결정 0006), 사용자의 모든 에이전트 세션이 이 CLI로 `gujo-wiki`·`person-*` 원장을 읽고 쓴다.
 사용자는 한 사람(운영자)과 그 에이전트들이며, 서버는 없고 로컬 파일 원장 + git/S3 전송이 전부다.
 
 ## 프로젝트 구조
@@ -59,7 +59,7 @@ agent-wiki-mono/
 
 - 항상: `docs/standards.md`, `docs/engineering-notes.md`, 고칠 패키지의 `AGENTS.md`.
 - `LedgerObject`·`LedgerStore`·직렬화를 건드리기 전: `docs/business-rules.md`의 객체 정체성 절과 `agent-wiki-kit/AGENTS.md`의 불변식.
-- CLI 명령·옵션을 바꾸기 전: `docs/contracts.md` 전체와 `docs/engineering-notes.md`의 "CLI 사본 세 벌" 항목. 같은 명령이 `WikiCLIShared`, `apps/agent-wiki-synchronizer/Sources/AgentWikiGlobalCLI`, `apps/agent-wiki-editor/Sources/AgentWikiFullCLI`에 따로 있다.
+- CLI 명령·옵션을 바꾸기 전: `docs/contracts.md` 전체와 `docs/engineering-notes.md`의 "CLI 명령 두 자리" 항목. 공용 명령은 `WikiCLIShared`, 전역 전용 명령은 `apps/agent-wiki-synchronizer/Sources/AgentWikiSynchronizerCLI`에 있다.
 - world·인용·승격 규칙을 바꾸기 전: `docs/security.md`의 world 격리 절.
 - 동기화(`gujo`)·blob·백업을 건드리기 전: `docs/tracking/findings.md`의 퇴역 호스트 항목.
 

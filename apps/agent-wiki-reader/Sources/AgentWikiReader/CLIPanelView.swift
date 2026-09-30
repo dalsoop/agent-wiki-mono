@@ -55,7 +55,7 @@ struct CLIPanelView: View {
             }
             if WikiWorldPresentation.classify(name: model.world, rootPath: "") == .remoteShared {
                 Button(model.L(.cliRemoteStatus)) { Task { await model.loadRemoteStatus() } }
-                    .help(model.L(.CLIPanelViewHelp, GujoWikiWeb.projectURL))
+                    .help(model.L(.CLIPanelViewHelp))
             }
             Button {
                 Task { await model.reloadCurrentArea() }

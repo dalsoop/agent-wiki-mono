@@ -348,7 +348,7 @@ public final class CapabilitySearcher: @unchecked Sendable {
         matchedCmdNames: inout Set<String>
     ) -> Int {
         switch field {
-        case "name": return 8
+        case "name", "displayName", "displayNameKo": return 8
         case "cli": return 7
         case "purpose", "persona", "notes", "description", "summary", "skill.summary": return 6
         case "command.name":

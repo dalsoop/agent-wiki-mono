@@ -187,7 +187,7 @@ final class ReceiptIngestTests: XCTestCase {
                 "artifact_sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
                 "artifact_size": 10485760,
                 "notary_submission_id": "00000000-1111-2222-3333-444455556666",
-                "external_download_url": "https://gitlab.ranode.net/app.dmg",
+                "external_download_url": "https://gitlab.com/gujoai/app.dmg",
                 "readiness_score": 100,
                 "purchasable": true,
                 "summary": "릴리스 v1.0.0 등록 완료"

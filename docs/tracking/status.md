@@ -7,12 +7,12 @@
 | 패키지 | 구현 | 빌드 | 테스트 | 근거 |
 |---|---|---|---|---|
 | `citationledgerkit` | 해시·시각·UUIDv7·작성자 해석 | 통과 | 통과(5개 스위트, 10개 테스트) | `swift test --package-path citationledgerkit` 종료 코드 0 |
-| `agent-wiki-kit` | 원장 엔진, 공용 CLI 명령, BlobStore | 통과 | 통과(66개 스위트, 233개 테스트, 알려진 문제 1) | 2026-09-30 전체 테스트 종료 코드 0. wiki-hub 고정 호스트 기대는 `withKnownIssue` 로 표시 |
-| `apps/agent-wiki-synchronizer` | 전역 CLI, 메뉴바 앱 | 통과 | 실행 안 함 | 2026-09-30 `swift build --product agent-wiki-synchronizer` 종료 코드 0(`launchctl` 함수를 SafeProcessRunner 결과로 고침) |
+| `agent-wiki-kit` | 원장 엔진, 공용 CLI 명령, BlobStore | 통과 | 통과(70개 스위트, 248개 테스트) | 2026-10-01 전체 테스트 종료 코드 0 |
+| `apps/agent-wiki-synchronizer` | 전역 CLI, 메뉴바 앱 | 통과 | 실행 안 함 | 2026-10-01 `swift build --product agent-wiki-synchronizer` 종료 코드 0. 설치본(1.0.29)의 원천(결정 0006) |
 | `apps/agent-wiki-indexer` | repo `.wiki` CLI, 메뉴바 앱 | 통과 | 통과(XCTest 3개, swift-testing 0개) | `swift build`, `swift test` 모두 종료 코드 0 |
-| `apps/agent-wiki-grapher` | 그래프 질의 CLI, 창 앱 | 실패 | 실행 안 함 | `AgentWikiGraphCLI/main.swift` 293-298행에서 `SafeProcessRunner.run` 호출 뒤에 옛 `do`/`catch`의 본문 조각이 남아 구문이 깨진다. 같은 빌드에서 339행 동시성 오류와 351행 없는 멤버 `usage` 오류도 난다 |
-| `apps/agent-wiki-editor` | Studio GUI, 분기된 full CLI | 실패 | 실행 안 함 | 의존 패키지 `agent-wiki-ui`가 저장소에 없어 의존성 해석 단계에서 종료 코드 1 |
-| `apps/agent-wiki-reader` | 읽기 전용 프록시 CLI, 메뉴바 앱 | 실패 | 실행 안 함 | 위와 같은 원인 |
+| `apps/agent-wiki-grapher` | 그래프 질의 CLI, 창 앱 | 통과 | 실행 안 함 | 2026-10-01 `swift build` 종료 코드 0(결정 0006 으로 설치본 원천 사본을 가져온 뒤) |
+| `apps/agent-wiki-editor` | Studio GUI | 통과 | 실행 안 함 | 2026-10-01 `swift build` 종료 코드 0. `agent-wiki-ui` 가 커밋되어 새 클론에서도 해석된다 |
+| `apps/agent-wiki-reader` | 읽기 전용 프록시 CLI, 메뉴바 앱 | 통과 | 실행 안 함 | 2026-10-01 `swift build` 종료 코드 0 |
 | `swiftkit` | 공용 킷 사본 | 앱 빌드 과정에서 쓰는 킷은 컴파일됨 | 실행 안 함 | 테스트 디렉터리가 191개라 이번 확인에서 제외 |
 | `swiftkit-appscaffold`, `swiftkit-sparkle` | 앱 수명주기, 자동 업데이트 | indexer 빌드 과정에서 컴파일됨 | 실행 안 함 | 별도 명령 없음 |
 
@@ -25,9 +25,6 @@
 ## 남은 일 (우선순위 순)
 
 1. 고정 호스트 이름을 기대하는 wiki-hub 테스트(지금 `withKnownIssue`)를 현재 엔드포인트 해석 방식(환경 변수 → EndpointRouterKit)에 맞춘다.
-2. `agent-wiki-ui`를 저장소에 넣거나 editor·reader의 의존을 정리해 새 클론에서 빌드되게 한다.
-3. grapher CLI `main.swift`의 깨진 구간을 복구한다.
-4. `--of`·`--display`를 전역·repo CLI 허용 옵션에 넣어 scene-evidence 발행과 world 표시 이름 등록을 가능하게 한다.
-5. 상위 world 인용 발행 경로(`runScopedPublish`)가 분류·batch 인자를 처리하게 한다.
-6. editor의 분기된 `AgentWikiFullCLI` 사본을 `WikiCLIShared`로 합치거나 제거한다.
-7. 원격 연결·백업 기본값을 정리한다(보안 이슈 있음, 비공개 추적).
+2. `--of`·`--display`를 전역·repo CLI 허용 옵션에 넣어 scene-evidence 발행과 world 표시 이름 등록을 가능하게 한다.
+3. 상위 world 인용 발행 경로(`runScopedPublish`)가 분류·batch 인자를 처리하게 한다.
+4. 원격 연결·백업 기본값을 정리한다(보안 이슈 있음, 비공개 추적).

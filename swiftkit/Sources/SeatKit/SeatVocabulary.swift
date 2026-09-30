@@ -61,19 +61,20 @@ public struct Keys: Codable, Sendable, Equatable {
     }
 }
 
-/// Agent Browser 세션 바인딩 — 브라우저는 도구가 아니라 **자리에 붙는 자원**.
+/// 브라우저 세션 바인딩 — 브라우저는 도구가 아니라 **자리에 붙는 자원**.
 ///
-/// - 소유: 프로필·프로세스는 Agent Browser, 계약 포인터만 이 구조체.
-/// - 세션 id 공식: `seat:<handle>` (browserctl `--session` 과 1:1).
+/// - 소유: 계약 포인터만 이 구조체. 프로필·프로세스를 열던 Agent Browser 는 2026-09-25 폐기돼
+///   지금은 여는 소비자가 없다(로그인 세션 수단은 C 설계 850ba525). 옛 자리 원장이 디코드되게 남긴다.
+/// - 세션 id 공식: `seat:<handle>`.
 /// - claim: `exclusive`(기본, 한 자리 전용) | `shared-read`(읽기 공유·쓰기 주의).
 public struct BrowserBinding: Codable, Sendable, Equatable {
-    /// browserctl `--session` 값. 보통 `seat:<handle>`.
+    /// 세션 id. 보통 `seat:<handle>`.
     public var session: String
     /// 용도 라벨 — nicepay · gujo-admin · nest · …
     public var purpose: String?
     /// `exclusive` | `shared-read`
     public var claim: String
-    /// browserctl `--agent` 라벨(없으면 keys.agentID 또는 handle 사용 권장).
+    /// 에이전트 라벨(없으면 keys.agentID 또는 handle 사용 권장).
     public var agentLabel: String?
     public var boundAt: Date?
 
@@ -173,10 +174,16 @@ public struct Seat: Codable, Sendable, Equatable, Identifiable {
     public var workspace: Workspace
     public var keys: Keys?
     public var limits: Limits
-    /// Agent Browser 세션 계약. 없으면 브라우저는 이 자리에 안 묶인 것.
+    /// 브라우저 세션 계약. 없으면 브라우저는 이 자리에 안 묶인 것.
     public var browser: BrowserBinding?
     public var hiredAt: Date
     public var note: String?
+    /// 이 자리를 쓰는 주체 참조 — 방 체제 tick 이 고용하면 `room:<planID>/<roomID>`.
+    /// 없으면 사람이 만든 자리이거나 이 필드 도입 전 자리다. 방이 풀릴 때 **자기 방 owner 인
+    /// 자리만** 해고하는 근거라, 다른 방이 이어받은 자리를 잘못 거두지 않는다.
+    public var owner: String?
+    /// 마지막으로 쓰인 시각(고용·재바인딩·점유). 없으면 도입 전 자리 — 거둘 때 참고용.
+    public var lastUsedAt: Date?
 
     public var id: String { handle }
 
@@ -189,7 +196,9 @@ public struct Seat: Codable, Sendable, Equatable, Identifiable {
         limits: Limits = .none,
         browser: BrowserBinding? = nil,
         hiredAt: Date = Date(),
-        note: String? = nil
+        note: String? = nil,
+        owner: String? = nil,
+        lastUsedAt: Date? = nil
     ) {
         self.handle = handle
         self.displayName = displayName
@@ -200,6 +209,8 @@ public struct Seat: Codable, Sendable, Equatable, Identifiable {
         self.browser = browser
         self.hiredAt = hiredAt
         self.note = note
+        self.owner = owner
+        self.lastUsedAt = lastUsedAt
     }
 
     /// 해고할 때 **거둘 것이 있나**. 회수를 안 하면 좀비 worktree 가 쌓인다.
@@ -208,7 +219,7 @@ public struct Seat: Codable, Sendable, Equatable, Identifiable {
         return false
     }
 
-    /// browserctl 에 넘길 세션 id — binding 이 있으면 그 session, 없으면 공식 id.
+    /// 세션 id — binding 이 있으면 그 session, 없으면 공식 id.
     public var browserSessionID: String {
         browser?.session ?? BrowserBinding.sessionID(forHandle: handle)
     }

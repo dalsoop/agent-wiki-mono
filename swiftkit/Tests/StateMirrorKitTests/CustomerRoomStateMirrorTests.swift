@@ -35,7 +35,7 @@ final class CustomerRoomStateMirrorTests: XCTestCase {
         )
 
         XCTAssertTrue(url.path.hasPrefix(home))
-        XCTAssertTrue(url.path.contains("Library/Application Support/net.ranode.shared/rooms/room-default/\(slug)"))
+        XCTAssertEqual(url.path, "\(home)/Library/Application Support/net.ranode.shared/\(slug)")
 
         let mirrorURL = StateMirrorKit.customerMirrorURL(
             slug: slug,
@@ -44,6 +44,71 @@ final class CustomerRoomStateMirrorTests: XCTestCase {
         )
         XCTAssertEqual(mirrorURL.lastPathComponent, "state.json")
         XCTAssertEqual(mirrorURL.deletingLastPathComponent().path, url.path)
+    }
+
+    func testReadRoomPromotesLegacyNoRoomState() throws {
+        let app = "test-app"
+        let legacyDirectory = temporaryDirectory
+            .appendingPathComponent("Library/Application Support/net.ranode.shared/rooms/room-default", isDirectory: true)
+            .appendingPathComponent(app, isDirectory: true)
+        try FileManager.default.createDirectory(at: legacyDirectory, withIntermediateDirectories: true)
+        let expectedState = TestState(status: "legacy", counter: 7)
+        try Data(#"{"app":"test-app","updatedAt":"2026-09-25T00:00:00Z","state":{"status":"legacy","counter":7}}"#.utf8)
+            .write(to: legacyDirectory.appendingPathComponent("state.json"))
+
+        let loaded = try StateMirror.readRoom(
+            app: app,
+            homeDirectory: temporaryDirectory.path,
+            as: TestState.self
+        )
+
+        XCTAssertEqual(loaded.state, expectedState)
+        // 옛 경로에는 새 저장소를 가리키는 호환 심링크가 남는다.
+        XCTAssertNotNil(try? FileManager.default.destinationOfSymbolicLink(atPath: legacyDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: StateMirror.roomMirrorURL(app: app, homeDirectory: temporaryDirectory.path).path
+        ))
+    }
+
+    func testPublishRoomDoesNotPromoteLegacyNoRoomState() throws {
+        let app = "publish-no-room"
+        let legacyDirectory = temporaryDirectory
+            .appendingPathComponent("Library/Application Support/net.ranode.shared/rooms/room-default", isDirectory: true)
+            .appendingPathComponent(app, isDirectory: true)
+        try FileManager.default.createDirectory(at: legacyDirectory, withIntermediateDirectories: true)
+        try Data("legacy".utf8).write(to: legacyDirectory.appendingPathComponent("marker"))
+
+        StateMirror.publishRoom(
+            app: app,
+            homeDirectory: temporaryDirectory.path,
+            TestState(status: "new", counter: 1)
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacyDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: StateMirror.roomMirrorURL(app: app, homeDirectory: temporaryDirectory.path).path
+        ))
+    }
+
+    func testSelfHealingStorePromotesBeforeFirstNoRoomLoad() throws {
+        let app = "self-healing-no-room"
+        let legacyDirectory = temporaryDirectory
+            .appendingPathComponent("Library/Application Support/net.ranode.shared/rooms/room:default", isDirectory: true)
+            .appendingPathComponent(app, isDirectory: true)
+        try FileManager.default.createDirectory(at: legacyDirectory, withIntermediateDirectories: true)
+        try Data(#"{"app":"self-healing-no-room","updatedAt":"2026-09-25T00:00:00Z","state":{"status":"legacy","counter":8}}"#.utf8)
+            .write(to: legacyDirectory.appendingPathComponent("state.json"))
+        let store = StateMirrorSelfHealingStore<TestState>(
+            app: app,
+            homeDirectory: temporaryDirectory.path
+        )
+
+        let loaded = try store.loadOrSelfHeal()
+
+        XCTAssertEqual(loaded.state, TestState(status: "legacy", counter: 8))
+        // 옛 경로에는 새 저장소를 가리키는 호환 심링크가 남는다.
+        XCTAssertNotNil(try? FileManager.default.destinationOfSymbolicLink(atPath: legacyDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.url.path))
     }
 
     func testCustomRoomIDStoragePath() {
@@ -195,15 +260,40 @@ final class CustomerRoomStateMirrorTests: XCTestCase {
         let roomID = "BD400651-BA69-4607-A9EA-7A91E3C5DC6E"
         let state = TestState(status: "running", counter: 99)
 
-        StateMirror.publishRoom(app: app, roomID: roomID, state)
-        defer { StateMirror.clearRoom(app: app, roomID: roomID) }
+        StateMirror.publishRoom(
+            app: app,
+            roomID: roomID,
+            homeDirectory: temporaryDirectory.path,
+            state
+        )
+        defer {
+            StateMirror.clearRoom(
+                app: app,
+                roomID: roomID,
+                homeDirectory: temporaryDirectory.path
+            )
+        }
 
-        let readEnvelope = try StateMirror.readRoom(app: app, roomID: roomID, as: TestState.self)
+        let readEnvelope = try StateMirror.readRoom(
+            app: app,
+            roomID: roomID,
+            homeDirectory: temporaryDirectory.path,
+            as: TestState.self
+        )
         XCTAssertEqual(readEnvelope.app, app)
         XCTAssertEqual(readEnvelope.state, state)
 
-        StateMirror.clearRoom(app: app, roomID: roomID)
-        XCTAssertThrowsError(try StateMirror.readRoom(app: app, roomID: roomID, as: TestState.self))
+        StateMirror.clearRoom(
+            app: app,
+            roomID: roomID,
+            homeDirectory: temporaryDirectory.path
+        )
+        XCTAssertThrowsError(try StateMirror.readRoom(
+            app: app,
+            roomID: roomID,
+            homeDirectory: temporaryDirectory.path,
+            as: TestState.self
+        ))
     }
 
     func testResolveMirrorURLWithRoom() {
@@ -237,6 +327,17 @@ final class CustomerRoomStateMirrorTests: XCTestCase {
             homeDirectory: home
         )
         XCTAssertTrue(roomEnvResolved.path.contains("rooms/ROOM-ENV-111/\(app)/state.json"))
+
+        let legacyAliasResolved = StateMirror.resolveMirrorURL(
+            app: app,
+            roomID: nil,
+            environment: ["ROOM_ID": "room:default"],
+            homeDirectory: home
+        )
+        XCTAssertEqual(
+            legacyAliasResolved.path,
+            "\(home)/Library/Application Support/net.ranode.shared/\(app)/state.json"
+        )
 
         // 일반 환경 폴백
         let fallback = StateMirror.resolveMirrorURL(

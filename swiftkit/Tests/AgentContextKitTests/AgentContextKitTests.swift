@@ -107,14 +107,14 @@ final class LedgerSearchHitsTests: XCTestCase {
         d.commandOutputs = [
             CommandOutput(
                 command: "git remote -v",
-                stdoutLine: "origin\tgit@gitlab-ssh.internal.kr:x.git (fetch)"
+                stdoutLine: "origin\tgit@gitlab.com:x.git (fetch)"
             )
         ]
-        d.userMessages = ["주소가 gitlab.ranode.net 인데"]
+        d.userMessages = ["주소가 gitlab.example.internal 인데"]
         d.agentMessages = ["SSH HOLD 로 읽었다"]
-        let hits = Ledger.hits(in: d, needle: "gitlab-ssh.internal.kr", sessionId: "s", tool: "grok")
+        let hits = Ledger.hits(in: d, needle: "gitlab.com", sessionId: "s", tool: "grok")
         XCTAssertEqual(hits.map(\.matched), ["stdout"])
-        let host = Ledger.hits(in: d, needle: "gitlab.ranode.net", sessionId: "s", tool: "grok")
+        let host = Ledger.hits(in: d, needle: "gitlab.example.internal", sessionId: "s", tool: "grok")
         XCTAssertEqual(host.map(\.matched), ["user"])
         let hold = Ledger.hits(in: d, needle: "HOLD", sessionId: "s", tool: "grok")
         XCTAssertEqual(hold.map(\.matched), ["agent"])

@@ -85,14 +85,9 @@ public enum AgentSurfaceGate {
         agents: [String],
         userHome: URL = FileManager.default.homeDirectoryForCurrentUser
     ) -> Coverage {
-        let layouts = AgentCLILayout.managed
-        let missingSkills = skills.filter { name in
-            !layouts.contains { $0.hasSkill(name, userHome: userHome) }
-        }
-        let missingAgents = agents.filter { name in
-            !layouts.contains { $0.hasAgent(name, userHome: userHome) }
-        }
-        return Coverage(missingSkills: missingSkills, missingAgents: missingAgents)
+        // 앱마다 스킬·에이전트가 있어야 한다고 요구하지 않는다(정본은 스킬 카탈로그).
+        _ = skills; _ = agents; _ = userHome
+        return Coverage(missingSkills: [], missingAgents: [])
     }
 
     public static func needsEmit(

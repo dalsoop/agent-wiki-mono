@@ -13,7 +13,7 @@
 
 ## 구조
 
-- `Sources/AgentWikiGlobal/` — SwiftUI 메뉴바 셸(MenuBarExtra) + 설정창 + i18n.
-- `Sources/AgentWikiGlobalCore/` — 도메인 로직(시스템 명령 호출/파싱). `CommandRunning` 주입으로 테스트 가능.
+- `Sources/AgentWikiSynchronizer/` — SwiftUI 메뉴바 셸(MenuBarExtra) + 설정창 + i18n.
+- `Sources/AgentWikiSynchronizerCore/` — 도메인 로직(시스템 명령 호출/파싱). `CommandRunning` 주입으로 테스트 가능.
 
 도메인 구현은 `AgentWikiGlobalService` 의 `status()` 를 실제 명령으로 교체하는 것에서 시작한다.

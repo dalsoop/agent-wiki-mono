@@ -27,6 +27,7 @@ import Testing
     /// 목록이 조용히 늘면 구조적 의존이 이름만 남는다.
     @Test func bootstrapExemptionIsExactlyTheLedgerOwnerAndTheInstaller() {
         #expect(GujoManaged.bootstrapExemptBundleIDs == [
+            "net.ranode.cloud-app-launcher",
             "net.ranode.gujo-cloud-apps",
             "kr.gujo.gujo-cloud-apps",
             "net.ranode.appbuildmanager",
@@ -68,6 +69,7 @@ import Testing
 
     @Test func installDetectionUsesBundleOrCLI() {
         #expect(GujoManaged.cliName == "gujo-cloud-apps")
+        #expect(GujoManaged.cloudAppsBundleIDs.contains("net.ranode.cloud-app-launcher"))
         #expect(GujoManaged.cloudAppsBundleIDs.contains("net.ranode.gujo-cloud-apps"))
         if let path = GujoManaged.appPath {
             #expect(path.hasSuffix(".app"))

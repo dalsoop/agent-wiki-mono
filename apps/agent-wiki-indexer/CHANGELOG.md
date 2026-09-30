@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.18] - 2026-09-30
+
+### Changed
+- The `install` subcommand no longer copies or links into PATH (shared `agent-wiki-kit` change). It prints guidance and exits 0. PATH linking is done only by the deploy tool (`app-build-manager ship`).
+- The CLI version check re-probes the PATH CLI `version` when the stamp differs from the app version.
+
+## [1.0.17] - 2026-09-26
+
+### Changed
+- Rename targets to the AgentWikiIndexer prefix (app-structural-parity); products unchanged
+
 ## [1.0.16] - 2026-09-19
 ### Changed
 - Align state directory and storage paths to use `StateRootKit.ensureCustomerRoomStorage(slug:)` in `AppPaths` for customer room environments.

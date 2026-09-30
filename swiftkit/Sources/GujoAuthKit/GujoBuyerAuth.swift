@@ -19,7 +19,7 @@ public struct GujoBuyerAuth: Sendable {
 
     public init(
         http: any HTTPClient = URLSessionHTTPClient(),
-        store: any GujoSessionStore = KeychainSessionStore(),
+        store: any GujoSessionStore = GujoSessionStores.buyer(),
         baseURL: URL? = nil,
         sleep: @escaping GujoStaffAuth.Sleeper = { try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) },
         now: @escaping GujoStaffAuth.Clock = { Date() }

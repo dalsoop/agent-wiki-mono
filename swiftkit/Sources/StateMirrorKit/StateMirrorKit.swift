@@ -3,30 +3,28 @@ import StateRootKit
 
 /// StateMirrorKit 모듈 우산 및 기기 로컬 Room 저장소 바인딩 SSOT.
 ///
-/// 고객용 단일 Room 로컬 저장소(`~/Library/Application Support/net.ranode.shared/rooms/<room-id>/<slug>/`)
+/// 고객용 로컬 저장소(`~/Library/Application Support/net.ranode.shared/<slug>/` 또는 명시적 Room)
 /// 와 StateMirror 를 바인딩하여 개발자 홈(`~/.<slug>/`) 하드코딩을 탈피하고,
 /// `AtomicFileWriter` 및 `SelfHealingDocumentStore` 연계 무결성을 보장한다.
 public enum StateMirrorKit {
-    /// 외부 고객용 기본 룸 식별자 SSOT.
+    /// 레거시 외부 고객용 기본 룸 식별자 SSOT. 새 코드에서는 룸 없음에 `nil`을 사용한다.
     public static var defaultRoomID: String {
         StateRootKit.defaultRoomID
     }
 
-    /// 특정 앱의 고객용 단일 룸 네임스페이스 저장소 디렉터리 URL.
-    /// `~/Library/Application Support/net.ranode.shared/rooms/<room-id>/<slug>/`
+    /// 특정 앱의 고객용 저장소 디렉터리 URL. `nil`은 룸 없는 앱 저장소를 뜻한다.
     public static func customerAppStorageURL(
         slug: String,
-        roomID: String = defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil
     ) -> URL {
         StateRootKit.customerAppStorageURL(slug: slug, roomID: roomID, homeDirectory: homeDirectory)
     }
 
-    /// 특정 앱의 고객용 단일 룸 네임스페이스 미러 파일 URL.
-    /// `~/Library/Application Support/net.ranode.shared/rooms/<room-id>/<slug>/state.json`
+    /// 특정 앱의 고객용 미러 파일 URL. `nil`은 룸 없는 앱 저장소를 뜻한다.
     public static func customerMirrorURL(
         slug: String,
-        roomID: String = defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil
     ) -> URL {
         StateRootKit.customerStateMirrorURL(slug: slug, roomID: roomID, homeDirectory: homeDirectory)
@@ -36,7 +34,7 @@ public enum StateMirrorKit {
     @discardableResult
     public static func ensureCustomerMirrorStorage(
         slug: String,
-        roomID: String = defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil
     ) -> URL {
         StateRootKit.ensureCustomerRoomStorage(slug: slug, roomID: roomID, homeDirectory: homeDirectory)
@@ -103,6 +101,7 @@ public struct StateMirrorSelfHealingStore<State: Codable & Sendable>: Sendable {
     public let app: String
     public let url: URL
     public let writer: any AtomicWriting
+    private let noRoomPromotion: (slug: String, homeDirectory: String?)?
 
     public var bakURL: URL {
         let resolved = url.resolvingSymlinksInPath()
@@ -118,23 +117,31 @@ public struct StateMirrorSelfHealingStore<State: Codable & Sendable>: Sendable {
         self.app = app
         self.url = url
         self.writer = writer
+        self.noRoomPromotion = nil
     }
 
     public init(
         app: String,
-        roomID: String = StateRootKit.defaultRoomID,
+        roomID: String? = nil,
         homeDirectory: String? = nil,
         writer: any AtomicWriting = AtomicFileWriter()
     ) {
-        self.init(
-            app: app,
-            url: StateMirrorKit.customerMirrorURL(slug: app, roomID: roomID, homeDirectory: homeDirectory),
-            writer: writer
-        )
+        self.app = app
+        self.url = StateMirrorKit.customerMirrorURL(slug: app, roomID: roomID, homeDirectory: homeDirectory)
+        self.writer = writer
+        self.noRoomPromotion = StateRootKit.isLegacyDefaultRoomID(roomID ?? "")
+            ? (app, homeDirectory)
+            : nil
     }
 
     /// 파일 로드 또는 .bak 자가 치유.
     public func loadOrSelfHeal() throws -> StateMirrorEnvelope<State> {
+        if let noRoomPromotion {
+            StateRootKit.promoteLegacyNoRoomStorage(
+                slug: noRoomPromotion.slug,
+                homeDirectory: noRoomPromotion.homeDirectory
+            )
+        }
         let resolvedURL = url.resolvingSymlinksInPath()
         let decoder = JSONDecoder()
 

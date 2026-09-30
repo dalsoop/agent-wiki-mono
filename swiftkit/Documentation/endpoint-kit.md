@@ -60,8 +60,8 @@ host-infra 선언은 인프라 원장에 그 호스트가 있는지다. Endpoint
 | 키 | 폴백 | host-infra 선언 |
 |---|---|---|
 | `app` | `https://gujo.ai` | 선언 |
-| `apps` / `apps-prod` | `https://app.gujo.ai` | 선언 |
-| `assets` / `assets-prod` | `https://asset.gujo.ai` | 선언 |
+| `apps` / `apps-prod` | `https://apps.gujo.ai` | 선언 |
+| `assets` / `assets-prod` | `https://assets.gujo.ai` | 선언 |
 | `support` / `support-prod` | `https://support.gujo.ai` | 선언 |
 | `learn` / `learn-prod` | `https://learn.gujo.ai` | 선언 — `lecture.gujo.ai` 와 별개 호스트 |
 | `pay` / `pay-prod` | `https://pay.gujo.ai` | 미선언 — 결정 대기 (백로그 A01E22AF, 실측 2026-09-10). **값은 바꾸지 않는다** |
@@ -69,7 +69,8 @@ host-infra 선언은 인프라 원장에 그 호스트가 있는지다. Endpoint
 | `lecture-prod` | `https://lecture.gujo.ai` | 선언 — 강좌 사이트. `learn` 과 별개 |
 | `core` | `http://gujo.test:8001` | 로컬 폴백 |
 | `core-prod` / `gujo-core` | `https://gujo.ai` | 선언 |
-| `software` | `http://app.gujo.test:8012` | 로컬 폴백 |
+| `software` | `http://apps.gujo.test:8012` | 로컬 폴백 |
+| `distribution-feed-template` | (빈 문자열) | 값은 URL 이 아니라 `{product_id}` 자리표시를 담은 Sparkle 피드 템플릿. 빌드 앱 원장이 채움 — ship 의 제품 ID 피드 opt-in(`update_feed`) 전용, 비면 opt-in 앱 ship 실패 |
 | `tokens` | `http://tokens.gujo.test:8011` | 로컬 폴백 |
 | `api-prod` | `https://api.gujo.ai` | 선언 |
 | `infisical` | `https://infisical.local.ranode.net` | InfisicalCerts 권장 호스트 |

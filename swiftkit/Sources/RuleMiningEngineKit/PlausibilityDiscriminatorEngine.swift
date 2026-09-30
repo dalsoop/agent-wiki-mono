@@ -115,7 +115,8 @@ public struct PlausibilityDiscriminatorEngine: Sendable {
         }
 
         // 2. 예외 삼킴 (Empty catch / swallow) 감지
-        if fixLower.contains("catch { /* handled */ _ = error }") || fixLower.contains("catch { /* handled */ _ = error }") || fixLower.contains("try?") {
+        let swallowMarkers = ["catch { }", "catch {}", "_ = error", "try?"]
+        if swallowMarkers.contains(where: fixLower.contains) {
             if !patLower.contains("try?") {
                 details.append("StaticContractViolation: Error swallowing pattern detected in fix")
                 passed = false

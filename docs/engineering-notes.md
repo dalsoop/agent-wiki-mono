@@ -23,11 +23,11 @@
 - 원인: `LedgerStore.scan()`은 프런트매터를 파싱만 하고 저장된 id를 믿는다. id 재해시 검사는 `verify()`에만 있다.
 - 대응: 무결성이 필요한 경로(승격 원본 확인 등)는 `sourceStore.verify()` 결과를 함께 본다. `PromotionService.validateSource`가 그렇게 한다. 새 경로에서 "scan에 나왔으니 진짜"라고 가정하지 않는다.
 
-## CLI 사본 세 벌
+## CLI 명령 두 자리
 
-- 증상: `WikiCLIShared`의 명령을 고쳤는데 설치된 `agent-wiki`나 Studio의 `agent-wiki` 동작이 다르다.
-- 원인: 같은 이름의 명령 파일이 세 곳에 있다. `agent-wiki-kit/Sources/WikiCLIShared`(공용), `apps/agent-wiki-synchronizer/Sources/AgentWikiGlobalCLI`(fleet·gujo·promotion·schedule·task·world 등 전역 CLI 전용 명령), `apps/agent-wiki-editor/Sources/AgentWikiFullCLI`(전체 명령의 분기 사본, 제품명 `agent-wiki`). editor 사본은 공용 파일과 수십~수백 줄씩 다르다.
-- 대응: 설치된 `agent-wiki`의 원천은 synchronizer(`agent-wiki-synchronizer` 제품이 `AgentWikiGlobal.app/Contents/Helpers/agent-wiki-synchronizer`로 설치되고 `/opt/homebrew/bin/agent-wiki` → `agent-wiki-global` → 그 파일로 링크된다)다. 공용 명령은 `WikiCLIShared`에서 고치고, 전역 전용 명령은 synchronizer에서 고친다. editor 사본은 같은 변경을 받았는지 따로 확인한다.
+- 명령 파일은 두 곳에 있다. `agent-wiki-kit/Sources/WikiCLIShared`(공용), `apps/agent-wiki-synchronizer/Sources/AgentWikiSynchronizerCLI`(fleet·gujo·promotion·schedule·task·world 등 전역 CLI 전용 명령). editor 의 분기 사본(`AgentWikiFullCLI`)은 editor 1.0.28 에서 지웠다.
+- 설치된 `agent-wiki`의 원천은 이 저장소의 synchronizer다(`agent-wiki-synchronizer` 제품이 `AgentWikiGlobal.app/Contents/Helpers/agent-wiki-synchronizer`로 설치되고 `/opt/homebrew/bin/agent-wiki` → `agent-wiki-global` → 그 파일로 링크된다). 공용 명령은 `WikiCLIShared`에서, 전역 전용 명령은 synchronizer에서 고친다.
+- 2026-09-30 까지는 설치본이 swift-app-mono 의 사본에서 빌드됐다(결정 0006). 그 사본은 퇴역했으니 거기서 고치지 않는다.
 
 ## 인용이 상위 world를 가리키면 분류 검사가 빠진다
 

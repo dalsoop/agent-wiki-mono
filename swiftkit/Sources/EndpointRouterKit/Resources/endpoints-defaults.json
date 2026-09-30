@@ -4,6 +4,7 @@
   "endpoints": {
     "core": "http://gujo.test:8001",
     "software": "http://app.gujo.test:8012",
+    "distribution-feed-template": "",
     "apps-local": "http://app.gujo.test:8012",
     "tokens": "http://tokens.gujo.test:8011",
     "app": "https://gujo.ai",

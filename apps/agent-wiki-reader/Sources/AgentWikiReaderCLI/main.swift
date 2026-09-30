@@ -7,11 +7,10 @@ import AppPathsKit
 import LocalizationKit
 import CommandKit
 
-SingleInstanceCLI.autoGuard()
-
 @main
 enum AgentWikiReaderCLIMain {
     static func main() async {
+        SingleInstanceCLI.autoGuard()
         let args = Array(CommandLine.arguments.dropFirst())
         GujoManaged.exitIfNotEntitledSync()
         switch args.first ?? "help" {
@@ -100,8 +99,9 @@ enum AgentWikiReaderCLIMain {
             "/usr/bin/open",
             ["-a", "Agent Wiki Reader"]
         )
-        } catch {
-            fputs(CLILocalization.format("main.fputs-2", error.localizedDescription), stderr)
+        if !safeResult.ok {
+            let msg = safeResult.stderr.isEmpty ? "exit code \(safeResult.exitCode)" : safeResult.stderr
+            fputs(CLILocalization.format("main.fputs-2", msg), stderr)
             exit(1)
         }
     }

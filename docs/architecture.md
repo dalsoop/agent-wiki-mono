@@ -19,7 +19,7 @@ swiftkit-sparkle ─────────────────────
 | `agent-wiki-kit` / `KnowledgeBaseWikiCore` | 원장 엔진: 객체 모델, 저장소, verify, world 설정, 인용·승격 게이트, 색인(SQLite FTS), 그래프, 사건 로그, git·S3 동기화, fleet 질의 | `citationledgerkit`, `swiftkit` |
 | `agent-wiki-kit` / `WikiCLIShared` | CLI 명령 구현 공용 라이브러리(`runPublish`, `runVerify`, `runScopedSearchOrContext` 등) | `KnowledgeBaseWikiCore`, `swiftkit` |
 | `agent-wiki-kit` / `BlobStoreKit` | `KnowledgeBaseWikiCore`가 재수출하는 blob 저장 모듈 | 없음 |
-| `apps/agent-wiki-synchronizer` | 전역 CLI(제품명 `agent-wiki-synchronizer`, 런타임 슬러그 `agent-wiki-global`)와 메뉴바 앱 `AgentWikiGlobal`. 설치된 `agent-wiki`의 원천 | `agent-wiki-kit`, `citationledgerkit`, `swiftkit*` |
+| `apps/agent-wiki-synchronizer` | 전역 CLI(제품명 `agent-wiki-synchronizer`, 런타임 슬러그 `agent-wiki-global`)와 메뉴바 앱 `AgentWikiSynchronizer`. 설치된 `agent-wiki`의 원천 | `agent-wiki-kit`, `citationledgerkit`, `swiftkit*` |
 | `apps/agent-wiki-indexer` | repo `.wiki/` 전용 CLI(제품명 `agent-wiki-indexer`, 슬러그 `agent-wiki-local`)와 메뉴바 앱 | `agent-wiki-kit`, `citationledgerkit`, `swiftkit*` |
 | `apps/agent-wiki-reader` | 설치된 `agent-wiki`를 하위 프로세스로 부르는 읽기 전용 프록시 CLI와 메뉴바 앱 | `agent-wiki-kit`, `agent-wiki-ui`, `swiftkit*` |
 | `apps/agent-wiki-editor` | Studio GUI(`AgentWikiStudio`), 얇은 CLI(`agent-wiki-editor`, 슬러그 `agent-wiki-studio`), 그리고 분기된 full CLI 사본(제품명 `agent-wiki`) | `agent-wiki-kit`, `agent-wiki-ui`, `swiftkit*` |
@@ -45,7 +45,7 @@ world 목록은 호스트 파일 `~/.memo-citation-ledger/config.json`(`LedgerCo
 
 ## 대표 흐름: `agent-wiki --world gujo-wiki publish ...`
 
-1. `AgentWikiGlobalCLI/main.swift`가 `SingleInstanceCLI.autoGuard()`와 `GujoManaged.exitIfNotEntitledSync()`를 먼저 부른다.
+1. `AgentWikiSynchronizerCLI/main.swift`가 `SingleInstanceCLI.autoGuard()`와 `GujoManaged.exitIfNotEntitledSync()`를 먼저 부른다.
 2. `CLIArgv.peelLeadingGlobals`가 명령 앞의 `--as`·`--world`만 떼어 낸다. 작성자 기본값은 `MEMO_LEDGER_AUTHOR` 환경 변수, 없으면 `CitationActor.resolve()`다.
 3. 허용 옵션 집합 밖의 `-`로 시작하는 인자가 있으면 종료 코드 64로 끝낸다.
 4. world 없이 동작하는 명령(`help`, `version`, `capabilities`, `install`, `skill*`, `hook`, `schedule`, `init`, `world`, `gujo`, `fleet`, `pull`, `weight`)은 여기서 처리하고 끝난다.

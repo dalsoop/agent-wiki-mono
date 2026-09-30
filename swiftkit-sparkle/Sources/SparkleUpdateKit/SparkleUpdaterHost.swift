@@ -16,6 +16,8 @@ public final class SparkleUpdaterHost {
     public static let shared = SparkleUpdaterHost()
 
     private var controller: SPUStandardUpdaterController?
+    /// Sparkle 은 delegate 를 약하게 잡으므로 호스트가 강하게 붙잡는다.
+    private let channelDelegate = UpdateChannelDelegate()
     public private(set) var didStart = false
 
     /// 마지막 시작 시도 사유. `SUFeedURL` 누락 등 진단용.
@@ -44,7 +46,7 @@ public final class SparkleUpdaterHost {
         didStart = true
         controller = SPUStandardUpdaterController(
             startingUpdater: true,
-            updaterDelegate: nil,
+            updaterDelegate: channelDelegate,
             userDriverDelegate: nil
         )
         lastStartStatus = .started

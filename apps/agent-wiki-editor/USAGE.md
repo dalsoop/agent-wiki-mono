@@ -8,7 +8,7 @@ monlith 폴백: 헤더 「GUI (studio)」「GUI (전체)」.
 
 CLI 바이너리 이름: `agent-wiki-studio`.
 
-**dual-entry:** 공개 full CLI `agent-wiki` 는 아직 monlith. Studio 승계 후 Helpers·PATH·별칭 이전.
+**dual-entry:** PATH CLI `agent-wiki` 는 `agent-wiki-synchronizer` 가 `cli_aliases` 로 소유한다. 이 앱은 그 이름을 claim 하지 않고, 조회·발행은 PATH 의 `agent-wiki` 를 프록시한다.
 설치: `app-build-manager ship apps/agent-wiki-studio-swift release`.
 
 의존성: `agent-wiki-studio capabilities` → `.result.depends` (목록은 여기 두지 않는다.

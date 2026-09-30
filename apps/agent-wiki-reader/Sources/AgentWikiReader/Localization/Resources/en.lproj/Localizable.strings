@@ -28,7 +28,7 @@
 "CLIPanelView.textfield" = "Search or look up by id or title";
 "CLIPanelView.textfield-2" = "id (neighbor/timeline lookup)";
 "CLIPanelView.textfield-3" = "sha (blob info lookup)";
-"CLIPanelView.help" = "ahead/behind of the %1$@ clone";
+"CLIPanelView.help" = "ahead/behind of the ~/gujo-wiki clone";
 "main.fputs" = "capabilities encode failed: %1$@\n";
 "main.fputs-2" = "GUI launch failed: %1$@\n";
 "CLIPanelView.label" = "Query results appear here.";

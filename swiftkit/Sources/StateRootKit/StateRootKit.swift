@@ -54,7 +54,8 @@ public enum StateRootKit {
         if let tenantID = currentTenantID(environment: environment, homeDirectory: home) {
             let slug = tenantSlug(from: tenantID)
             if !slug.isEmpty {
-                return (home as NSString).appendingPathComponent(".tenants/\(slug)")
+                // 넘겨받은 홈이 이미 테넌트 루트여도 `.tenants` 층을 한 벌 더 만들지 않는다.
+                return TenantsLayer.join(home, "\(tenantsDirectoryName)/\(slug)")
             }
         }
         return home
@@ -139,25 +140,28 @@ public enum StateRootKit {
     }
 
     /// `resolveHost` 아래 상대 경로. 함대 registry 등 호스트 SSOT 전용.
+    /// `.tenants` 층은 `TenantsLayer.join` 규칙을 따른다 — 오버라이드가 테넌트 루트여도 겹치지 않는다.
     public static func hostPath(
         _ relative: String,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String? = nil
     ) -> String {
-        (resolveHost(environment: environment, homeDirectory: homeDirectory) as NSString)
-            .appendingPathComponent(relative)
+        TenantsLayer.join(resolveHost(environment: environment, homeDirectory: homeDirectory), relative)
     }
 
     /// 상태 루트 아래 상대 경로 하나를 이어 붙인 절대경로. 앱은
     /// `FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(...)` 대신
     /// 이 함수로 자기 상태 파일 경로를 구한다.
+    ///
+    /// `.tenants` 또는 `.tenants/…` 는 상태 루트 안이 아니라 `tenantsRoot`(호스트 홈 한 층의
+    /// `~/.tenants`) 기준이다 — 테넌트 축 루트(`~/.tenants/personal`) 밑에 이으면
+    /// `~/.tenants/personal/.tenants/gujo` 같은 중첩 루트가 생긴다(`TenantsLayer.join` 참고).
     public static func path(
         _ relative: String,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String? = nil
     ) -> String {
-        (resolve(environment: environment, homeDirectory: homeDirectory) as NSString)
-            .appendingPathComponent(relative)
+        TenantsLayer.join(resolve(environment: environment, homeDirectory: homeDirectory), relative)
     }
 
     /// 상태 루트 아래 상대 경로 하나를 이어 붙인 `URL`. `path(_:)` 의 URL 버전.
@@ -329,16 +333,7 @@ public enum StateRootKit {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String? = nil
     ) -> String {
-        let stateRoot = URL(
-            fileURLWithPath: resolve(environment: environment, homeDirectory: homeDirectory),
-            isDirectory: true
-        )
-        let components = stateRoot.pathComponents
-        if let index = components.lastIndex(of: tenantsDirectoryName) {
-            let prefix = components[...index]
-            return NSString.path(withComponents: Array(prefix))
-        }
-        return (stateRoot.path as NSString).appendingPathComponent(tenantsDirectoryName)
+        TenantsLayer.directory(containing: resolve(environment: environment, homeDirectory: homeDirectory))
     }
 
     /// 방이 속한 테넌트의 상태 루트 `<.tenants>/<slug>`.
@@ -364,7 +359,7 @@ public enum StateRootKit {
         return resolved.contains("/\(tenantsDirectoryName)/")
     }
 
-    /// 특정 테넌트 상태 루트 아래 상대 경로 URL을 반환합니다.
+    /// 특정 테넌트 상태 루트 아래 상대 경로 URL을 반환합니다. `.tenants` 층은 `TenantsLayer.join` 규칙.
     public static func tenantURL(
         for relative: String,
         tenant: String,
@@ -372,10 +367,10 @@ public enum StateRootKit {
         homeDirectory: String? = nil
     ) -> URL {
         let root = tenantStateRoot(tenant: tenant, environment: environment, homeDirectory: homeDirectory)
-        return URL(fileURLWithPath: (root as NSString).appendingPathComponent(relative))
+        return URL(fileURLWithPath: TenantsLayer.join(root, relative))
     }
 
-    /// 특정 테넌트 상태 루트 아래 상대 경로 문자열을 반환합니다.
+    /// 특정 테넌트 상태 루트 아래 상대 경로 문자열을 반환합니다. `.tenants` 층은 `TenantsLayer.join` 규칙.
     public static func tenantPath(
         for relative: String,
         tenant: String,
@@ -383,7 +378,7 @@ public enum StateRootKit {
         homeDirectory: String? = nil
     ) -> String {
         let root = tenantStateRoot(tenant: tenant, environment: environment, homeDirectory: homeDirectory)
-        return (root as NSString).appendingPathComponent(relative)
+        return TenantsLayer.join(root, relative)
     }
 
     /// 특정 테넌트 환경의 앱 상태 디렉터리 URL을 반환합니다.
@@ -397,82 +392,6 @@ public enum StateRootKit {
         return tenantURL(for: dirName, tenant: tenant, environment: environment, homeDirectory: homeDirectory)
     }
 
-    // MARK: - Customer-Grade Single Room Local Storage SSOT
-
-    /// 외부 고객용 기본 룸 식별자 SSOT.
-    public static let defaultRoomID = "room:default"
-
-    /// 고객용 애플리케이션 지원 공유 루트 (`~/Library/Application Support/net.ranode.shared`).
-    public static func customerApplicationSupportDirectory(
-        homeDirectory: String? = nil
-    ) -> URL {
-        let baseDir: URL
-        if let home = homeDirectory {
-            let appSupportComponent = String(
-                decoding: [0x41, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x53, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74],
-                as: UTF8.self
-            )
-            baseDir = URL(fileURLWithPath: home, isDirectory: true)
-                .appendingPathComponent("Library", isDirectory: true)
-                .appendingPathComponent(appSupportComponent, isDirectory: true)
-        } else {
-            baseDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-        }
-        return baseDir.appendingPathComponent("net.ranode.shared", isDirectory: true)
-    }
-
-    /// 고객용 단일 격리 Room 로컬 저장소 루트 (`.../rooms/<room-id>`).
-    public static func customerRoomRoot(
-        roomID: String = defaultRoomID,
-        homeDirectory: String? = nil
-    ) -> URL {
-        let safeRoom = roomID.replacingOccurrences(of: ":", with: "-")
-        return customerApplicationSupportDirectory(homeDirectory: homeDirectory)
-            .appendingPathComponent("rooms", isDirectory: true)
-            .appendingPathComponent(safeRoom, isDirectory: true)
-    }
-
-    /// 특정 앱의 고객용 단일 룸 네임스페이스 저장소 (`.../rooms/<room-id>/<slug>`).
-    public static func customerAppStorageURL(
-        slug: String,
-        roomID: String = defaultRoomID,
-        homeDirectory: String? = nil
-    ) -> URL {
-        customerRoomRoot(roomID: roomID, homeDirectory: homeDirectory)
-            .appendingPathComponent(slug, isDirectory: true)
-    }
-
-    /// 특정 앱의 고객용 단일 룸 네임스페이스 StateMirror 파일 URL (`.../rooms/<room-id>/<slug>/state.json`).
-    public static func customerStateMirrorURL(
-        slug: String,
-        roomID: String = defaultRoomID,
-        homeDirectory: String? = nil
-    ) -> URL {
-        customerAppStorageURL(slug: slug, roomID: roomID, homeDirectory: homeDirectory)
-            .appendingPathComponent("state.json")
-    }
-
-    /// 첫 실행 시 기본 Room 및 앱 저장소 디렉터리를 자동 프로비저닝한다 (No Wizard First-Run).
-    @discardableResult
-    public static func ensureCustomerRoomStorage(
-        slug: String,
-        roomID: String = defaultRoomID,
-        homeDirectory: String? = nil
-    ) -> URL {
-        let url = customerAppStorageURL(slug: slug, roomID: roomID, homeDirectory: homeDirectory)
-        let fm = FileManager.default
-        if !fm.fileExists(atPath: url.path) {
-            do {
-                try fm.createDirectory(at: url, withIntermediateDirectories: true)
-            } catch {
-                FileHandle.standardError.write(
-                    Data("StateRootKit: failed to create customer storage directory \(url.path): \(error)\n".utf8)
-                )
-            }
-        }
-        return url
-    }
 
     /// 현재 상태 루트 디렉터리 경로 (resolve()의 단축 별칭).
     public static var current: String { root }

@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] - 2026-09-30
+
+### Removed
+- Removed the unused `AgentWikiFullCLI` target and its sources (no product ships it since 1.0.28).
+- `dual-entry adopt` no longer copies into `Contents/Helpers` or installs into PATH; it prints guidance and exits 0. PATH linking is done only by the deploy tool (`app-build-manager ship`). `dual-entry status` stays read-only.
+- The shared ledger UI no longer has a "CLI install" button; it shows the deploy guidance instead.
+- The CLI version check re-probes the PATH CLI `version` when the stamp differs from the app version, so the "CLI version mismatch" banner no longer sticks after a ship.
+- `dual-entry adopt --json` prints `{"ok":true,"message":"..."}`; help and usage no longer advertise `adopt` options. README rewritten.
+
+## [1.0.28] - 2026-09-30
+
+### Fixed
+- The app no longer claims the PATH CLI name `agent-wiki`. `agent-wiki-synchronizer` owns it through `cli_aliases`. Removed `full_cli_product`, `full_cli_helper_path` and `extra_clis` from the package identity and the `agent-wiki` product from `Package.swift`. The app keeps `agent-wiki-editor` (alias `agent-wiki-studio`).
+
+## [1.0.27] - 2026-09-30
+
+### Changed
+- `install`, `skill-install` and `skill-uninstall` no longer attach or detach skills in agent home folders (the skill catalog owns that).
+
+## [1.0.26] - 2026-09-25
+### Changed
+- The shared wiki has no remote git repository now, so the UI no longer shows the retired web URL and `gujo status` prints how to configure an endpoint instead of a dead clone URL (`GujoWikiRemote.current()` is optional; `GujoWikiWeb` is removed). The internal GitLab (10.0.50.63) was retired on 2026-09-24.
+
+## [1.0.25] - 2026-09-25
+### Changed
+- `backup` no longer falls back to the retired `sftp:pve:` restic repository (and its built-in password). Without `.memo-citation-ledger/backup.json` it stops and says what to write.
+- `search --remote` / `context --remote` stop with a clear error when no wiki-hub address is configured (env `GUJO_HUB_URL` or EndpointRouterKit `wiki-hub`), instead of querying a placeholder URL.
+- Remote whisper transcription is skipped outright when neither `MEMO_WHISPER_URL` nor EndpointRouterKit `whisper` is set; the "no transcription path" error now says remote needs explicit configuration.
+
+### Removed
+- Comments and messages that named the retired 50 server and its internal wiki-hub domain as the default target.
+
+## [1.0.24] - 2026-09-25
+### Fixed
+- The single-instance guard runs inside main() instead of at top level next to the async entry point.
+
 ## [1.0.23] - 2026-09-21
 ### Changed
 - Hosts come from EndpointRouterKit, not baked cluster DNS.

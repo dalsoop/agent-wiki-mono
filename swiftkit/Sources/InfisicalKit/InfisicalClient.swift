@@ -18,7 +18,7 @@ public enum InfisicalError: Error, Sendable, Equatable, CustomStringConvertible 
 /// access token 을 쥐고, 프로젝트·시크릿·아이덴티티를 조작한다.
 public actor InfisicalClient {
     private let http: HTTPClient
-    private let base: String   // 예: https://infisical.50.internal.kr
+    private let base: String   // 예: https://infisical.example.internal
     private var accessToken: String?
 
     // 기본값을 nil 로 두고 내부에서 생성한다 — default 인자가 caller 모듈에서 HTTPClientKit

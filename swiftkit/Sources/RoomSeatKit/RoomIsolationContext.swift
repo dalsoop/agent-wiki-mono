@@ -101,10 +101,8 @@ public struct RoomContext: Sendable, Equatable, Codable {
            sharedIdx + 2 < comps.count,
            comps[sharedIdx + 1] == "rooms" {
             let rawRoomID = comps[sharedIdx + 2]
-            let roomID = (rawRoomID == "room-default" || rawRoomID == "room:default")
-                ? CustomerRoomLayout.defaultRoomID
-                : rawRoomID
-            return CustomerRoomLayout.makeCustomerRoomContext(roomID: roomID)
+            guard !StateRootKit.isLegacyDefaultRoomID(rawRoomID) else { return nil }
+            return CustomerRoomLayout.makeCustomerRoomContext(roomID: rawRoomID)
         }
 
         // 2. 개발자/테넌트 멀티룸 경로 (~/.tenants/<slug>/rooms/<room_id>/)
@@ -126,43 +124,49 @@ public struct RoomContext: Sendable, Equatable, Codable {
 /// 고객용 표준 단일 기기 로컬 Room 레이아웃 (Customer-Grade Single Room SSOT)
 /// 경로: ~/Library/Application Support/net.ranode.shared/rooms/<room_id>/
 public enum CustomerRoomLayout: Sendable {
-    public static let defaultRoomID = "room:default"
-    public static let defaultTenantID = "tenant:personal"
     public static let sharedDomain = "net.ranode.shared"
 
     /// ~/Library/Application Support/
     public static func applicationSupportURL(
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) -> URL {
-        fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        if let homeDirectory {
+            return URL(fileURLWithPath: homeDirectory, isDirectory: true)
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
+        }
+        return fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
                 .appendingPathComponent("Library/Application Support", isDirectory: true)
     }
 
     /// ~/Library/Application Support/net.ranode.shared/rooms/
     public static func roomsBaseURL(
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) -> URL {
-        applicationSupportURL(fileManager: fileManager)
+        applicationSupportURL(fileManager: fileManager, homeDirectory: homeDirectory)
             .appendingPathComponent(sharedDomain, isDirectory: true)
             .appendingPathComponent("rooms", isDirectory: true)
     }
 
     /// ~/Library/Application Support/net.ranode.shared/rooms/<room_id>/ (SSOT: StateRootKit.customerRoomRoot)
     public static func roomURL(
-        roomID: String = defaultRoomID,
-        fileManager: FileManager = .default
+        roomID: String,
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) -> URL {
-        StateRootKit.customerRoomRoot(roomID: roomID)
+        StateRootKit.customerRoomRoot(roomID: roomID, homeDirectory: homeDirectory)
     }
 
     /// 고객용 단일 정본 RoomContext 생성
     public static func makeCustomerRoomContext(
-        roomID: String = defaultRoomID,
-        tenantID: String = defaultTenantID,
-        fileManager: FileManager = .default
+        roomID: String,
+        tenantID: String = "tenant:personal",
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) -> RoomContext {
-        let rURL = roomURL(roomID: roomID, fileManager: fileManager)
+        let rURL = roomURL(roomID: roomID, fileManager: fileManager, homeDirectory: homeDirectory)
         let roomsBase = rURL.deletingLastPathComponent()
         let tenantRoot = roomsBase.deletingLastPathComponent()
         let tenantDocs = tenantRoot.appendingPathComponent("Documents/Gujo", isDirectory: true)
@@ -186,60 +190,39 @@ public enum CustomerRoomLayout: Sendable {
         )
     }
 
-    /// 첫 기동 시 기본 Room(room:default) 디렉터리 및 spec.json/windows.json 자동 준비 (0-overhead idempotent)
-    @discardableResult
-    public static func ensureDefaultRoom(
-        roomID: String = defaultRoomID,
-        fileManager: FileManager = .default
-    ) throws -> RoomContext {
-        try ensureDefaultRoom(roomID: roomID, performGC: true, fileManager: fileManager)
-    }
-
-    /// 첫 기동 시 기본 Room 디렉터리 자동 준비 및 GC 수명주기 제어
-    @discardableResult
-    public static func ensureDefaultRoom(
-        roomID: String = defaultRoomID,
-        performGC: Bool,
-        fileManager: FileManager = .default
-    ) throws -> RoomContext {
-        runStorageGCIfNeeded(roomID: roomID, performGC: performGC, fileManager: fileManager)
-        let context = makeCustomerRoomContext(roomID: roomID, fileManager: fileManager)
-        try createDirectoryIfNeeded(at: context.roomURL, fileManager: fileManager)
-        try createDirectoryIfNeeded(at: context.roomURL.appendingPathComponent("apps", isDirectory: true), fileManager: fileManager)
-        try createDirectoryIfNeeded(at: context.worktreeURL, fileManager: fileManager)
-
-        let initialSpec = """
-        {"roomID":"\(roomID)","task":"Default Customer Isolated Room","verdict":"ok"}
-        """
-        try createFileIfNeeded(at: context.specURL, content: initialSpec, fileManager: fileManager)
-
-        let initialWindows = """
-        {"roomID":"\(roomID)","windows":[]}
-        """
-        try createFileIfNeeded(at: context.windowsURL, content: initialWindows, fileManager: fileManager)
-
-        return context
-    }
-
     /// 고객 룸 작업공간 생성 및 샌드박스 프로비저닝 (GC 수명주기 명시 실행)
     @discardableResult
     public static func createCustomerWorkspace(
-        roomID: String = defaultRoomID,
+        roomID: String,
         options: FastStorageGCOptions = .default,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        homeDirectory: String? = nil
     ) throws -> (context: RoomContext, gcReport: RoomStorageGCReport) {
-        let report = try RoomStorageGC.runCustomerRoomGC(roomID: roomID, options: options, fileManager: fileManager)
-        let context = try ensureDefaultRoom(roomID: roomID, performGC: false, fileManager: fileManager)
+        let report = try RoomStorageGC.runCustomerRoomGC(
+            roomID: roomID,
+            options: options,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
+        )
+        let context = makeCustomerRoomContext(
+            roomID: roomID,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
+        )
+        try createDirectoryIfNeeded(at: context.roomURL, fileManager: fileManager)
+        try createDirectoryIfNeeded(at: context.roomURL.appendingPathComponent("apps", isDirectory: true), fileManager: fileManager)
+        try createDirectoryIfNeeded(at: context.worktreeURL, fileManager: fileManager)
+        try createFileIfNeeded(
+            at: context.specURL,
+            content: "{\"roomID\":\"\(roomID)\",\"task\":\"Customer Isolated Room\",\"verdict\":\"ok\"}",
+            fileManager: fileManager
+        )
+        try createFileIfNeeded(
+            at: context.windowsURL,
+            content: "{\"roomID\":\"\(roomID)\",\"windows\":[]}",
+            fileManager: fileManager
+        )
         return (context, report)
-    }
-
-    private static func runStorageGCIfNeeded(roomID: String, performGC: Bool, fileManager: FileManager) {
-        guard performGC else { return }
-        do {
-            _ = try RoomStorageGC.runCustomerRoomGC(roomID: roomID, fileManager: fileManager)
-        } catch {
-            fputs("CustomerRoomLayout: Storage GC warning in room \(roomID): \(error.localizedDescription)\n", stderr)
-        }
     }
 
     private static func createDirectoryIfNeeded(at url: URL, fileManager: FileManager) throws {

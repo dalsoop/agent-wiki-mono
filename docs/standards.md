@@ -19,7 +19,7 @@
 
 ## CLI 표면
 
-- 전역 CLI와 repo CLI는 허용 옵션 집합 밖의 옵션이 오면 작업 전에 종료 코드 64로 끝난다. 새 옵션을 추가하면 `apps/agent-wiki-synchronizer/Sources/AgentWikiGlobalCLI/main.swift`와 `apps/agent-wiki-indexer/Sources/AgentWikiLocalCLI/main.swift`의 `allowedOptions` 양쪽에 넣는다. 한쪽만 넣으면 다른 CLI가 그 옵션을 거부한다.
+- 전역 CLI와 repo CLI는 허용 옵션 집합 밖의 옵션이 오면 작업 전에 종료 코드 64로 끝난다. 새 옵션을 추가하면 `apps/agent-wiki-synchronizer/Sources/AgentWikiSynchronizerCLI/main.swift`와 `apps/agent-wiki-indexer/Sources/AgentWikiLocalCLI/main.swift`의 `allowedOptions` 양쪽에 넣는다. 한쪽만 넣으면 다른 CLI가 그 옵션을 거부한다.
 - 발행 명령은 표준 출력에 id 한 줄만 낸다. 부가 정보(선별 id 등)는 표준 에러로 낸다. 다른 도구가 표준 출력을 id로 읽는다.
 - 앱의 도메인 조작은 그 앱 CLI로 한다. 상태 파일(`~/.swift-app-state/*.json`, `~/.memo-citation-ledger/*.json`)을 손으로 고치거나 GUI 조작으로 우회하지 않는다.
 - CLI에 연산을 추가하면 `capabilities` 출력의 `commands`에도 넣는다.

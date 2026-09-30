@@ -5,6 +5,8 @@ public enum DatabaseClientError: Error, Equatable, LocalizedError {
     case unsafeSQL
     case commandFailed(String)
     case parseFailed(String)
+    /// 선택한 연결 프로필(이름)의 jump·kube 호스트가 비어 있다 — 원격 명령을 띄우기 전에 거부한다.
+    case connectionNotConfigured(String)
 
     public var errorDescription: String? {
         switch self {
@@ -14,6 +16,10 @@ public enum DatabaseClientError: Error, Equatable, LocalizedError {
             message.isEmpty ? "Query failed." : message
         case let .parseFailed(message):
             message
+        case let .connectionNotConfigured(profile):
+            "연결 대상을 설정하세요: 프로필 '\(profile)' 의 jumpHost·kubeHost 가 비어 있습니다 "
+                + "(예: root@db-jump.example.internal). \(AppPaths.default.storeFile.path) 의 "
+                + "settings.profiles 에 지정합니다."
         }
     }
 }

@@ -2,7 +2,8 @@ import Foundation
 import KeychainKit
 import os
 
-/// 세션 저장소 seam. 정본은 Keychain(`KeychainSessionStore`), 테스트·러너는 `InMemorySessionStore`.
+/// 세션 저장소 seam. 정본은 Secure Enclave 키로 암호화한 파일(`SecureEnclaveFileSessionStore`, 결정 7 — Keychain 에
+/// 두지 않는다), 테스트·러너는 `InMemorySessionStore`. `KeychainSessionStore` 는 옛 항목을 옮기는 데만 쓴다.
 public protocol GujoSessionStore: Sendable {
     func data(account: String) -> Data?
     @discardableResult func setData(_ value: Data, account: String) -> Bool
@@ -18,11 +19,24 @@ public enum GujoKeychain {
 
 public enum GujoSessionStores {
     public static func `default`() -> any GujoSessionStore {
-        KeychainSessionStore()
+        SecureEnclaveFileSessionStore()
+    }
+
+    /// 구매자 세션 저장소. **의도적 차이**: 운영자 맥(Secure Enclave 식별자가 있는 맥)은 스태프와 같은 SE 암호 파일
+    /// (`buyer` 계정, 옛 Keychain 항목은 첫 읽기 때 옮기고 지운다)을, 구매자 맥은 macOS 표준인 Keychain 을 쓴다.
+    /// 키체인 미사용(결정 7)은 운영자 자신의 비밀에 대한 규칙이고, 구매자 맥에는 age 식별자가 없다.
+    /// 운영자 맥의 내부 도구는 같은 파일을 같은 사용자 권한으로 읽어 배포 v1 기기 키로 쓴다(확인 창 없음).
+    /// gujo-apps-mono GujoAuthKit 과 같다.
+    public static func buyer(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        home: String = NSHomeDirectory()
+    ) -> any GujoSessionStore {
+        let sealed = SecureEnclaveFileSessionStore(environment: environment, home: home)
+        return sealed.recipient() != nil ? sealed : KeychainSessionStore()
     }
 }
 
-/// Keychain generic-password 저장소. `CachedKeychainStore` 위의 얇은 어댑터 —
+/// 옛 Keychain generic-password 저장소 — 결정 7 이전 세션을 파일로 옮길 때만 읽고 지운다. `CachedKeychainStore` 위의 얇은 어댑터 —
 /// 앱이 `SecItem*` 를 직접 부르지 않는다(KeychainKit 원칙).
 public struct KeychainSessionStore: GujoSessionStore {
     private let store: CachedKeychainStore

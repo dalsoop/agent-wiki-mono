@@ -532,8 +532,8 @@ public struct AppBundleID: RawRepresentable, ExpressibleByStringLiteral, Hashabl
         "gujo-payment-tester-swift": "net.ranode.gujo-payment-tester",
         "gujo-product-gate": "net.ranode.gujo-product-gate",
         "gujo-product-gate-swift": "net.ranode.gujo-product-gate",
-        "gujo-product-studio": "net.ranode.gujo-product-proof-studio",
-        "gujo-product-studio-swift": "net.ranode.gujo-product-proof-studio",
+        "gujo-product-studio": "net.ranode.product-catalog-editor",
+        "gujo-product-studio-swift": "net.ranode.product-catalog-editor",
         "gujo-service-mailer": "net.ranode.gujo-service-mailer",
         "gujo-service-mailer-swift": "net.ranode.gujo-service-mailer",
         "gujo-service-qa": "net.ranode.gujo-service-qa",
@@ -795,6 +795,7 @@ public struct AppBundleID: RawRepresentable, ExpressibleByStringLiteral, Hashabl
         "playbook-installer-swift": "net.ranode.playbookinstaller",
         "pptx-editor": "net.ranode.pptx-editor",
         "pptx-editor-swift": "net.ranode.pptx-editor",
+        "product-catalog-editor": "net.ranode.product-catalog-editor",
         "product-competitor-pricing": "net.ranode.product-competitor-pricing",
         "product-competitor-pricing-swift": "net.ranode.product-competitor-pricing",
         "product-definition-workspace": "net.ranode.productdefinitionworkspace",
@@ -1508,8 +1509,8 @@ public struct AppBundleID: RawRepresentable, ExpressibleByStringLiteral, Hashabl
     public static let gujoPaymentTesterSwift: AppBundleID = "net.ranode.gujo-payment-tester"
     public static let gujoProductGate: AppBundleID = "net.ranode.gujo-product-gate"
     public static let gujoProductGateSwift: AppBundleID = "net.ranode.gujo-product-gate"
-    public static let gujoProductStudio: AppBundleID = "net.ranode.gujo-product-proof-studio"
-    public static let gujoProductStudioSwift: AppBundleID = "net.ranode.gujo-product-proof-studio"
+    public static let gujoProductStudio: AppBundleID = "net.ranode.product-catalog-editor"
+    public static let gujoProductStudioSwift: AppBundleID = "net.ranode.product-catalog-editor"
     public static let gujoServiceMailer: AppBundleID = "net.ranode.gujo-service-mailer"
     public static let gujoServiceMailerSwift: AppBundleID = "net.ranode.gujo-service-mailer"
     public static let gujoServiceQa: AppBundleID = "net.ranode.gujo-service-qa"

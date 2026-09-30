@@ -20,11 +20,14 @@ public struct ConnectionPreset: Codable, Equatable, Sendable, Identifiable {
         public var name: String
         public var jumpHost: String
         public var kubeHost: String
+        /// 기본값은 **미설정**이다(2026-09-25). 예전 기본 프리셋은 퇴역한 망을 가리켰다 —
+        /// 조용히 그쪽으로 붙지 않도록 호스트를 비워 두고, 클라이언트가 빈 호스트를 거부한다.
+        /// 설정 예: jumpHost `root@db-jump.example.internal`, kubeHost `root@kube.example.internal`.
         public init(
-            id: String = "k3s-prod-via-pve",
-            name: String = "k3s-prod via pve",
-            jumpHost: String = "root@192.168.2.50",
-            kubeHost: String = "root@10.0.50.100"
+            id: String = ConnectionPreset.unconfiguredID,
+            name: String = "Unconfigured",
+            jumpHost: String = "",
+            kubeHost: String = ""
         ) {
             self.id = id
             self.name = name
@@ -167,7 +170,17 @@ public struct ConnectionPreset: Codable, Equatable, Sendable, Identifiable {
         )
     }
 
-    public static let defaultK3SProd = ConnectionPreset()
+    /// jump·kube 호스트가 둘 다 있어야 원격 명령을 만들 수 있다.
+    public var hasConnectionTarget: Bool {
+        !jumpHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !kubeHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    public static let unconfiguredID = "unconfigured"
+    /// 퇴역한 예전 기본 프리셋 id. 저장된 설정을 읽을 때 걸러 내 다시 붙지 않게 한다(2026-09-25).
+    public static let retiredPresetIDs: Set<String> = ["k3s-prod-via-pve"]
+    /// 설정이 늘 고를 프로필을 갖도록 하는 자리표시 — 호스트가 비어 있어 연결하지 않는다.
+    public static let unconfigured = ConnectionPreset()
 }
 
 public enum WorkbenchTab: String, Codable, CaseIterable, Equatable, Sendable, Identifiable {
@@ -311,13 +324,13 @@ public struct DatabaseViewerSettings: Codable, Equatable, Sendable {
     public var autoDisconnectWhenIdle: Bool
 
     public init(
-        profiles: [ConnectionPreset] = [.defaultK3SProd],
-        selectedProfileID: String = ConnectionPreset.defaultK3SProd.id,
+        profiles: [ConnectionPreset] = [.unconfigured],
+        selectedProfileID: String = ConnectionPreset.unconfigured.id,
         readOnlyMode: Bool = true,
         erdTableFilter: TableCategoryFilter = .all,
         autoDisconnectWhenIdle: Bool = false
     ) {
-        let usableProfiles = profiles.isEmpty ? [.defaultK3SProd] : profiles
+        let usableProfiles = profiles.isEmpty ? [.unconfigured] : profiles
         self.profiles = usableProfiles
         self.selectedProfileID = selectedProfileID
         self.readOnlyMode = readOnlyMode
@@ -326,19 +339,24 @@ public struct DatabaseViewerSettings: Codable, Equatable, Sendable {
     }
 
     // Decode leniently so state persisted before `erdTableFilter` existed still loads.
+    // 퇴역한 예전 기본 프리셋은 여기서 걸러 낸다 — 저장본이 남아 있어도 그쪽으로 다시 붙지 않는다.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let decodedProfiles = try container.decodeIfPresent([ConnectionPreset].self, forKey: .profiles) ?? [.defaultK3SProd]
-        self.profiles = decodedProfiles.isEmpty ? [.defaultK3SProd] : decodedProfiles
-        self.selectedProfileID = try container.decodeIfPresent(String.self, forKey: .selectedProfileID)
-            ?? ConnectionPreset.defaultK3SProd.id
+        let decodedProfiles = (try container.decodeIfPresent([ConnectionPreset].self, forKey: .profiles) ?? [])
+            .filter { !ConnectionPreset.retiredPresetIDs.contains($0.id) }
+        self.profiles = decodedProfiles.isEmpty ? [.unconfigured] : decodedProfiles
+        let decodedSelection = try container.decodeIfPresent(String.self, forKey: .selectedProfileID)
+            ?? ConnectionPreset.unconfigured.id
+        self.selectedProfileID = ConnectionPreset.retiredPresetIDs.contains(decodedSelection)
+            ? ConnectionPreset.unconfigured.id
+            : decodedSelection
         self.readOnlyMode = try container.decodeIfPresent(Bool.self, forKey: .readOnlyMode) ?? true
         self.erdTableFilter = try container.decodeIfPresent(TableCategoryFilter.self, forKey: .erdTableFilter) ?? .all
         self.autoDisconnectWhenIdle = try container.decodeIfPresent(Bool.self, forKey: .autoDisconnectWhenIdle) ?? false
     }
 
     public var selectedProfile: ConnectionPreset {
-        profiles.first { $0.id == selectedProfileID } ?? profiles.first ?? .defaultK3SProd
+        profiles.first { $0.id == selectedProfileID } ?? profiles.first ?? .unconfigured
     }
 }
 

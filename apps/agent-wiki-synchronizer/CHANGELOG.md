@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] - 2026-10-01
+
+### Changed
+- 정본 저장소를 agent-wiki-mono 로 옮겼다(agent-wiki-mono 결정 0006). 동작은 1.0.28 과 같고, 설치본의 원천이 이 저장소가 된다.
+
+## [1.0.28] - 2026-09-30
+
+### Added
+- 병합 개정: `publish --supersedes <id>` 를 반복하면 개정 하나가 여러 head 를 함께 대체한다(첫째는 `supersedes:`,
+  나머지는 `supersedes-also:`). 옛 판 CLI 도 같은 id 를 재계산해 `verify` 가 통과한다. head·분류 승격·참조 검사·그래프가
+  모든 부모를 보고, `history` 는 병합된 갈래를 들여 써서 함께 보인다(agent-wiki-mono 결정 0005, PR #6 과 같은 변경).
+
+## [1.0.27] - 2026-09-30
+
+### Changed
+- The `install` subcommand no longer copies or links into PATH (shared `agent-wiki-kit` change). It prints guidance and exits 0. PATH linking is done only by the deploy tool (`app-build-manager ship`).
+- The CLI version check re-probes the PATH CLI `version` when the stamp differs from the app version.
+
+## [1.0.26] - 2026-09-26
+
+### Changed
+- Rename targets to the AgentWikiSynchronizer prefix (app-structural-parity); products unchanged
+
+## [1.0.25] - 2026-09-25
+### Fixed
+- Fixed repository world resolution to dynamically resolve to the current worktree's `.wiki` when executed inside the same bare+worktree repository.
+- Refused writes to the shared main slot `.wiki` or from outside the repository, enforcing dedicated worktrees for repository wiki mutations.
+- `promotion repair-receipts --apply` now outputs the list of written files to commit.
+
+## [1.0.24] - 2026-09-25
+### Changed
+- `gujo status` prints how to configure an endpoint instead of a dead clone URL; there is no default remote for the shared wiki. The internal GitLab (10.0.50.63) was retired on 2026-09-24.
+
+## [1.0.23] - 2026-09-25
+### Added
+- Added `agent-wiki promotion repair-receipts [--world <w>] [--apply] [--json]` command to detect and repair missing half receipts across promotion source and target worlds.
+### Fixed
+- Fixed promotion publish write order and error recovery so that writing failures roll back partial state and never leave half receipts on either world.
+
+## [1.0.22] - 2026-09-24
+### Fixed
+- The CLI compiles again: 86c79a277e's SafeProcessRunner migration removed the `Process` in `launchctl` but kept its wait loop. The 10 s timeout (124 on timeout) now comes from SafeProcessRunner.
+- `verify` no longer fails a promotion receipt only because its source worktree was deleted or the origin remote moved (gitlab.ranode.net → gitlab.com changed every repoId). A registered world holding the same content-addressed object id is accepted as the source.
+
 ## [1.0.21] - 2026-09-19
 ### Changed
 - Align state directory and storage paths to use `StateRootKit.ensureCustomerRoomStorage(slug:)` in `AppPaths` for customer room environments.

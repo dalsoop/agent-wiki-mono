@@ -1,7 +1,7 @@
 import Foundation
 
 // HTTP 직접 크롤링이 막히는(403/로그인벽/JS 전용) 호스트 목록.
-// 이 호스트들은 WebFetch 대신 browserctl(AgentBrowser) 렌더링 폴백이 필요하다.
+// 이 호스트들은 WebFetch 대신 WebRenderUIKit(화면 밖 WKWebView) 렌더링이 필요하다.
 // online-opportunity-radar 의 것과 동일 — 한 곳에서 유지.
 public enum BotBlockedHosts {
     public static let hosts: [String] = [

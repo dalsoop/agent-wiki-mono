@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(XCTest)
-import XCTest
-#endif
 
 /// 순수 Swift Mirror 리플렉션과 LCS(Longest Common Subsequence) 라인 단위 Diff 알고리즘을 사용한 경량 Diff 엔진.
 /// 외부 의존성이 0개이며 결정론적(deterministic) 출력을 보장합니다.
@@ -105,101 +102,8 @@ public enum MiniDiff: Sendable {
     }
 }
 
-// MARK: - Assertion Helpers
-
-/// 두 값이 일치하는지 검증하고, 차이가 있다면 Mirror 덤프와 LCS 기반 라인 Diff를 출력하며 단언 실패를 발생시킵니다.
-public func assertNoDifference<T1, T2>(
-    _ actual: @autoclosure () throws -> T1,
-    _ expected: @autoclosure () throws -> T2,
-    _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
-) rethrows {
-    let act = try actual()
-    let exp = try expected()
-    if let difference = MiniDiff.diff(exp, act) {
-        let customMessage = message()
-        let failureMessage = customMessage.isEmpty ? difference : "\(customMessage)\n\(difference)"
-        #if canImport(XCTest)
-        XCTFail(failureMessage, file: file, line: line)
-        #else
-        fputs("\(file):\(line): error: assertNoDifference failed:\n\(failureMessage)\n", stderr)
-        assertionFailure(failureMessage, file: file, line: line)
-        #endif
-    }
-}
-
-/// 명시적 레이블 `actual` / `expected`를 사용하는 단언 헬퍼.
-public func assertNoDifference<T1, T2>(
-    actual: @autoclosure () throws -> T1,
-    expected: @autoclosure () throws -> T2,
-    _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
-) rethrows {
-    let act = try actual()
-    let exp = try expected()
-    if let difference = MiniDiff.diff(exp, act) {
-        let customMessage = message()
-        let failureMessage = customMessage.isEmpty ? difference : "\(customMessage)\n\(difference)"
-        #if canImport(XCTest)
-        XCTFail(failureMessage, file: file, line: line)
-        #else
-        fputs("\(file):\(line): error: assertNoDifference failed:\n\(failureMessage)\n", stderr)
-        assertionFailure(failureMessage, file: file, line: line)
-        #endif
-    }
-}
-
-/// XCTest 스타일 단언 헬퍼. 두 식의 결과를 비교하여 차이가 있을 경우 라인 Diff와 함께 실패를 보고합니다.
-public func XCTAssertNoDifference<T1, T2>(
-    _ expression1: @autoclosure () throws -> T1,
-    _ expression2: @autoclosure () throws -> T2,
-    _ message: @autoclosure () -> String = "",
-    file: StaticString = #filePath,
-    line: UInt = #line
-) rethrows {
-    let val1 = try expression1()
-    let val2 = try expression2()
-    if let difference = MiniDiff.diff(val1, val2) {
-        let customMessage = message()
-        let failureMessage = customMessage.isEmpty ? difference : "\(customMessage)\n\(difference)"
-        #if canImport(XCTest)
-        XCTFail(failureMessage, file: file, line: line)
-        #else
-        fputs("\(file):\(line): error: XCTAssertNoDifference failed:\n\(failureMessage)\n", stderr)
-        assertionFailure(failureMessage, file: file, line: line)
-        #endif
-    }
-}
-
-// MARK: - SelfTestCase Extension
-
-extension SelfTestCase {
-    /// `MiniDiff`를 사용하여 두 값의 차이점을 검증하는 SelfTestCase를 생성합니다.
-    public static func diff<T1, T2>(
-        _ name: String,
-        expected: T1,
-        actual: T2,
-        detail: String = ""
-    ) -> SelfTestCase {
-        if let diffString = MiniDiff.diff(expected, actual) {
-            let detailMessage = detail.isEmpty ? diffString : "\(detail)\n\(diffString)"
-            return SelfTestCase(
-                name: name,
-                passed: false,
-                expected: MiniDiff.dump(expected),
-                actual: MiniDiff.dump(actual),
-                detail: detailMessage
-            )
-        } else {
-            return SelfTestCase(
-                name: name,
-                passed: true,
-                expected: MiniDiff.dump(expected),
-                actual: MiniDiff.dump(actual),
-                detail: detail
-            )
-        }
-    }
-}
+// 단언 도우미(assertNoDifference·XCTAssertNoDifference)는 여기 두지 않는다. 운영 킷이
+// `#if canImport(XCTest) import XCTest` 를 하면 Xcode 가 깔린 Mac 에서 조건이 참이 되어
+// 이 킷을 쓰는 앱 실행 파일이 libXCTestSwiftSupport 에 링크되고, 설치본은 시작하자마자
+// "Library missing" 으로 죽는다(2026-09-24 AgentWikiGlobal ship 품질 게이트 실측).
+// 도우미는 쓰는 곳이 없었다 — 필요하면 테스트 전용 타깃에 둔다.

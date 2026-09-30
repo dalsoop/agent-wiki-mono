@@ -8,7 +8,7 @@ final class ConnectionPresetVPNTests: XCTestCase {
         let preset = try decode(
             """
             {"id":"p","name":"p","jumpHost":"root@jump",
-             "kubeHost":"root@10.0.50.100","namespaceFilter":"",
+             "kubeHost":"root@192.0.2.100","namespaceFilter":"",
              "defaultDatabase":"","queryTimeoutSeconds":30,
              "defaultLimit":100,"requiredTunnel":"office"}
             """
@@ -21,7 +21,7 @@ final class ConnectionPresetVPNTests: XCTestCase {
         let preset = try decode(
             """
             {"id":"p","name":"p","jumpHost":"root@jump",
-             "kubeHost":"root@10.0.50.100","namespaceFilter":"",
+             "kubeHost":"root@192.0.2.100","namespaceFilter":"",
              "defaultDatabase":"","queryTimeoutSeconds":30,
              "defaultLimit":100,"requiredTunnel":"office",
              "recovery_preferred_vpn":null}
@@ -35,7 +35,7 @@ final class ConnectionPresetVPNTests: XCTestCase {
         let preset = try decode(
             """
             {"id":"p","name":"p","jumpHost":"root@jump",
-             "kubeHost":"root@10.0.50.100","namespaceFilter":"",
+             "kubeHost":"root@192.0.2.100","namespaceFilter":"",
              "defaultDatabase":"","queryTimeoutSeconds":30,
              "defaultLimit":100,"requiredTunnel":"old",
              "recovery_preferred_vpn":{"serviceID":"service-uuid",
@@ -56,7 +56,7 @@ final class ConnectionPresetVPNTests: XCTestCase {
         let preset = try decode(
             """
             {"id":"p","name":"p","jumpHost":"root@jump",
-             "kubeHost":"root@10.0.50.100","namespaceFilter":"",
+             "kubeHost":"root@192.0.2.100","namespaceFilter":"",
              "defaultDatabase":"","queryTimeoutSeconds":30,
              "defaultLimit":100,"requiredTunnel":"old",
              "recoveryPreferredVPN":{"serviceID":"service-uuid",

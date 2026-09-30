@@ -168,6 +168,8 @@ extension CapabilitySearcher {
         public let version: String
         public let summary: String
         public let commands: [Capabilities.Command]
+        /// 앱의 영어·한글 표시명(`Capabilities.displayName`·`displayNameKo`). 스킬·에이전트는 빈 배열.
+        public let displayNames: [String]
 
         public init(
             name: String,
@@ -176,7 +178,8 @@ extension CapabilitySearcher {
             cli: String,
             version: String,
             summary: String,
-            commands: [Capabilities.Command] = []
+            commands: [Capabilities.Command] = [],
+            displayNames: [String] = []
         ) {
             self.name = name
             self.kind = kind
@@ -185,6 +188,7 @@ extension CapabilitySearcher {
             self.version = version
             self.summary = summary
             self.commands = commands
+            self.displayNames = displayNames
         }
     }
 

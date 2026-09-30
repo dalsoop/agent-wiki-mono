@@ -181,3 +181,139 @@ final class StaleInstallIndexBannerTests: XCTestCase {
         )
     }
 }
+
+/// 판정은 그 판정 뒤에 생긴 바이너리에 대해 말할 수 없다:
+/// 바이너리 수정 시각이 색인 updatedAt 보다 뒤면 배너를 내지 않는다.
+final class StaleInstallIndexTests: XCTestCase {
+    private func tempURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("stale-\(UUID().uuidString).json")
+    }
+
+    /// 색인 updatedAt=T, 이름이 색인에 있음, 실행 파일 수정 시각 T+60s → 배너 없음, fail-closed 에서도 exit 호출 없음.
+    func testBinaryNewerThanIndexSuppressesBannerAndExit() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let now = Date()
+        let tString = ISO8601DateFormatter().string(from: now)
+        let snapshot = StaleInstallIndex.Snapshot(updatedAt: tString, stale: ["mycli": "소스가 더 바뀜"])
+        let data = try JSONEncoder().encode(snapshot)
+        try data.write(to: url)
+
+        let newerDate = now.addingTimeInterval(60)
+
+        // 1. 일반 모드: 배너 없음
+        var emitted: [String] = []
+        StaleInstallIndex.warnIfStale(
+            cli: "mycli",
+            arguments: ["mycli"],
+            environment: [:],
+            at: url,
+            executableModifiedAt: newerDate,
+            emit: { emitted.append($0) }
+        )
+        XCTAssertTrue(emitted.isEmpty, "바이너리 수정 시각이 색인보다 뒤면 배너를 내지 않아야 함: \(emitted)")
+
+        // 2. fail-closed 모드: 배너 없음 및 exit 호출 없음
+        var failClosedEmitted: [String] = []
+        var exitCode: Int32? = nil
+        StaleInstallIndex.warnIfStale(
+            cli: "mycli",
+            arguments: ["mycli"],
+            environment: [StaleInstallIndex.enforceEnvironmentKey: "1"],
+            at: url,
+            executableModifiedAt: newerDate,
+            emit: { failClosedEmitted.append($0) },
+            exitHandler: { exitCode = $0 }
+        )
+        XCTAssertTrue(failClosedEmitted.isEmpty, "fail-closed 에서도 바이너리가 더 최신이면 배너를 내지 않아야 함")
+        XCTAssertNil(exitCode, "fail-closed 에서도 바이너리가 더 최신이면 exit 을 호출하지 않아야 함")
+    }
+
+    /// 같은 조건, 수정 시각 T-60s → 배너 있음(기존 동작).
+    func testBinaryOlderThanIndexEmitsBanner() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let now = Date()
+        let tString = ISO8601DateFormatter().string(from: now)
+        let snapshot = StaleInstallIndex.Snapshot(updatedAt: tString, stale: ["mycli": "소스가 더 바뀜"])
+        let data = try JSONEncoder().encode(snapshot)
+        try data.write(to: url)
+
+        let olderDate = now.addingTimeInterval(-60)
+
+        var emitted: [String] = []
+        StaleInstallIndex.warnIfStale(
+            cli: "mycli",
+            arguments: ["mycli"],
+            environment: [:],
+            at: url,
+            executableModifiedAt: olderDate,
+            emit: { emitted.append($0) }
+        )
+        XCTAssertEqual(emitted.count, 1)
+        XCTAssertTrue(emitted[0].contains("설치본이 소스보다 낡았습니다"))
+
+        // fail-closed 에서도 exit 호출됨
+        var exitCode: Int32? = nil
+        StaleInstallIndex.warnIfStale(
+            cli: "mycli",
+            arguments: ["mycli"],
+            environment: [StaleInstallIndex.enforceEnvironmentKey: "1"],
+            at: url,
+            executableModifiedAt: olderDate,
+            emit: { _ in },
+            exitHandler: { exitCode = $0 }
+        )
+        XCTAssertEqual(exitCode, 70)
+    }
+
+    /// 수정 시각 nil → 배너 있음(기존 동작).
+    func testNilModificationDateEmitsBanner() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let now = Date()
+        let tString = ISO8601DateFormatter().string(from: now)
+        let snapshot = StaleInstallIndex.Snapshot(updatedAt: tString, stale: ["mycli": "소스가 더 바뀜"])
+        let data = try JSONEncoder().encode(snapshot)
+        try data.write(to: url)
+
+        var emitted: [String] = []
+        StaleInstallIndex.warnIfStale(
+            cli: "mycli",
+            arguments: ["mycli"],
+            environment: [:],
+            at: url,
+            executableModifiedAt: nil,
+            emit: { emitted.append($0) }
+        )
+        XCTAssertEqual(emitted.count, 1)
+        XCTAssertTrue(emitted[0].contains("설치본이 소스보다 낡았습니다"))
+    }
+
+    /// updatedAt 파싱 실패 시(형식 오류) 기존처럼 배너 출력
+    func testMalformedUpdatedAtEmitsBanner() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let snapshot = StaleInstallIndex.Snapshot(updatedAt: "not-a-valid-date", stale: ["mycli": "소스가 더 바뀜"])
+        let data = try JSONEncoder().encode(snapshot)
+        try data.write(to: url)
+
+        var emitted: [String] = []
+        StaleInstallIndex.warnIfStale(
+            cli: "mycli",
+            arguments: ["mycli"],
+            environment: [:],
+            at: url,
+            executableModifiedAt: Date().addingTimeInterval(60),
+            emit: { emitted.append($0) }
+        )
+        XCTAssertEqual(emitted.count, 1)
+        XCTAssertTrue(emitted[0].contains("설치본이 소스보다 낡았습니다"))
+    }
+}
+

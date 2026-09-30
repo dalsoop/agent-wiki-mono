@@ -7,9 +7,9 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         // helpers dual-entry: PATH CLI product (never MacOS GUI)
-        .executable(name: "agent-wiki-grapher", targets: ["AgentWikiGraphCLI"]),
-        .executable(name: "AgentWikiGraph", targets: ["AgentWikiGraph"]),
-        .library(name: "AgentWikiGraphCore", targets: ["AgentWikiGraphCore"]),
+        .executable(name: "agent-wiki-grapher", targets: ["AgentWikiGrapherCLI"]),
+        .executable(name: "AgentWikiGraph", targets: ["AgentWikiGrapher"]),
+        .library(name: "AgentWikiGraphCore", targets: ["AgentWikiGrapherCore"]),
     ],
     dependencies: [
         .package(path: "../../swiftkit"),
@@ -17,7 +17,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AgentWikiGraphCore",
+            name: "AgentWikiGrapherCore",
             dependencies: [
                 .product(name: "AppPathsKit", package: "swiftkit"),
             
@@ -29,9 +29,9 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "AgentWikiGraph",
+            name: "AgentWikiGrapher",
             dependencies: [
-                "AgentWikiGraphCore",
+                "AgentWikiGrapherCore",
                 .product(name: "LocalizationKit", package: "swiftkit"),
                 .product(name: "OnboardingUIKit", package: "swiftkit"),
                 .product(name: "SettingsUIKit", package: "swiftkit"),
@@ -46,7 +46,7 @@ let package = Package(
         ),
         // Foundation-only PATH CLI — keep AppKit out (dual-entry hang 2026-07-25)
         .executableTarget(
-            name: "AgentWikiGraphCLI",
+            name: "AgentWikiGrapherCLI",
             dependencies: [
                 .product(name: "CommandKit", package: "swiftkit"),
                 .product(name: "SingleInstanceKit", package: "swiftkit"),
@@ -56,13 +56,13 @@ let package = Package(
                 .product(name: "WikiLedgerKit", package: "swiftkit"),
                 .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),
                 .product(name: "InteropKit", package: "swiftkit"),
-                "AgentWikiGraphCore",
+                "AgentWikiGrapherCore",
             ]
         ),
         .testTarget(
-            name: "AgentWikiGraphCoreTests",
+            name: "AgentWikiGrapherCoreTests",
             dependencies: [
-                "AgentWikiGraphCore",
+                "AgentWikiGrapherCore",
                 .product(name: "StateRootKit", package: "swiftkit"),
             
                 .product(name: "AppScaffoldKit", package: "swiftkit-appscaffold"),

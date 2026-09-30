@@ -32,17 +32,23 @@ public enum RoomStorageGC: Sendable {
     /// 고객용 단일 룸(`StateRootKit.customerRoomRoot()`)의 수명주기 가비지 컬렉션 실행
     @discardableResult
     public static func runCustomerRoomGC(
-        roomID: String = CustomerRoomLayout.defaultRoomID,
+        roomID: String,
         options: FastStorageGCOptions = .default,
         fileManager: FileManager = .default,
+        homeDirectory: String? = nil,
         now: Date = Date()
     ) throws -> RoomStorageGCReport {
-        let targetURL = CustomerRoomLayout.roomURL(roomID: roomID, fileManager: fileManager)
+        let targetURL = CustomerRoomLayout.roomURL(
+            roomID: roomID,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
+        )
         return try executeStorageGC(
             roomID: roomID,
             roomPath: targetURL.path,
             options: options,
             fileManager: fileManager,
+            homeDirectory: homeDirectory,
             now: now
         )
     }
@@ -70,6 +76,7 @@ public enum RoomStorageGC: Sendable {
         roomPath: String,
         options: FastStorageGCOptions = .default,
         fileManager: FileManager = .default,
+        homeDirectory: String? = nil,
         now: Date = Date()
     ) throws -> RoomStorageGCReport {
         guard fileManager.fileExists(atPath: roomPath) else {
@@ -90,7 +97,9 @@ public enum RoomStorageGC: Sendable {
         // 2. windows.json 내 사망한 좀비 프로세스(PID) 잔여 윈도우 프루닝
         report.prunedZombieWindowsCount = pruneZombiesIfActivePIDProvided(
             roomID: roomID,
-            options: options
+            options: options,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
         )
 
         return report
@@ -98,21 +107,40 @@ public enum RoomStorageGC: Sendable {
 
     private static func pruneZombiesIfActivePIDProvided(
         roomID: String,
-        options: FastStorageGCOptions
+        options: FastStorageGCOptions,
+        fileManager: FileManager,
+        homeDirectory: String?
     ) -> Int {
         guard let activePIDs = options.activePIDs else {
-            return pruneZombiesAgainstRunningProcesses(roomID: roomID)
+            return pruneZombiesAgainstRunningProcesses(
+                roomID: roomID,
+                fileManager: fileManager,
+                homeDirectory: homeDirectory
+            )
         }
         do {
-            return try RoomWindowManager.pruneZombieWindows(roomID: roomID, activePIDs: activePIDs)
+            return try RoomWindowManager.pruneZombieWindows(
+                roomID: roomID,
+                activePIDs: activePIDs,
+                fileManager: fileManager,
+                homeDirectory: homeDirectory
+            )
         } catch {
             fputs("RoomStorageGC: failed to prune zombie windows for room \(roomID): \(error.localizedDescription)\n", stderr)
             return 0
         }
     }
 
-    private static func pruneZombiesAgainstRunningProcesses(roomID: String) -> Int {
-        let snapshot = RoomWindowManager.loadSnapshot(roomID: roomID)
+    private static func pruneZombiesAgainstRunningProcesses(
+        roomID: String,
+        fileManager: FileManager,
+        homeDirectory: String?
+    ) -> Int {
+        let snapshot = RoomWindowManager.loadSnapshot(
+            roomID: roomID,
+            fileManager: fileManager,
+            homeDirectory: homeDirectory
+        )
         guard !snapshot.windows.isEmpty else { return 0 }
 
         var alivePIDs = Set<pid_t>()
@@ -122,7 +150,12 @@ public enum RoomStorageGC: Sendable {
         }
 
         do {
-            return try RoomWindowManager.pruneZombieWindows(roomID: roomID, activePIDs: alivePIDs)
+            return try RoomWindowManager.pruneZombieWindows(
+                roomID: roomID,
+                activePIDs: alivePIDs,
+                fileManager: fileManager,
+                homeDirectory: homeDirectory
+            )
         } catch {
             fputs("RoomStorageGC: failed to prune zombie windows for room \(roomID): \(error.localizedDescription)\n", stderr)
             return 0

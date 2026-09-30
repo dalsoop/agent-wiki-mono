@@ -1,17 +1,5 @@
 # 미해결 문제
 
-## `agent-wiki-ui` 패키지가 커밋되어 있지 않다
-
-- 증상: 새 클론에서 `apps/agent-wiki-editor`와 `apps/agent-wiki-reader`를 빌드하면 `agent-wiki-ui doesn't exist in file system`으로 의존성 해석이 실패한다. 이 Mac의 메인 체크아웃에는 추적되지 않는 `agent-wiki-ui/`가 있다.
-- 영향: 두 앱은 이 Mac의 메인 체크아웃에서만 빌드되고, 다른 worktree·클론·다른 Mac에서는 빌드되지 않는다.
-- 지금 못 고치는 이유: `agent-wiki-ui`를 이 저장소에 넣을지, 별도 저장소로 둘지 소유자 결정이 필요하다.
-
-## grapher CLI가 빌드되지 않는다
-
-- 증상: grapher 패키지 빌드가 `AgentWikiGraphCLI/main.swift` 293-298행(SafeProcessRunner 전환 뒤 남은 옛 `catch` 본문), 339행(`isoDateFormatter` 동시성), 351행(`CLI.usage` 없음)에서 실패한다.
-- 영향: `agent-wiki-graph` CLI와 창 앱을 이 저장소에서 만들 수 없다.
-- 지금 못 고치는 이유: 소스 코드 수정이 필요하다.
-
 ## `publish --of`와 `world add --display`가 옵션 검사에서 거부된다
 
 - 증상: `agent-wiki publish --of <id>`와 `agent-wiki world add … --display <이름>`이 "unknown option(s)"로 종료 코드 64를 낸다. 발행 파서와 world 파서는 두 옵션을 읽지만, 전역·repo CLI의 `allowedOptions`에 두 옵션이 없다. 설치본에서도 `--of` 거부를 확인했다(2026-09-30, 쓰기 없음).
@@ -23,13 +11,6 @@
 - 증상: `--cite`가 상위 world 객체를 가리키면 `runScopedPublish`로 가서, 기준선 이후 미분류 지식도 거부되지 않고, `--domain` 등 분류 인자와 `--batch`·`MEMO_LEDGER_BATCH`가 무시된다.
 - 영향: 개인·테넌트 world에서 `gujo-wiki`를 인용하는 흔한 발행이 분류 없이 들어가 `verify` 위반으로 쌓이고, batch 단위 `rollback` 대상에서 빠진다.
 - 지금 못 고치는 이유: 두 발행 경로의 인자 파서를 합치는 코드 수정이 필요하다.
-
-## Studio(editor)에 분기된 full CLI 사본이 있다
-
-- 증상: `apps/agent-wiki-editor/Sources/AgentWikiFullCLI`가 `agent-wiki`라는 같은 제품명으로 전체 명령을 구현하지만, `WikiCLIShared`·synchronizer 파일과 파일마다 수 줄에서 수백 줄씩 다르다.
-- 영향: editor를 설치하면 PATH의 `agent-wiki`가 다른 동작의 바이너리로 바뀔 수 있다. 한쪽에서 고친 결함이 다른 쪽에 남는다.
-- 병합 개정(`--supersedes` 반복, 결정 0005)은 synchronizer·`WikiCLIShared` 에만 들어갔다. editor 사본은 반복된 `--supersedes` 의 마지막 값만 쓴다.
-- 지금 못 고치는 이유: editor `DualEntryAdoption.swift`의 2026-08 정책 주석과 README는 Studio `AgentWikiFullCLI`를 CLI 소스 정본으로 선언하지만, 실제 설치본과 앱 레지스트리는 synchronizer를 원천으로 쓴다. 어느 쪽을 정본으로 할지 소유자가 정해야 한다.
 
 ## 원격 연결 기본값과 보안 관련 이슈
 
@@ -54,7 +35,7 @@
 
 - 증상: `swiftkit`, `swiftkit-appscaffold`, `swiftkit-sparkle`은 킷 약 100개를 담은 사본이고, 이 저장소 커밋(`dc4b31d`, `37135c6`)이 그 안의 EndpointRouterKit 기본값을 직접 고친다. 원본 저장소와의 동기화 절차는 저장소 안에 없다.
 - 영향: 같은 킷의 수정이 저장소마다 갈라진다. 이 저장소에서 쓰지 않는 킷(가계부·세금·게임 등)도 함께 유지된다.
-- 지금 못 고치는 이유: 사본을 유지할지, 원본을 원격 의존으로 받을지는 소유자가 정해야 한다.
+- 지금 못 고치는 이유: 사본을 유지할지, 원본을 원격 의존으로 받을지는 소유자가 정해야 한다. 2026-09-30 결정 0006 때 swift-app-mono 의 킷으로 다시 맞췄다(그 뒤로 이 저장소가 정본이라 swift-app-mono 쪽 변경은 들어오지 않는다).
 
 ## 추적되는 백업 파일이 있다
 

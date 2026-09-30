@@ -237,10 +237,12 @@ final class AppModel {
             "/usr/bin/open",
             ["-a", "Agent Wiki"]
         )
+        if safeResult.ok {
             lastError = ""
             return true
-        } catch {
-            lastError = L(.AppModelString_2, error.localizedDescription)
+        } else {
+            let msg = safeResult.stderr.isEmpty ? "exit code \(safeResult.exitCode)" : safeResult.stderr
+            lastError = L(.AppModelString_2, msg)
             return false
         }
     }
