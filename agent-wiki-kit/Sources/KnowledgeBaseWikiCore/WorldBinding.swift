@@ -59,11 +59,13 @@ public struct BoundLedgerFile: Codable, Equatable, Sendable {
     public var dreamDevice: String?
     /// agent-law R2 엔드포인트·버킷(비밀 아님). 키는 키체인에만 둔다. 근거: docs/security.md "R2 와 세션".
     public var lawStorage: LawStorageSettings?
+    /// 심급(중재자 후보·대법원 이의 기간). 비우면 기본값. 근거: docs/business-rules.md "심급제".
+    public var court: LawCourtSettings?
     /// 앱이 주입. Codable 에는 안 실린다.
     public var fallbackWorldName: String
 
     enum CodingKeys: String, CodingKey {
-        case rootPath, worlds, currentWorld, tenantMap, devices, currentDevice, dreamDevice, lawStorage
+        case rootPath, worlds, currentWorld, tenantMap, devices, currentDevice, dreamDevice, lawStorage, court
     }
 
     public init(
@@ -75,6 +77,7 @@ public struct BoundLedgerFile: Codable, Equatable, Sendable {
         currentDevice: String? = nil,
         dreamDevice: String? = nil,
         lawStorage: LawStorageSettings? = nil,
+        court: LawCourtSettings? = nil,
         fallbackWorldName: String = "gujo-wiki"
     ) {
         self.rootPath = rootPath
@@ -85,6 +88,7 @@ public struct BoundLedgerFile: Codable, Equatable, Sendable {
         self.currentDevice = currentDevice
         self.dreamDevice = dreamDevice
         self.lawStorage = lawStorage
+        self.court = court
         self.fallbackWorldName = fallbackWorldName
     }
 
@@ -98,6 +102,7 @@ public struct BoundLedgerFile: Codable, Equatable, Sendable {
         currentDevice = try container.decodeIfPresent(String.self, forKey: .currentDevice)
         dreamDevice = try container.decodeIfPresent(String.self, forKey: .dreamDevice)
         lawStorage = try container.decodeIfPresent(LawStorageSettings.self, forKey: .lawStorage)
+        court = try container.decodeIfPresent(LawCourtSettings.self, forKey: .court)
         fallbackWorldName = "gujo-wiki"
     }
 

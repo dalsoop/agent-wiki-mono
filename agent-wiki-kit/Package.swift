@@ -59,6 +59,8 @@ let package = Package(
             dependencies: [
                 "KnowledgeBaseWikiCore",
                 .product(name: "WikiLedgerKit", package: "swiftkit"),
+                .product(name: "CommandKit", package: "swiftkit"),
+                .product(name: "SessionKit", package: "swiftkit"),
             ],
             path: "Tests/KnowledgeBaseWikiCoreTests",
             resources: [.copy("Fixtures")]
