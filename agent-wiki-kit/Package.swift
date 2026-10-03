@@ -34,6 +34,7 @@ let package = Package(
                 .product(name: "StateRootKit", package: "swiftkit"),
                 .product(name: "SelfTestKit", package: "swiftkit"),
                 .product(name: "InteropKit", package: "swiftkit"),
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
             ],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
@@ -51,7 +52,10 @@ let package = Package(
         ),
         .testTarget(
             name: "KnowledgeBaseWikiCoreTests",
-            dependencies: ["KnowledgeBaseWikiCore"],
+            dependencies: [
+                "KnowledgeBaseWikiCore",
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
+            ],
             path: "Tests/KnowledgeBaseWikiCoreTests",
             resources: [.copy("Fixtures")]
         ),

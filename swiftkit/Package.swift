@@ -756,6 +756,7 @@ let package = Package(
         .target(name: "TimelineGraphUIKit"),
         .testTarget(name: "TimelineGraphUIKitTests", dependencies: ["TimelineGraphUIKit"]),
         .target(name: "WikiLedgerKit", dependencies: ["GraphEngineKit"]),
+        .testTarget(name: "WikiLedgerKitTests", dependencies: ["WikiLedgerKit"]),
         .target(name: "GraphRAGKit", dependencies: ["GraphEngineKit"]),
         .target(name: "TelemetryKit", dependencies: ["EndpointRouterKit"]),
         .testTarget(name: "TelemetryKitTests", dependencies: ["TelemetryKit"]),
