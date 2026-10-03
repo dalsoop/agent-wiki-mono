@@ -1,0 +1,10 @@
+import Foundation
+import KnowledgeBaseWikiCore
+
+// court — 자리만 둔 명령. 작업 T9 이 이 파일의 `runCourt` 만 채운다.
+// 계약: docs/contracts.md "agent-law 명령 (ledger 3)" — `court appeal|propose|hear|decide|list` (심급)
+// 지금은 "구현 전" 안내와 종료 코드 1.
+
+public func runCourt(context: LawCommandContext, arguments: [String]) {
+    lawNotImplemented(arguments.prefix(2).joined(separator: " "), task: "T9")
+}
