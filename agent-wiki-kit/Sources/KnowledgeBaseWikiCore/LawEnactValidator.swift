@@ -34,14 +34,17 @@ struct LawEnactValidator {
         try checkOrigin(draft)
         let speaker = try resolvedSpeaker(draft, type: type, actor: actor, head: head, resolved: resolved)
 
+        let authorship = LawAuthorship(
+            authorKind: actor.kind.rawValue, device: actor.device, runtime: actor.runtime,
+            runtimeVersion: actor.runtimeVersion, model: actor.model, effort: actor.effort,
+            app: actor.app, appVersion: actor.appVersion, speaker: speaker)
+        let relations = LawRelations(
+            cites: draft.cites, exhibits: draft.exhibits, amends: draft.amends,
+            amendsAlso: draft.amendsAlso, repeals: draft.repeals)
         return LawRecord(
-            promulgated: promulgated, author: actor.author, authorKind: actor.kind.rawValue,
-            device: actor.device, runtime: actor.runtime, runtimeVersion: actor.runtimeVersion,
-            model: actor.model, effort: actor.effort, app: actor.app, appVersion: actor.appVersion,
-            speaker: speaker, title: draft.title, type: type.rawValue, origin: draft.origin,
-            batch: draft.batch, tags: draft.tags, cites: draft.cites, exhibits: draft.exhibits,
-            amends: draft.amends, amendsAlso: draft.amendsAlso, repeals: draft.repeals,
-            source: draft.source, body: draft.body, cost: draft.cost
+            promulgated: promulgated, author: actor.author, authorship: authorship,
+            title: draft.title, type: type.rawValue, origin: draft.origin, batch: draft.batch,
+            tags: draft.tags, relations: relations, source: draft.source, body: draft.body, cost: draft.cost
         ).nfcNormalized()
     }
 

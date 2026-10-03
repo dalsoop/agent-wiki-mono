@@ -12,11 +12,15 @@ struct LedgerThreeGraphParserTests {
     static func record() -> LawRecord {
         LawRecord(
             promulgated: LawTime.parse("2026-10-04T01:02:03.456Z")!,
-            author: "agent:claude@macbook", authorKind: "agent", device: "macbook",
-            runtime: "claude-code", model: "claude-opus-5-5", effort: "high", speaker: "agent",
+            author: "agent:claude@macbook",
+            authorship: LawAuthorship(
+                authorKind: "agent", device: "macbook", runtime: "claude-code", model: "claude-opus-5-5",
+                effort: "high", speaker: "agent"),
             title: "개정된 기록", type: "record", batch: "batch-1",
-            cites: [LawCite(id: target, rel: "cites"), LawCite(id: target, rel: "testifies")],
-            amends: previous, amendsAlso: [merged], body: "본문 [[다른 기록]]\n")
+            relations: LawRelations(
+                cites: [LawCite(id: target, rel: "cites"), LawCite(id: target, rel: "testifies")],
+                amends: previous, amendsAlso: [merged]),
+            body: "본문 [[다른 기록]]\n")
     }
 
     @Test("ledger 3 파일 → 노드(공포일·유형·작성자)와 간선(cites 관계·amends·batch·wikilink)")
@@ -41,8 +45,9 @@ struct LedgerThreeGraphParserTests {
     func repealEdge() throws {
         let record = LawRecord(
             promulgated: LawTime.parse("2026-10-04T01:02:03.456Z")!, author: "user:jeonghan",
-            authorKind: "human", runtime: "human", speaker: "user", title: "폐지: x", type: "record",
-            repeals: Self.target, body: "")
+            authorship: LawAuthorship(authorKind: "human", runtime: "human", speaker: "user"),
+            title: "폐지: x", type: "record",
+            relations: LawRelations(repeals: Self.target), body: "")
         let parsed = try #require(WikiLedgerParser.parse(raw: record.serialize(id: record.contentID()), relativePath: "x.md"))
         #expect(parsed.edges.contains { $0.kind == WikiEdgeKind.retracts.rawValue && $0.to == Self.target })
     }

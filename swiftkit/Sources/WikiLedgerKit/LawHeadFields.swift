@@ -118,8 +118,15 @@ public enum LawHeadFields {
         guard let colon = line.firstIndex(of: ":") else { return nil }
         let key = String(line[..<colon])
         guard let head = key.first, head.isLowercase, head.isASCII,
-              key.allSatisfy({ ($0.isLowercase && $0.isASCII) || $0.isNumber || $0 == "-" }) else { return nil }
+              key.allSatisfy(isKeyCharacter) else { return nil }
         let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         return (key, value)
+    }
+
+    /// 머리 칸 키 글자 — ASCII 소문자, 숫자, 하이픈.
+    static func isKeyCharacter(_ c: Character) -> Bool {
+        let isASCIILowercase = c.isLowercase && c.isASCII
+        guard !isASCIILowercase else { return true }
+        return c.isNumber || c == "-"
     }
 }
