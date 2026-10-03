@@ -165,7 +165,7 @@ public struct GujoSync: Sendable {
         public var messages: [String]
     }
 
-    /// 시드(origin) 와 왕복. `peer` 를 주면 그 피어에서 **fetch·merge 만** 한다(push 안 함).
+    /// 시드(origin) 에서 fetch·merge 만 한다(전신은 읽기 pull 만 — 결정 0007). `peer` 를 주면 그 피어에서 받는다.
     public func sync(peer: String? = nil) -> Result<SyncOutcome, GujoError> {
         guard git(["rev-parse", "--is-inside-work-tree"]).code == 0 else {
             return .failure(.notARepository(root.path))
@@ -194,9 +194,9 @@ public struct GujoSync: Sendable {
         guard merge.code == 0 else { return .failure(.git("merge 실패(수동 해소 필요): \(merge.out)")) }
         messages.append(merge.out)
 
-        let push = git(["push", "origin", "HEAD:main"])
-        let pushed = push.code == 0
-        if !pushed { messages.append("push 실패: \(push.out)") }
+        // 결정 0007: 옛 원장(전신)은 읽기 pull 만 남는다. push 하지 않는다 — 새 기록은 agent-law(`sync`)로 간다.
+        let pushed = false
+        messages.append("push 안 함 — 전신은 읽기 pull 만(결정 0007)")
         stampSync()
 
         return .success(SyncOutcome(fetched: fetched, merged: true, pushed: pushed,

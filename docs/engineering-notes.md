@@ -38,8 +38,8 @@
 ## `gujo sync`는 커밋을 만들지 않는다
 
 - 증상: 발행했는데 다른 Mac에서 `gujo sync` 후에도 새 객체가 보이지 않는다.
-- 원인: `GujoSync.sync`는 `git fetch origin` → `merge --no-edit origin/main` → `push origin HEAD:main`만 한다. `git add`·`commit`은 이 저장소 코드 어디에도 없다. push 실패는 오류가 아니라 결과의 `pushed=false`와 메시지로만 남는다.
-- 대응: sync 결과 JSON의 `pushed`를 확인한다. 새 객체를 커밋하는 주체는 이 저장소 밖에 있다.
+- 원인: `GujoSync.sync`는 `git fetch origin` → `merge --no-edit origin/main`만 한다(옛 원장용, 커밋하지 않는다).
+- 대응: 결정 0007 이후 `gujo sync`는 전신 읽기 pull 만 하고 push 하지 않는다(`pushed`는 늘 false). 새 기록은 agent-law 로 공포하고, 공포 경로(`LawEnactAftermath` → `LawGitCommit.commit`)가 그 기록 파일만 커밋하며 `sync`(`LawGitSync.sync`)가 pull·push 한다.
 
 ## 발행마다 그래프를 전부 다시 만든다
 
