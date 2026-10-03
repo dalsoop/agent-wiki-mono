@@ -6,6 +6,8 @@ import LocalizationKit
 
 func runWorld(arguments: [String]) {
     var file = loadBoundFile()
+    // ledger 3 원장 설정(add --key·tenant-map·device register·dream-device)은 공용 구현이 먼저 맡는다.
+    if runWorldLedgerSubcommand(file: &file, arguments: arguments) { return }
     switch arguments.count >= 2 ? arguments[1] : "list" {
     case "list":
         runWorldList(
@@ -37,6 +39,8 @@ let worldUsage = """
 사용법: world list [--json]
        world add <이름> <경로> [--layer tenant --parent <공유world>]
        world set-layer <이름> tenant --parent <공유world>
+       world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]
+       world tenant-map <테넌트> <원장> | world device register <키> | world dream-device <키>
 """
 
 func loadBoundFile() -> BoundLedgerFile {
