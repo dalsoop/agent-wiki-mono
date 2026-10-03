@@ -36,6 +36,8 @@ let package = Package(
                 .product(name: "InteropKit", package: "swiftkit"),
                 .product(name: "WikiLedgerKit", package: "swiftkit"),
                 .product(name: "SessionKit", package: "swiftkit"),
+                .product(name: "AgentSessionStorageKit", package: "swiftkit"),
+                .product(name: "SecretMaskKit", package: "swiftkit"),
             ],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
