@@ -35,6 +35,7 @@ let package = Package(
                 .product(name: "SelfTestKit", package: "swiftkit"),
                 .product(name: "InteropKit", package: "swiftkit"),
                 .product(name: "WikiLedgerKit", package: "swiftkit"),
+                .product(name: "SessionKit", package: "swiftkit"),
             ],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
