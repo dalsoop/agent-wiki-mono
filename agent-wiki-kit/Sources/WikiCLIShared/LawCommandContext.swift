@@ -63,7 +63,7 @@ public struct LawCommandContext {
         let world = requireWorld()
         return LawLedgerTarget(
             worldName: world.name, root: URL(fileURLWithPath: world.rootPath), catalog: catalog,
-            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice)
+            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice, file: file)
     }
 
     public func scopeIndex() -> LawScopeIndex { LawScopeIndex(current: requireWorld().name, catalog: catalog) }

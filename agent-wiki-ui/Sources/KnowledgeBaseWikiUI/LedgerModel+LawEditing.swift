@@ -15,7 +15,7 @@ extension LedgerModel {
         }
         return LawLedgerTarget(
             worldName: name, root: rootURL, catalog: catalog,
-            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice)
+            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice, file: file)
     }
 
     var isLedgerThreeWorld: Bool { editTarget?.isLedgerThree ?? false }

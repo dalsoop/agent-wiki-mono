@@ -12,16 +12,23 @@ public struct LawLedgerTarget: Sendable {
     public let catalog: WorldBindingCatalog
     public let registeredDevices: [String]
     public let currentDevice: String?
+    /// 호스트 설정(테넌트 대응표·R2 자리). 소환·증언 확인의 표준 원천이 쓴다.
+    public let file: BoundLedgerFile?
+    /// 소환·증언 확인의 원천을 바꿔 끼운다(시험). 비우면 `LawSummonSources.standard(file:)`.
+    public var summonOverride: LawSummonSources?
 
     public init(
         worldName: String, root: URL, catalog: WorldBindingCatalog,
-        registeredDevices: [String], currentDevice: String?
+        registeredDevices: [String], currentDevice: String?, file: BoundLedgerFile? = nil,
+        summonSources: LawSummonSources? = nil
     ) {
         self.worldName = worldName
         self.root = root
         self.catalog = catalog
         self.registeredDevices = registeredDevices
         self.currentDevice = currentDevice
+        self.file = file
+        self.summonOverride = summonSources
     }
 
     /// 설정 파일 하나에서. `catalog` 를 주지 않으면 파일의 world 목록.
@@ -31,10 +38,16 @@ public struct LawLedgerTarget: Sendable {
             ?? file.effectiveWorlds.first { $0.name == worldName }?.rootPath ?? ""
         self.init(
             worldName: worldName, root: URL(fileURLWithPath: rootPath), catalog: resolvedCatalog,
-            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice)
+            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice, file: file)
     }
 
     public var store: LawStore { LawStore(root: root) }
+
+    /// 소환·증언 확인이 세션을 찾는 원천.
+    public var summonSources: LawSummonSources { summonOverride ?? .standard(file: file) }
+
+    /// 공포 경로의 기본 증언 확인자(세션 대조). 부를 때만 세션·R2 를 읽는다.
+    public var defaultTestimony: any LawTestimonyVerifying { LawSessionTestimony(target: self) }
     public var isLedgerThree: Bool { catalog.isLedgerThree(worldName) }
 
     /// 쓰기 허용 판정(보관된 원장·미등록 기기). 판정은 `WorldWriteGate` 한 곳.
@@ -64,11 +77,14 @@ public enum LawEnactServiceError: Error, CustomStringConvertible {
 }
 
 public enum LawEnactService {
-    /// 범위 해석기를 넣은 공포 문맥. 증언 확인자는 소환 작업(T8)이 넘긴다.
+    /// 범위 해석기와 증언 확인자를 넣은 공포 문맥. 확인자를 주지 않으면 세션 대조 확인자(`LawSessionTestimony`,
+    /// 표준 원천)가 기본이다. 공포·원상회복은 대상 원장의 설정으로 만든 확인자(`LawLedgerTarget.defaultTestimony`)를 넘긴다.
     public static func context(
         index: LawScopeIndex, testimony: (any LawTestimonyVerifying)? = nil
     ) -> LawEnactContext {
-        LawEnactContext(testimony: testimony, resolver: LawScopeReferenceResolver(index: index))
+        let verifier = testimony ?? LawSessionTestimony(
+            scope: LawSummonScope(world: index.current, catalog: index.catalog)) { .standard(file: nil) }
+        return LawEnactContext(testimony: verifier, resolver: LawScopeReferenceResolver(index: index))
     }
 
     public static func scope(of target: LawLedgerTarget) -> LawScopeIndex {
@@ -94,7 +110,8 @@ public enum LawEnactService {
         if let denial = target.writeDenial() { throw LawEnactServiceError.writeDenied(denial) }
         let scope = index ?? scope(of: target)
         do {
-            let stored = try target.store.enact(draft, now: now, context: context(index: scope, testimony: testimony))
+            let stored = try target.store.enact(
+                draft, now: now, context: context(index: scope, testimony: testimony ?? target.defaultTestimony))
             LawEnactAftermath.run(target: target, enacted: [stored])
             return stored
         } catch let error as LawEnactError {
@@ -113,7 +130,8 @@ public enum LawEnactService {
         do {
             let enacted = try target.store.restore(
                 batch: batch, actor: actor, now: now,
-                context: context(index: scope(of: target), testimony: testimony), perRuling: perRuling)
+                context: context(index: scope(of: target), testimony: testimony ?? target.defaultTestimony),
+                perRuling: perRuling)
             LawEnactAftermath.run(target: target, enacted: enacted)
             return enacted
         } catch let error as LawEnactError {
