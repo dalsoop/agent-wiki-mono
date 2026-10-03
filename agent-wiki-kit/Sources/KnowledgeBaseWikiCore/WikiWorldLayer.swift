@@ -114,6 +114,10 @@ public enum WikiWorldPresentation: Sendable {
         if trimmed.lowercased() == "gujo-wiki" || path.hasSuffix("/gujo-wiki") {
             return .remoteShared
         }
+        // ledger 3 공유 원장(결정 0007). 개인·테넌트 원장은 `layer: tenant` 를 명시한다.
+        if trimmed.lowercased() == "agent-law" {
+            return .remoteShared
+        }
         if trimmed.lowercased().hasPrefix("person-") {
             return .localPerson
         }
