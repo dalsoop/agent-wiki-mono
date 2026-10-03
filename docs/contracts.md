@@ -99,7 +99,7 @@
 
 | 명령 | 문법 |
 |---|---|
-| 공포 | `enact --title <t> [--type <유형>] [--tag <t>]… [--cite <id>[:<rel>]]… [--exhibit <sha>]… [--speaker <s>] [--batch <id>]` (본문 표준 입력) |
+| 공포 | `enact --title <t> [--type <유형>] [--tag <t>]… [--cite <id>[:<rel>]]… [--exhibit <sha>]… [--speaker <s>] [--batch <id>] [--runtime <r>] [--runtime-version <v>] [--model <m>] [--effort <e>] [--app <a>] [--app-version <v>]` (본문 표준 입력. 모델 기록 인자는 환경 변수·세션 등록보다 우선) |
 | 개정 | `amend <id> [--also <id>]… --title <t> …` |
 | 폐지 | `repeal <id> [--reason <r>]` |
 | 연혁 | `history <id>` |
@@ -120,7 +120,9 @@
 | 원장 설정 | `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]` · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` |
 | 훅 | `hook session` |
 
-- `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다.
+- `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다. ledger 3 의 `show` 는 현행 여부·4종류 보기·현행 사실인정을 텍스트 모드에서는 표준 에러에, `--json` 에서는 필드로 낸다. 검색 결과의 전신 객체는 `[전신 <원장>]`(JSON `predecessor: true`)로 표시한다.
+- ledger 2 원장(`novel-world`, repo world)에 쓰는 일도 `enact`·`amend`·`repeal`·`restore`·`audit`·`checkpoint` 로 하며, ledger 2 의 `enact` 는 옛 분류 옵션(`--domain`·`--kind`·`--knowledge`·`--classification-reason`·`--allow-unclassified`·`--origin`·`--alias`·`--observes`)을 계속 받는다.
+- ledger 3 승격의 대상 기록은 원본을 인용하지 않는다(상위 원장은 하위를 인용할 수 없다). 원본 id 는 영수증 본문에 적힌다.
 - 폐지된 이름(`publish`, `verify`, `rollback`, `classify`, `capture`, `blob` 의 쓰기 하위 명령, `hook authoring`)은 종료 코드 64 와 새 이름 안내만 내고 아무것도 하지 않는다.
 - 그 밖의 옛 쓰기 명령(`discuss`, `learn`, `review`, `event`, `task`, `agent` 등)은 ledger 2 원장에서만 동작하고, ledger 3 원장에서는 64 와 새 명령 안내를 낸다. `checkpoint` 는 두 형식 모두에서 동작한다.
 - 종료 코드: 0 성공, 1 거부(모델 미상, 증언 불일치, 전신 쓰기, 소환 범위 밖, 기기 키 미등록, 드리밍 기기 아님, 허용되지 않은 관계, 안전장치 위반, 구현 전 명령), 2 감사 위반, 64 사용법 오류·폐지된 명령.
