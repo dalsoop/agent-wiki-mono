@@ -2,7 +2,8 @@ import Foundation
 import KnowledgeBaseWikiCore
 
 // 원장 설정 — `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]`,
-// `world tenant-map <테넌트> <원장>`, `world device register <키>`, `world dream-device <키>`.
+// `world tenant-map <테넌트> <원장>`, `world device register <키>`, `world dream-device <키>`,
+// `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]`(R2 주소, 비밀 아님. 키는 키체인).
 // 규칙은 `WorldMutation.adding`·`LedgerThreeConfigMutation` 이 판정하고, 저장은 `WorldBoundIO`(BoundLedgerFile) 하나.
 // 근거: docs/contracts.md "agent-law 명령 (ledger 3)", docs/business-rules.md "원장 구성".
 
@@ -11,6 +12,7 @@ let worldLedgerUsage = """
        world tenant-map <테넌트> <원장>
        world device register <키>
        world dream-device <키>
+       world storage [--endpoint <url>] [--bucket <b>] [--region <r>]
 """
 
 /// 두 CLI 의 `world` 분기가 먼저 부른다. ledger 3 원장 설정이면 처리하고 true.
@@ -36,6 +38,18 @@ public func runWorldLedgerSubcommand(file: inout BoundLedgerFile, arguments: [St
         file = mutationResult(LedgerThreeConfigMutation.settingDreamDevice(in: file, key: rest[0]))
         WorldBoundIO.save(file)
         print("dream device \(rest[0])") // allow:debug
+    case "storage":
+        let options = LawOptions.parse(
+            arguments, skip: 2, valued: ["--endpoint", "--bucket", "--region"],
+            flags: ["--json", "-j"], usage: worldLedgerUsage)
+        guard options.positionals.isEmpty else { usageFail(worldLedgerUsage) }
+        var settings = file.lawStorage ?? LawStorageSettings()
+        if let endpoint = options.value("--endpoint") { settings.endpoint = endpoint }
+        if let bucket = options.value("--bucket") { settings.bucket = bucket }
+        if let region = options.value("--region") { settings.region = region }
+        file.lawStorage = settings
+        WorldBoundIO.save(file)
+        print("storage endpoint=\(settings.resolvedEndpoint)  bucket=\(settings.resolvedBucket)  region=\(settings.resolvedRegion)") // allow:debug
     default:
         return false
     }

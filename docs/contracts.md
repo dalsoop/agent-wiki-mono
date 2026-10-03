@@ -117,7 +117,7 @@
 | 목차 | `contents` |
 | 보고 | `report models [--since <t>]` |
 | 승격 | `promote <id> --to <원장>` |
-| 원장 설정 | `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]` · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` |
+| 원장 설정 | `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]` · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` · `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]` |
 | 훅 | `hook session [--session <id>] [--runtime <r>] [--runtime-version <v>] [--model <m>] [--effort <e>]` (표준 입력에 실행 도구의 세션 시작 훅 JSON. 표준 출력 없음, 항상 종료 코드 0) |
 
 - `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다. ledger 3 의 `show` 는 현행 여부·4종류 보기·현행 사실인정을 텍스트 모드에서는 표준 에러에, `--json` 에서는 필드로 낸다. 검색 결과의 전신 객체는 `[전신 <원장>]`(JSON `predecessor: true`)로 표시한다.

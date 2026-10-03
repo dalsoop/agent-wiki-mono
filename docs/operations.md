@@ -90,6 +90,6 @@ agent-wiki capabilities                             # InteropKit 계약 JSON
 
 - 기기 등록: `agent-wiki world device register <기기 키>`. 드리밍 기기 지정: `agent-wiki world dream-device <기기 키>`.
 - 원장 만들기: `agent-wiki world add agent-law --key law --root ~/agent-law/law --predecessor gujo-wiki` 등(원장 구성표대로). 테넌트 대응: `agent-wiki world tenant-map personal agent-law-person-yun-jeonghan`.
-- R2 키: 금고에서 꺼내 키체인 서비스 `agent-law-r2` 에 넣는다(화면에 출력하지 않는다). 엔드포인트·버킷 이름은 호스트 설정에 둔다.
+- R2 키: 금고에서 꺼내 키체인 서비스 `agent-law-r2` 에 넣는다(화면에 출력하지 않는다). 엔드포인트·버킷 이름은 `agent-wiki world storage --endpoint … --bucket agent-law` 로 호스트 설정에 둔다(생략하면 기존 R2 계정 엔드포인트와 버킷 `agent-law`).
 - 예약 실행: `agent-wiki schedule` 이 동기화(10분)·적재(하루)·드리밍(하루, 드리밍 기기만) 틱을 함께 등록한다.
 - 확인: `agent-wiki audit`, `agent-wiki dream status`, `agent-wiki contents`.
