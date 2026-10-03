@@ -73,6 +73,11 @@ public enum CommandSurfaceRouting {
         case "enact", "amend", "repeal", "restore", "finding", "checkpoint", "promote", "migrate", "tick", "review":
             return true
         case "exhibit": return sub == "put"
+        case "judgment": return sub == "register"
+        case "redact", "archive": return true
+        case "summon": return arguments.contains("--record")
+        case "court": return ["appeal", "propose", "hear", "decide"].contains(sub)
+        case "dream": return sub == "run" || sub == "resume"
         case "promotion": return sub == "publish" || sub == "repair-receipts"
         case "policy": return sub == "classification-baseline"
         case "event": return ["start", "step", "ok", "fail", "append"].contains(sub)
@@ -85,7 +90,8 @@ public enum CommandSurfaceRouting {
 
     /// enact 계열(옛 publish 의 자리) — `AGENT_WIKI_WORLD` 잠금을 본다.
     public static func isEnactFamily(_ command: String) -> Bool {
-        ["enact", "amend", "repeal", "restore", "finding", "checkpoint", "promote"].contains(command)
+        ["enact", "amend", "repeal", "restore", "finding", "checkpoint", "promote",
+         "judgment", "redact", "summon", "court", "dream"].contains(command)
     }
 }
 

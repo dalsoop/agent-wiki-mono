@@ -39,11 +39,14 @@ import Testing
     @Test func writeCommandsGoThroughWriteGate() {
         for arguments in [["enact"], ["amend", "x"], ["repeal", "x"], ["restore", "b"], ["finding", "x"],
                           ["checkpoint"], ["promote", "x"], ["exhibit", "put", "f"], ["promotion", "publish", "x"],
-                          ["event", "append"], ["agent", "run", "r"]] {
+                          ["event", "append"], ["agent", "run", "r"], ["judgment", "register"], ["redact", "k"],
+                          ["archive"], ["summon", "--record", "3"], ["court", "appeal", "x"], ["dream", "run"],
+                          ["dream", "resume"]] {
             #expect(CommandSurfaceRouting.isLedgerWrite(arguments), "\(arguments)")
         }
         for arguments in [["show", "x"], ["audit"], ["exhibit", "get", "x"], ["search", "q"], ["history", "x"],
-                          ["promotion", "preview", "x"], ["task", "list"]] {
+                          ["promotion", "preview", "x"], ["task", "list"], ["judgment", "list"], ["summon", "--query", "q"],
+                          ["court", "list"], ["dream", "status"], ["sync"], ["contents"]] {
             #expect(!CommandSurfaceRouting.isLedgerWrite(arguments), "\(arguments)")
         }
     }
