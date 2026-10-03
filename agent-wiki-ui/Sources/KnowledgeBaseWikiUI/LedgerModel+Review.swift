@@ -73,7 +73,7 @@ extension LedgerModel {
 
     /// 수락 — 심사 기록 발행 + 위키 개념으로 확립(정제본 본문을 개념 객체로, 원문 계보 인용).
     func acceptDigest(_ digest: LedgerDocument, scores: [String: Int], comment: String) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         let verdict = ReviewVerdict(decision: .accept, scores: scores, comment: comment)
         let title = digest.title.replacingOccurrences(of: "정제: ", with: "")
         do {
@@ -94,7 +94,7 @@ extension LedgerModel {
 
     /// 반려 — 심사 기록만 발행(코멘트·점수). distiller 세대 진화의 학습 신호가 된다.
     func rejectDigest(_ digest: LedgerDocument, scores: [String: Int], comment: String) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         let verdict = ReviewVerdict(decision: .reject, scores: scores, comment: comment)
         let title = digest.title.replacingOccurrences(of: "정제: ", with: "")
         do {
@@ -126,7 +126,7 @@ extension LedgerModel {
 
     /// 붙여넣기 원문 수집(인app) — blob 봉인 + paste 근거로 수집함. CLI capture --text 와 같은 결과.
     func captureText(title: String, project: String?, body: String) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { errorMessage = "원문이 비어 있습니다"; return }
         do {

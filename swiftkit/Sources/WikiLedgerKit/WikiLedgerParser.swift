@@ -18,6 +18,10 @@ public enum WikiLedgerParser {
     }
 
     public static func parse(raw: String, relativePath: String) -> ParsedObject? {
+        // ledger 3(agent-law) 파일은 파서 정본 `LawRecordParser` 로 읽는다(결정 0007).
+        if LawRecordParser.ledgerVersion(of: raw) == LawRecord.ledgerVersion {
+            return parseLedgerThree(raw: raw, relativePath: relativePath)
+        }
         let (frontmatter, body) = splitFrontmatter(raw)
         guard let frontmatter, let id = frontmatter["id"]?.trimmingCharacters(in: .whitespaces),
               !id.isEmpty else { return nil }
@@ -55,6 +59,30 @@ public enum WikiLedgerParser {
         }
         edges.append(contentsOf: bodyWikilinks(body: body, from: id))
         edges.append(contentsOf: instanceOfEdges(body: body, from: id))
+        return ParsedObject(node: node, edges: edges)
+    }
+
+    /// ledger 3 기록 → 노드·간선. `cites: <id> <rel>` → cite(관계 유지), `amends`·`amends-also` → supersedes,
+    /// `repeals` → retracts, `batch` → batch. 노드의 `published` 는 공포일(`promulgated`).
+    static func parseLedgerThree(raw: String, relativePath: String) -> ParsedObject? {
+        guard let parsed = LawRecordParser.parse(raw) else { return nil }
+        let id = parsed.storedID
+        let record = parsed.record
+        let title = record.title ?? "(untitled)"
+        let rawType = record.type ?? ""
+        let node = WikiNode(
+            id: id,
+            type: rawType.isEmpty ? Self.inferType(from: title) : rawType,
+            author: record.author,
+            published: LawTime.format(record.promulgated),
+            title: title,
+            path: relativePath
+        )
+        var edges = record.cites.map { WikiEdge(from: id, to: $0.id, kind: .cite, relation: $0.rel) }
+        edges += record.allAmends.map { WikiEdge(from: id, to: $0, kind: .supersedes) }
+        if let repeals = record.repeals { edges.append(WikiEdge(from: id, to: repeals, kind: .retracts)) }
+        if let batch = record.batch, !batch.isEmpty { edges.append(WikiEdge(from: id, to: batch, kind: .batch)) }
+        edges.append(contentsOf: bodyWikilinks(body: record.body, from: id))
         return ParsedObject(node: node, edges: edges)
     }
 

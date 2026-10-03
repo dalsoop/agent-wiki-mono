@@ -134,7 +134,7 @@ extension LedgerModel {
 
     /// 위키 페이지에서 바로 대화 — 발행 + (수정요청/질문이면) 사서 즉시 기동.
     func postDiscussion(on document: LedgerDocument, kind: DiscussionKind, text: String) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         do {
             let rel = kind == .objection ? "undercuts" : "discusses"
             let object = try store.publish(
@@ -154,7 +154,7 @@ extension LedgerModel {
 
     /// 복원 — 철회된 원문을 재발행(restores 로 원본 인용). 역사는 그대로.
     func restore(document: LedgerDocument) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         do {
             let head = document.head
             _ = try store.publish(
@@ -197,9 +197,8 @@ extension LedgerModel {
     }
 
     func rollback(batch: ActivityBatch) {
-        guard let store else { return }
         do {
-            _ = try store.rollback(batchID: batch.id, author: "human")
+            try performRestore(batch: batch.id)
             refresh()
         } catch {
             errorMessage = "되돌리기 실패: \(error)"
@@ -215,7 +214,7 @@ extension LedgerModel {
         classification: LedgerClassificationInput,
         aliases: [String]
     ) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         do {
             var cites: [LedgerObject.Cite] = []
             if let supportsID { cites.append(.init(id: supportsID, rel: "supports")) }
@@ -236,7 +235,7 @@ extension LedgerModel {
 
     /// 기존 근거에 재현/반박 스탬프 발행.
     func reinforce(_ document: LedgerDocument, contradicts: Bool, note: String) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         do {
             _ = try store.publish(
                 author: "human",

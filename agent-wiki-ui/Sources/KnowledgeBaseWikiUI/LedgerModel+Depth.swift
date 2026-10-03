@@ -86,7 +86,7 @@ extension LedgerModel {
 
     /// 킵 — 선별 스탬프 발행. 판단 기록 규약: 근거 서술 필수.
     func screenIn(_ document: LedgerDocument, rationale: String) {
-        guard let store else { return }
+        guard let store = legacyWritableStore() else { return }
         let reason = rationale.trimmingCharacters(in: .whitespaces)
         guard !reason.isEmpty else {
             errorMessage = "선별 사유가 필요합니다 — 판단은 근거와 함께 기록됩니다"
@@ -110,7 +110,15 @@ extension LedgerModel {
 
     /// 버림 — 철회 발행(사유 본문). 역사에 남는다.
     func discard(_ document: LedgerDocument, reason: String) {
-        guard let store else { return }
+        if isLedgerThreeWorld {
+            // ledger 3: 폐지(공포 경로). 제목은 공포 경로가 "폐지: <제목>" 으로 정한다.
+            do {
+                _ = try performEdit(.repeal(target: document.head.id, reason: reason.isEmpty ? "triage discard" : reason))
+            } catch { errorMessage = "버림 실패: \(error)" }
+            refresh()
+            return
+        }
+        guard let store = legacyWritableStore() else { return }
         _ = try? store.publish(
             author: "human", title: "버림: \(document.title.replacingOccurrences(of: "근거: ", with: ""))",
             body: reason.isEmpty ? "triage discard" : reason,
@@ -120,7 +128,7 @@ extension LedgerModel {
 
     /// 정제본 발행 — 선별 원자료들을 digests 로 인용.
     func publishDigest(title: String, body: String, citing evidenceIDs: [String]) {
-        guard let store, !evidenceIDs.isEmpty else { return }
+        guard !evidenceIDs.isEmpty, let store = legacyWritableStore() else { return }
         do {
             let object = try store.publish(
                 author: "human", title: title, body: body,

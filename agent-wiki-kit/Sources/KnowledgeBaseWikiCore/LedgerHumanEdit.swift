@@ -44,6 +44,11 @@ public enum LedgerHumanEdit {
         "user:" + (environment["USER"].flatMap { $0.isEmpty ? nil : $0 } ?? NSUserName())
     }
 
+    /// 화면 편집의 공포 주체 — 사람(모델 칸 비움, runtime human), 기기는 설정의 이 기기 키.
+    public static func humanActor(author: String = humanAuthor(), device: String?) -> LawActor {
+        LawActor(author: author, kind: .human, device: device, runtime: LawRuntime.human.rawValue)
+    }
+
     /// 편집 하나를 쓰고 새 기록 id 를 돌려준다.
     @discardableResult
     public static func perform(
@@ -62,8 +67,7 @@ public enum LedgerHumanEdit {
     static func performLedgerThree(
         _ action: LedgerHumanEditAction, target: LawLedgerTarget, author: String, now: Date
     ) throws -> String {
-        let actor = LawActor(
-            author: author, kind: .human, device: target.currentDevice, runtime: LawRuntime.human.rawValue)
+        let actor = humanActor(author: author, device: target.currentDevice)
         let records = target.store.scan()
         func record(_ id: String) throws -> LawRecord {
             guard let found = records.first(where: { $0.id == id })?.record else {
