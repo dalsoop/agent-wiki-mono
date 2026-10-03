@@ -111,7 +111,7 @@
 | 소환 | `summon [--session <id>] [--since <t>] [--until <t>] [--device <k>] [--runtime <r>] [--role user\|assistant\|tool] [--query <q>] [--record <발화 번호>]` |
 | 적재 | `archive [--dry-run]` |
 | 동기화 | `sync` |
-| 드리밍 | `dream run` · `dream status` · `dream resume` |
+| 드리밍 | `dream run [--scheduled]` · `dream status` · `dream resume` |
 | 심급 | `court appeal <id> --reason <r>` · `court propose <id> --scope <s>` · `court hear` · `court decide <건 id> --approve\|--reject --testimony <증거 id>` · `court list [--level appellate\|supreme]` |
 | 판결 | `judgment register --repo <r> --title <t> [--status provisional\|confirmed] [--path <p>]` · `judgment list [--repo <r>]` · `judgment show <번호>` |
 | 목차 | `contents` |

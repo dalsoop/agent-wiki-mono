@@ -19,8 +19,12 @@ public enum LawDreamTrigger: String, Codable, Sendable {
     public static let scheduleLabel = "net.ranode.memo-citation-ledger.law-dream"
     public static let scheduleEnvironmentKey = "XPC_SERVICE_NAME"
 
-    public static func detect(environment: [String: String]) -> LawDreamTrigger {
-        environment[scheduleEnvironmentKey] == scheduleLabel ? .scheduled : .manual
+    /// 예약 틱은 `dream run --scheduled` 로 부른다(`agent-wiki schedule`). 라벨 환경 변수는 옛 plist 를 위한 보조 판정.
+    public static let scheduledFlag = "--scheduled"
+
+    public static func detect(environment: [String: String], scheduledFlag: Bool = false) -> LawDreamTrigger {
+        if scheduledFlag { return .scheduled }
+        return environment[scheduleEnvironmentKey] == scheduleLabel ? .scheduled : .manual
     }
 }
 

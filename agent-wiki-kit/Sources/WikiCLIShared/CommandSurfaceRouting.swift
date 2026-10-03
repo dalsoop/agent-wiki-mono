@@ -166,6 +166,6 @@ extension CommandSurfaceRouting {
         "--runtime", "--role", "--query", "--record", "--dry-run", "--scope", "--approve", "--reject",
         "--testimony", "--level", "--repo", "--status", "--path", "--to", "--key", "--root", "--parent",
         "--predecessor", "--model", "--runtime-version", "--effort", "--app", "--app-version", "--json",
-        "--endpoint", "--bucket", "--region",
+        "--endpoint", "--bucket", "--region", "--scheduled",
     ]
 }

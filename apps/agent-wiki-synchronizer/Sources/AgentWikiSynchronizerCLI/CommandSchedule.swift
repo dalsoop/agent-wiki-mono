@@ -33,7 +33,7 @@ let scheduleTicks: [ScheduleTick] = [
         interval: .calendar(["Hour": 5, "Minute": 0, "Weekday": 1])),
     ScheduleTick(role: "law-sync", arguments: ["sync"], interval: .every(seconds: 600)),
     ScheduleTick(role: "law-archive", arguments: ["archive"], interval: .calendar(["Hour": 2, "Minute": 0])),
-    ScheduleTick(role: "law-dream", arguments: ["dream", "run"], interval: .calendar(["Hour": 2, "Minute": 30])),
+    ScheduleTick(role: "law-dream", arguments: ["dream", "run", "--scheduled"], interval: .calendar(["Hour": 2, "Minute": 30])),
 ]
 
 func runSchedule(arguments: [String]) {

@@ -43,7 +43,7 @@ let allowedOptions: Set<String> = [
     "--no-studio-adopt",
     // agent-law (ledger 3) — docs/contracts.md "agent-law 명령". 두 CLI 목록을 같게 유지한다.
     "--also", "--app", "--app-version", "--approve", "--certainty", "--device", "--dry-run", "--effort",
-    "--exhibit", "--from", "--key", "--predecessor", "--record", "--reject", "--repo", "--role", "--runtime",
+    "--exhibit", "--from", "--key", "--predecessor", "--record", "--scheduled", "--reject", "--repo", "--role", "--runtime",
     "--runtime-version", "--scope", "--session", "--speaker", "--status", "--testimony", "--until",
 ]
 let suppliedOptions = Set(arguments.filter { $0.hasPrefix("-") && $0 != "-" })

@@ -8,7 +8,7 @@ import WikiLedgerKit
 // 쓰기 게이트(기기 키 미등록 거부)는 명령 표면이 먼저 판정한다. 예약 실행(LaunchAgent 라벨)은 24시간·새 세션·정지 조건을 본다.
 
 let dreamUsage = """
-사용법: dream run [--json]      (드리밍 기기에서만. 예약 실행은 24시간·새 세션·정지 조건을 본다)
+사용법: dream run [--scheduled] [--json]  (드리밍 기기에서만. --scheduled 는 예약 틱이 붙이며 24시간·새 세션·정지 조건을 본다)
        dream status [--json]
        dream resume [--json]   (사람 작성자만 — 원상회복으로 멈춘 자동 드리밍을 다시 켠다)
 """
@@ -16,12 +16,13 @@ let dreamUsage = """
 public func runDream(context: LawCommandContext, arguments: [String]) {
     guard arguments.count >= 2 else { usageFail(dreamUsage) }
     guard context.isLedgerThree else { usageFail("dream 은 ledger 3 원장 전용") }
-    let options = LawOptions.parse(arguments, skip: 2, valued: [], usage: dreamUsage)
+    let options = LawOptions.parse(
+        arguments, skip: 2, valued: [], flags: ["--json", "-j", LawDreamTrigger.scheduledFlag], usage: dreamUsage)
     guard options.positionals.isEmpty else { usageFail(dreamUsage) }
     let asJSON = options.has("--json")
 
     switch arguments[1] {
-    case "run": dreamRun(context: context, asJSON: asJSON)
+    case "run": dreamRun(context: context, asJSON: asJSON, scheduled: options.has(LawDreamTrigger.scheduledFlag))
     case "status": dreamStatus(context: context, asJSON: asJSON)
     case "resume": dreamResume(context: context, asJSON: asJSON)
     default: usageFail(dreamUsage)
@@ -77,7 +78,7 @@ func dreamFinishSync(file: BoundLedgerFile, catalog: WorldBindingCatalog, object
     return messages
 }
 
-private func dreamRun(context: LawCommandContext, asJSON: Bool) {
+private func dreamRun(context: LawCommandContext, asJSON: Bool, scheduled: Bool = false) {
     let (service, storeError) = standardDreamService(context: context)
     do {
         try service.checkDevice()
@@ -85,7 +86,7 @@ private func dreamRun(context: LawCommandContext, asJSON: Bool) {
         fail("\(error)")
     }
     if let storeError, service.objectStore == nil { fail("드리밍에 R2 가 필요함: \(storeError)") }
-    let trigger = LawDreamTrigger.detect(environment: context.environment)
+    let trigger = LawDreamTrigger.detect(environment: context.environment, scheduledFlag: scheduled)
     let outcome: LawDreamOutcome
     do {
         outcome = try service.run(trigger: trigger)
