@@ -127,3 +127,37 @@ final class AIRuntimeTests: XCTestCase {
         XCTAssertEqual(cli, runtime)
     }
 }
+
+final class AIRuntimeEnvironmentTests: XCTestCase {
+    func testClaudeCodeEnvironment() {
+        let environment = [
+            "CLAUDE_CODE_SESSION_ID": "s-1", "CLAUDE_EFFORT": "medium",
+            "AI_AGENT": "claude-code_2-1-286_agent",
+            "CLAUDE_CODE_EXECPATH": "/Users/x/.local/share/claude/versions/2.1.280",
+        ]
+        XCTAssertEqual(SupportedAIAgentCLI.current(in: environment), .claude)
+        XCTAssertEqual(SupportedAIAgentCLI.claude.sessionID(in: environment), "s-1")
+        XCTAssertEqual(SupportedAIAgentCLI.claude.effort(in: environment), "medium")
+        // AI_AGENT 가 실행 경로보다 먼저다.
+        XCTAssertEqual(SupportedAIAgentCLI.claude.version(in: environment), "2.1.286")
+        var withoutIdentity = environment
+        withoutIdentity["AI_AGENT"] = nil
+        XCTAssertEqual(SupportedAIAgentCLI.claude.version(in: withoutIdentity), "2.1.280")
+        XCTAssertEqual(SupportedAIAgentCLI.current(in: withoutIdentity), .claude)
+    }
+
+    func testCodexAndUnknown() {
+        XCTAssertEqual(SupportedAIAgentCLI.current(in: ["CODEX_THREAD_ID": "t-1"]), .codex)
+        XCTAssertEqual(SupportedAIAgentCLI.codex.sessionID(in: ["CODEX_THREAD_ID": " t-1 "]), "t-1")
+        XCTAssertNil(SupportedAIAgentCLI.current(in: ["CODEX_THREAD_ID": "  "]))
+        XCTAssertNil(SupportedAIAgentCLI.current(in: ["AI_AGENT": "unknown_1_agent"]))
+        XCTAssertNil(SupportedAIAgentCLI.codex.version(in: [:]))
+    }
+
+    func testOwnsPath() {
+        XCTAssertTrue(SupportedAIAgentCLI.claude.ownsPath("/Users/x/.claude/projects/p/s.jsonl"))
+        XCTAssertTrue(SupportedAIAgentCLI.codex.ownsPath("/Users/x/.codex/sessions/2026/r.jsonl"))
+        XCTAssertFalse(SupportedAIAgentCLI.claude.ownsPath("/Users/x/.codex/sessions/r.jsonl"))
+        XCTAssertTrue(SupportedAIAgentCLI.agy.ownsPath("/Users/x/.gemini/antigravity-cli/c/1.json"))
+    }
+}

@@ -44,7 +44,7 @@ public struct LawModelRecord: Sendable, Equatable {
 
 /// 모델 기록 값을 모으는 한 자리.
 /// 우선순위(business-rules): 명시 인자 > 위키 전용 환경 변수 > 실행 도구 환경 변수 > 세션 등록 파일.
-/// 실행 도구 환경 변수와 세션 등록 파일 단계는 세션 훅 작업(T6)이 `collect` 안에 더한다.
+/// 실행 도구 환경 변수는 `LawSessionEnvironment`, 세션 등록 파일은 `LawSessionRegistry`(`hook session` 이 쓴다).
 public enum LawModelRecordSource {
     public static let runtimeKey = "AGENT_WIKI_RUNTIME"
     public static let modelKey = "AGENT_WIKI_MODEL"
@@ -62,19 +62,33 @@ public enum LawModelRecordSource {
     }
 
     /// 값을 모은다. 앞 단계에 없는 칸만 뒤 단계에서 채운다. 다른 세션을 추정하지 않는다.
-    public static func collect(explicit: LawModelRecord, environment: [String: String]) -> LawModelRecord {
-        explicit.filling(from: wikiEnvironment(environment))
-        // T6: .filling(from: 실행 도구 환경 변수) .filling(from: 세션 등록 파일)
+    /// 세션 등록은 실행 도구의 세션 id 환경 변수가 가리키는 파일 하나만 본다.
+    public static func collect(
+        explicit: LawModelRecord, environment: [String: String], sessions: LawSessionRegistry = .standard
+    ) -> LawModelRecord {
+        let session = sessions.registration(environment: environment)?.modelRecord ?? LawModelRecord()
+        return explicit
+            .filling(from: wikiEnvironment(environment))
+            .filling(from: LawSessionEnvironment.toolRecord(environment))
+            .filling(from: session)
     }
 }
 
 public enum LawActorError: Error, Equatable, CustomStringConvertible {
     case unknownAuthorKind(String)
+    /// 에이전트 공포인데 모델 기록 값도, 실행 도구의 세션 id 도 없다.
+    case sessionUnknown
+    /// 세션 id 는 있는데 그 세션의 등록 파일이 없고 모델 기록 값도 없다.
+    case sessionNotRegistered(String)
 
     public var description: String {
         switch self {
         case .unknownAuthorKind(let author):
             return "작성자 종류를 정할 수 없음: '\(author)' — --as agent:<이름>@<기기> · user:<이름> · app:<앱 슬러그>"
+        case .sessionUnknown:
+            return "세션 미상 — 실행 도구의 세션 id 환경 변수도 --runtime·--model 같은 명시 값도 없음(다른 세션을 추정하지 않는다)"
+        case .sessionNotRegistered(let id):
+            return "세션 '\(id)' 의 등록이 없음 — 세션 시작 훅(`hook session`)이 남기거나 --runtime·--model 을 명시한다"
         }
     }
 }
@@ -96,7 +110,8 @@ public enum LawActorResolution {
         author: String,
         explicit: LawModelRecord = LawModelRecord(),
         environment: [String: String],
-        device: String?
+        device: String?,
+        sessions: LawSessionRegistry = .standard
     ) throws -> LawActor {
         let trimmed = author.trimmingCharacters(in: .whitespaces)
         guard let kind = kind(of: trimmed) else { throw LawActorError.unknownAuthorKind(author) }
@@ -107,12 +122,22 @@ public enum LawActorResolution {
                 runtime: explicit.runtime ?? LawRuntime.human.rawValue,
                 runtimeVersion: explicit.runtimeVersion, model: explicit.model, effort: explicit.effort)
         case .agent:
-            let values = LawModelRecordSource.collect(explicit: explicit, environment: environment)
+            let values = LawModelRecordSource.collect(explicit: explicit, environment: environment, sessions: sessions)
+            // 세션 단계의 거부. 그 밖의 누락(일부 값만 있음)은 공포 검증이 runtime·model 미상으로 거부한다.
+            if let sessionID = LawSessionEnvironment.sessionID(environment) {
+                if values.model == nil, sessions.registration(sessionID: sessionID) == nil {
+                    throw LawActorError.sessionNotRegistered(sessionID)
+                }
+            } else if values.runtime == nil, values.model == nil {
+                throw LawActorError.sessionUnknown
+            }
             return LawActor(
                 author: trimmed, kind: .agent, device: device, runtime: values.runtime,
                 runtimeVersion: values.runtimeVersion, model: values.model, effort: values.effort)
         case .app:
-            let values = LawModelRecordSource.collect(explicit: explicit, environment: environment)
+            // 앱 공포는 실행 도구 환경·세션 등록을 보지 않는다 — 에이전트 세션 안에서 돈 기계적 기록에
+            // 그 세션의 runtime·model 이 묻지 않게. AI 판단을 거친 앱 기록은 명시 인자·위키 환경 변수로 넘긴다.
+            let values = explicit.filling(from: LawModelRecordSource.wikiEnvironment(environment))
             return LawActor(
                 author: trimmed, kind: .app, device: device,
                 runtime: values.runtime ?? (values.model == nil ? LawRuntime.app.rawValue : nil),
