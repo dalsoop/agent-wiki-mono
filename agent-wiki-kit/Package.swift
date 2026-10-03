@@ -47,6 +47,7 @@ let package = Package(
                 .product(name: "StateRootKit", package: "swiftkit"),
                 .product(name: "AgentSurfaceKit", package: "swiftkit"),
                 .product(name: "LocalizationKit", package: "swiftkit"),
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
             ],
             resources: [.process("Resources")]
         ),
@@ -58,6 +59,15 @@ let package = Package(
             ],
             path: "Tests/KnowledgeBaseWikiCoreTests",
             resources: [.copy("Fixtures")]
+        ),
+        .testTarget(
+            name: "WikiCLISharedTests",
+            dependencies: [
+                "WikiCLIShared",
+                "KnowledgeBaseWikiCore",
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
+            ],
+            path: "Tests/WikiCLISharedTests"
         ),
     ]
 )

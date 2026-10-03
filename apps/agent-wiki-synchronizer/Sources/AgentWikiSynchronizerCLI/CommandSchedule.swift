@@ -5,20 +5,39 @@ import WikiCLIShared
 import LocalizationKit
 import CommandKit
 
-private struct ScheduleTick {
-    let role: String
-    let tickArg: String
-    let interval: [String: Int]
+/// 예약 실행 간격 — 달력 시각(StartCalendarInterval) 또는 초 간격(StartInterval).
+enum ScheduleInterval: Equatable {
+    case calendar([String: Int])
+    case every(seconds: Int)
 }
 
+/// LaunchAgent 하나 = CLI 를 부르는 순수 plist 하나(RunAtLoad 없음).
+struct ScheduleTick: Equatable {
+    let role: String
+    /// CLI 뒤에 붙는 인자.
+    let arguments: [String]
+    let interval: ScheduleInterval
+}
+
+/// 예약 실행 틱 목록. 옛 운영 틱은 그대로 두고, agent-law 의 동기화 10분·적재 하루·드리밍 하루를 더한다
+/// (docs/architecture.md "agent-law" 예약 실행, 결정 0007). 실제 동작은 각 명령(T5·T7·T10)이 채운다.
+let scheduleTicks: [ScheduleTick] = [
+    ScheduleTick(role: "checkpoint", arguments: ["tick", "checkpoint"], interval: .calendar(["Hour": 21, "Minute": 30])),
+    ScheduleTick(role: "librarian", arguments: ["tick", "librarian"], interval: .calendar(["Hour": 3, "Minute": 30])),
+    ScheduleTick(role: "run-reaper", arguments: ["tick", "reaper"], interval: .calendar(["Minute": 45])),
+    ScheduleTick(
+        role: "verifier", arguments: ["tick", "verifier"],
+        interval: .calendar(["Hour": 4, "Minute": 30, "Weekday": 1])),
+    ScheduleTick(
+        role: "retrospective", arguments: ["tick", "retrospective"],
+        interval: .calendar(["Hour": 5, "Minute": 0, "Weekday": 1])),
+    ScheduleTick(role: "law-sync", arguments: ["sync"], interval: .every(seconds: 600)),
+    ScheduleTick(role: "law-archive", arguments: ["archive"], interval: .calendar(["Hour": 2, "Minute": 0])),
+    ScheduleTick(role: "law-dream", arguments: ["dream", "run"], interval: .calendar(["Hour": 2, "Minute": 30])),
+]
+
 func runSchedule(arguments: [String]) {
-    let ticks: [ScheduleTick] = [
-        ScheduleTick(role: "checkpoint", tickArg: "checkpoint", interval: ["Hour": 21, "Minute": 30]),
-        ScheduleTick(role: "librarian", tickArg: "librarian", interval: ["Hour": 3, "Minute": 30]),
-        ScheduleTick(role: "run-reaper", tickArg: "reaper", interval: ["Minute": 45]),
-        ScheduleTick(role: "verifier", tickArg: "verifier", interval: ["Hour": 4, "Minute": 30, "Weekday": 1]),
-        ScheduleTick(role: "retrospective", tickArg: "retrospective", interval: ["Hour": 5, "Minute": 0, "Weekday": 1]),
-    ]
+    let ticks = scheduleTicks
     let agentsDir = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/LaunchAgents")
 
@@ -105,13 +124,7 @@ private func writeSchedulePlist(
     cliPath: String,
     logDir: String
 ) -> Bool {
-    let dict: [String: Any] = [
-        "Label": "net.ranode.memo-citation-ledger.\(tick.role)",
-        "ProgramArguments": [cliPath, "tick", tick.tickArg],
-        "StandardOutPath": "\(logDir)/\(tick.role).log",
-        "StandardErrorPath": "\(logDir)/\(tick.role).err.log",
-        "StartCalendarInterval": tick.interval,
-    ]
+    let dict = schedulePlist(tick: tick, cliPath: cliPath, logDir: logDir)
     let data: Data
     do {
         data = try PropertyListSerialization.data(fromPropertyList: dict, format: .xml, options: 0)
@@ -128,6 +141,21 @@ private func writeSchedulePlist(
         print(CLILocalization.format("CommandSchedule.print-9", tick.role, String(describing: error)))
         return false
     }
+}
+
+/// 순수 plist 내용 — CLI 경로와 인자, 로그, 간격만(RunAtLoad·KeepAlive 없음).
+func schedulePlist(tick: ScheduleTick, cliPath: String, logDir: String) -> [String: Any] {
+    var dict: [String: Any] = [
+        "Label": "net.ranode.memo-citation-ledger.\(tick.role)",
+        "ProgramArguments": [cliPath] + tick.arguments,
+        "StandardOutPath": "\(logDir)/\(tick.role).log",
+        "StandardErrorPath": "\(logDir)/\(tick.role).err.log",
+    ]
+    switch tick.interval {
+    case .calendar(let calendar): dict["StartCalendarInterval"] = calendar
+    case .every(let seconds): dict["StartInterval"] = seconds
+    }
+    return dict
 }
 
 private func programArg0(at url: URL) -> String? {
@@ -147,6 +175,13 @@ private func programArg0(at url: URL) -> String? {
           let args = plist["ProgramArguments"] as? [String],
           let first = args.first, !first.isEmpty else { return nil }
     return first
+}
+
+private func fmt(_ interval: ScheduleInterval) -> String {
+    switch interval {
+    case .every(let seconds): return "\(seconds / 60)분마다"
+    case .calendar(let calendar): return fmt(calendar)
+    }
 }
 
 private func fmt(_ i: [String: Int]) -> String {

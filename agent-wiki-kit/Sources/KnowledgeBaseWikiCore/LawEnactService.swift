@@ -1,0 +1,158 @@
+import Foundation
+import WikiLedgerKit
+
+// ledger 3 공포 경로 — CLI 명령과 화면 편집이 같은 경로를 쓴다.
+// 순서: 쓰기 게이트(`WorldWriteGate`) → 범위 해석기를 넣은 `LawStore.enact` → 공포 후처리.
+// 근거: docs/business-rules.md "공포·개정·폐지·원상회복", docs/standards.md "agent-law (ledger 3)", 결정 0007.
+
+/// 공포 대상 원장과 그 판정에 필요한 설정.
+public struct LawLedgerTarget: Sendable {
+    public let worldName: String
+    public let root: URL
+    public let catalog: WorldBindingCatalog
+    public let registeredDevices: [String]
+    public let currentDevice: String?
+
+    public init(
+        worldName: String, root: URL, catalog: WorldBindingCatalog,
+        registeredDevices: [String], currentDevice: String?
+    ) {
+        self.worldName = worldName
+        self.root = root
+        self.catalog = catalog
+        self.registeredDevices = registeredDevices
+        self.currentDevice = currentDevice
+    }
+
+    /// 설정 파일 하나에서. `catalog` 를 주지 않으면 파일의 world 목록.
+    public init(worldName: String, file: BoundLedgerFile, catalog: WorldBindingCatalog? = nil) {
+        let resolvedCatalog = catalog ?? WorldBindingCatalog(worlds: file.effectiveWorlds)
+        let rootPath = resolvedCatalog.world(named: worldName)?.rootPath
+            ?? file.effectiveWorlds.first { $0.name == worldName }?.rootPath ?? ""
+        self.init(
+            worldName: worldName, root: URL(fileURLWithPath: rootPath), catalog: resolvedCatalog,
+            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice)
+    }
+
+    public var store: LawStore { LawStore(root: root) }
+    public var isLedgerThree: Bool { catalog.isLedgerThree(worldName) }
+
+    /// 쓰기 허용 판정(보관된 원장·미등록 기기). 판정은 `WorldWriteGate` 한 곳.
+    public func writeDenial() -> WorldWriteDenial? {
+        WorldWriteGate.denial(
+            targetWorld: worldName, catalog: catalog,
+            registeredDevices: registeredDevices, currentDevice: currentDevice)
+    }
+}
+
+public enum LawEnactServiceError: Error, CustomStringConvertible {
+    case writeDenied(WorldWriteDenial)
+    case reference(LawReferenceError)
+    case actor(LawActorError)
+    case enact(LawEnactError)
+    case notLedgerThree(String)
+
+    public var description: String {
+        switch self {
+        case .writeDenied(let denial): return denial.message
+        case .reference(let error): return error.description
+        case .actor(let error): return error.description
+        case .enact(let error): return error.description
+        case .notLedgerThree(let world): return "ledger 3 원장이 아님: \(world)"
+        }
+    }
+}
+
+public enum LawEnactService {
+    /// 범위 해석기를 넣은 공포 문맥. 증언 확인자는 소환 작업(T8)이 넘긴다.
+    public static func context(
+        index: LawScopeIndex, testimony: (any LawTestimonyVerifying)? = nil
+    ) -> LawEnactContext {
+        LawEnactContext(testimony: testimony, resolver: LawScopeReferenceResolver(index: index))
+    }
+
+    public static func scope(of target: LawLedgerTarget) -> LawScopeIndex {
+        LawScopeIndex(current: target.worldName, catalog: target.catalog)
+    }
+
+    /// 참조 토큰들을 64자 id 로 푼다(범위 밖이면 인용 게이트 거부).
+    public static func resolveReferences(_ tokens: [String], index: LawScopeIndex) throws -> [String] {
+        do {
+            return try tokens.map { try LawReferenceLookup.resolve($0, index: index) }
+        } catch let error as LawReferenceError {
+            throw LawEnactServiceError.reference(error)
+        }
+    }
+
+    /// 공포. 쓰기 게이트를 먼저 보고, 범위 해석기로 `LawStore.enact` 를 부른 뒤 후처리 자리를 부른다.
+    @discardableResult
+    public static func enact(
+        _ draft: LawDraft, target: LawLedgerTarget, index: LawScopeIndex? = nil,
+        testimony: (any LawTestimonyVerifying)? = nil, now: Date = Date()
+    ) throws -> LawStoredRecord {
+        guard target.isLedgerThree else { throw LawEnactServiceError.notLedgerThree(target.worldName) }
+        if let denial = target.writeDenial() { throw LawEnactServiceError.writeDenied(denial) }
+        let scope = index ?? scope(of: target)
+        do {
+            let stored = try target.store.enact(draft, now: now, context: context(index: scope, testimony: testimony))
+            LawEnactAftermath.run(target: target, enacted: [stored])
+            return stored
+        } catch let error as LawEnactError {
+            throw LawEnactServiceError.enact(error)
+        }
+    }
+
+    /// 원상회복 — 묶음의 기록마다 새 기록을 공포한다(같은 게이트·해석기·후처리).
+    @discardableResult
+    public static func restore(
+        batch: String, actor: LawActor, target: LawLedgerTarget,
+        testimony: (any LawTestimonyVerifying)? = nil, perRuling: String? = nil, now: Date = Date()
+    ) throws -> [LawStoredRecord] {
+        guard target.isLedgerThree else { throw LawEnactServiceError.notLedgerThree(target.worldName) }
+        if let denial = target.writeDenial() { throw LawEnactServiceError.writeDenied(denial) }
+        do {
+            let enacted = try target.store.restore(
+                batch: batch, actor: actor, now: now,
+                context: context(index: scope(of: target), testimony: testimony), perRuling: perRuling)
+            LawEnactAftermath.run(target: target, enacted: enacted)
+            return enacted
+        } catch let error as LawEnactError {
+            throw LawEnactServiceError.enact(error)
+        }
+    }
+
+    /// 체크포인트 — 지금 기록 집합의 수와 해시를 적고 이전 체크포인트를 `checkpoints` 로 인용한다.
+    @discardableResult
+    public static func checkpoint(
+        actor: LawActor, target: LawLedgerTarget, now: Date = Date()
+    ) throws -> LawStoredRecord {
+        let records = target.store.scan()
+        let ids = records.map(\.id).sorted()
+        let previous = records.filter { $0.record.type == LawRecordType.checkpoint.rawValue }.last
+        let draft = LawDraft(
+            actor: actor, title: "체크포인트: 기록 \(ids.count)개", type: LawRecordType.checkpoint.rawValue,
+            cites: previous.map { [LawCite(id: $0.id, rel: LawRelation.checkpoints.rawValue)] } ?? [],
+            body: "records: \(ids.count)\nset-sha256: \(LawHash.sha256Hex(ids.joined(separator: "\n")))\n")
+        return try enact(draft, target: target, now: now)
+    }
+}
+
+/// 공포가 성공한 직후 부르는 후처리 자리. 지금은 파생 색인 갱신만 한다.
+/// 동기화 작업(T5)이 여기서 그 원장 파일만 git 에 커밋한다(실패해도 공포는 성공이고 "커밋 대기"로 남는다).
+public enum LawEnactAftermath {
+    public static func run(target: LawLedgerTarget, enacted: [LawStoredRecord]) {
+        guard !enacted.isEmpty else { return }
+        refreshDerivedIndex(root: target.root)
+    }
+
+    /// 파생 색인(`state/index.db`)·그래프(`state/graph.db`)가 있으면 따라오게 한다. 캐시라 실패는 조용히 넘긴다.
+    public static func refreshDerivedIndex(root: URL) {
+        let indexPath = root.appendingPathComponent("state/index.db")
+        guard FileManager.default.fileExists(atPath: indexPath.path) else { return }
+        LedgerIndex(root: root).sync(objectsDir: root.appendingPathComponent("objects"))
+        let graphPath = root.appendingPathComponent("state/graph.db")
+        guard FileManager.default.fileExists(atPath: graphPath.path) else { return }
+        let objects = LawLedgerProjection.objects(LawStore(root: root).scan())
+        LedgerGraph(root: root).rebuild(objects: objects, events: [])
+    }
+}

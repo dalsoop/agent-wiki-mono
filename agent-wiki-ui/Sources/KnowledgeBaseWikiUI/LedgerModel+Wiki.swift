@@ -82,16 +82,21 @@ extension LedgerModel {
 
     /// 한 섹션만 편집 → 전체 본문 재조립 후 개정판 발행 (append-only 유지).
     func editWikiSection(_ document: LedgerDocument, index: Int, newRaw: String, reason: String) {
-        guard let store else { return }
         var raws = wikiSections(document.head.body).map(\.raw)
         guard index < raws.count else { return }
         raws[index] = newRaw
         let body = "개정 사유: \(reason)\n\n" + raws.joined(separator: "\n\n")
         do {
-            _ = try store.publish(
-                author: "human", title: document.head.title, type: document.head.effectiveType,
-                body: body, supersedes: document.head.id,
-                origin: document.head.origin, tags: document.head.tags)
+            if isLedgerThreeWorld {
+                _ = try performEdit(.amend(
+                    target: document.head.id, title: document.head.title, body: body, cites: document.head.cites))
+            } else {
+                guard let store = legacyWritableStore() else { return }
+                _ = try store.publish(
+                    author: "human", title: document.head.title, type: document.head.effectiveType,
+                    body: body, supersedes: document.head.id,
+                    origin: document.head.origin, tags: document.head.tags)
+            }
             refresh()
         } catch { errorMessage = "섹션 편집 실패: \(error)" }
     }

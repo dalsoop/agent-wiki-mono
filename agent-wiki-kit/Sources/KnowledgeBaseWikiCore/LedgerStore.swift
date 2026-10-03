@@ -524,10 +524,36 @@ public struct LedgerConfig: Codable, Sendable {
         }
     }
 
+    /// 설정 파일은 `BoundLedgerFile` 과 함께 쓴다. 이 모델에 없는 필드(world 의 layer·parent·key·
+    /// predecessor, 최상위 tenantMap·devices·currentDevice·dreamDevice)는 파일의 값을 보존한다.
     public func save() throws {
-        try FileManager.default.createDirectory(
-            at: Self.configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode(self).write(to: Self.configURL, options: .atomic)
+        try save(to: Self.configURL)
+    }
+
+    public func save(to url: URL) throws {
+        let merged = Self.merged(self, onto: WorldConfigStore.load(from: url))
+        try WorldConfigStore.save(merged, to: url)
+    }
+
+    /// 이 모델의 값(rootPath·currentWorld·worlds 의 이름·경로·표시 이름)을 파일 위에 덮는다.
+    /// 같은 이름 world 의 나머지 필드와 최상위 ledger 3 필드는 그대로 둔다.
+    public static func merged(_ config: LedgerConfig, onto file: BoundLedgerFile) -> BoundLedgerFile {
+        var next = file
+        next.rootPath = config.rootPath
+        next.currentWorld = config.currentWorld
+        guard let worlds = config.worlds else {
+            next.worlds = nil
+            return next
+        }
+        var previous: [String: BoundWorld] = [:]
+        for world in file.worlds ?? [] where previous[world.name] == nil { previous[world.name] = world }
+        next.worlds = worlds.map { world in
+            var bound = previous[world.name] ?? BoundWorld(name: world.name, rootPath: world.rootPath)
+            bound.rootPath = world.rootPath
+            bound.display = world.display ?? bound.display
+            return bound
+        }
+        return next
     }
 
     public var rootURL: URL? { current.map { URL(fileURLWithPath: $0.rootPath) } }

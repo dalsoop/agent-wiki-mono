@@ -11,6 +11,8 @@ public struct AgentWikiReaderService: Sendable {
         "help", "version", "list", "show", "search", "context", "path",
         "structure", "history", "cited-by", "verify", "world", "graph",
         "recent", "root", "discuss", "diff", "learn", "rules",
+        // agent-law (ledger 3) 조회 — 하위 명령이 있는 것은 nestedReadOnlyVerdict 가 판정한다.
+        "audit", "exhibit", "court", "judgment", "dream", "report",
     ]
 
     /// write / 운영 성격 — Reader 에서 거절
@@ -18,6 +20,19 @@ public struct AgentWikiReaderService: Sendable {
         "publish", "capture", "classify", "rollback", "checkpoint",
         "promotion", "task", "agent", "batch", "policy", "okf-export",
         "weight", "fleet", "init", "hook",
+        // agent-law (ledger 3) 쓰기 — docs/contracts.md "agent-law 명령"의 프록시 거부 목록.
+        "enact", "amend", "repeal", "restore", "finding", "redact", "archive", "sync", "promote",
+        "summon", "contents",
+    ]
+
+    /// agent-law 중첩 명령의 읽기 하위 명령. 그 밖(exhibit put, court appeal|propose|hear|decide,
+    /// judgment register, dream run|resume)은 쓰기라 거부한다.
+    public static let readOnlyLawSubcommands: [String: Set<String>] = [
+        "exhibit": ["get"],
+        "court": ["list"],
+        "judgment": ["list", "show"],
+        "dream": ["status"],
+        "report": ["models"],
     ]
 
     /// blob 읽기 서브커맨드(evidence 영역). put/gc 는 쓰기라 제외.
@@ -94,6 +109,8 @@ public struct AgentWikiReaderService: Sendable {
         case "world":
             let sub = rest.first ?? ""
             return sub == "list" || sub == "use"
+        case "exhibit", "court", "judgment", "dream", "report":
+            return readOnlyLawSubcommands[command]?.contains(rest.first ?? "") ?? false
         case "fleet":
             let sub = rest.first ?? ""
             return sub == "list" || sub == "doctor" || sub == "scan"
