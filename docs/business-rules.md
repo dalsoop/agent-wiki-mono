@@ -96,6 +96,8 @@
 | `agent-law-tenant-gujo` | `tenant-gujo` | tenant | `agent-law` | `tenant-gujo` |
 
 - 원장 키는 `^[a-z][a-z0-9-]{1,40}$` 이고 만든 뒤 바꿀 수 없다. 로컬 루트 `~/agent-law/<원장 키>/` 와 R2 키 앞부분에 쓰인다. 세 폴더가 git 저장소 하나(gitlab.com `gujoai/agents/agent-law`)를 이룬다.
+- 운영 기록 원장 `agent-ops-log`(ledger 2 형식, 전신 아님, 상위 없음)을 하나 둔다. 지식이 아닌 운영 기록(작업 `task`·인계 `handoff`, 실행 기록 `event`)을 쓰는 앱은 이 원장에 계속 쓴다. 승격은 ledger 3 `promote` 로 한다. (2026-10-04 사용자 결정 "운영 기록용 옛 형식 원장으로")
+- 옛 분류 축을 붙여 기록하던 앱은 공포 뒤 분야(`domain`)만 사실인정으로 함께 내고 종류·지식은 버린다. ledger 3 관계·유형 집합 밖을 쓰던 앱은 관계를 `cites` 로, 원래 뜻을 태그(`rel:<이름>`, `kind:<이름>`)로 남긴다. (같은 날 사용자 결정)
 - 테넌트 → 원장 대응표: `personal` → `person-yun-jeonghan`, `gujo` → `tenant-gujo`. 테넌트 표시가 없으면 `personal` 이다. 표에 없는 테넌트는 `unassigned` 다. 표의 정본은 호스트 설정 파일이고 CLI(`world tenant-map`)로만 고친다.
 - 기기마다 기기 키(원장 키와 같은 형식, 불변)를 한 번 등록한다. 미등록 기기에서는 공포와 세션 적재를 거부한다. 드리밍 기기는 하나만 지정한다.
 
