@@ -137,12 +137,18 @@ public enum LawEnactService {
     }
 }
 
-/// 공포가 성공한 직후 부르는 후처리 자리. 지금은 파생 색인 갱신만 한다.
-/// 동기화 작업(T5)이 여기서 그 원장 파일만 git 에 커밋한다(실패해도 공포는 성공이고 "커밋 대기"로 남는다).
+/// 공포가 성공한 직후 부르는 후처리 자리. 모든 ledger 3 쓰기(공포·개정·폐지·원상회복·사실인정·체크포인트·승격·화면 편집)가 지난다.
+/// 1) 그 기록 파일만 git 에 커밋(`LawGitCommit.commit`, 저장소 잠금 안). 잠금·커밋 실패는 공포 실패가 아니고 "커밋 대기"로 남아
+///    다음 `sync`(`LawGitSync.sync`)가 커밋한다. git 저장소가 아닌 원장 루트는 건너뛴다.
+/// 2) 파생 색인 갱신.
 public enum LawEnactAftermath {
-    public static func run(target: LawLedgerTarget, enacted: [LawStoredRecord]) {
-        guard !enacted.isEmpty else { return }
+    @discardableResult
+    public static func run(target: LawLedgerTarget, enacted: [LawStoredRecord]) -> LawGitCommitOutcome {
+        guard !enacted.isEmpty else { return .committed(0) }
+        // 커밋 대기는 저장소의 표시 파일(`agent-law-pending`)과 작업본 상태에 남고, 화면·`sync` 가 읽는다.
+        let outcome = LawGitCommit.commit(enacted, ledgerRoot: target.root)
         refreshDerivedIndex(root: target.root)
+        return outcome
     }
 
     /// 파생 색인(`state/index.db`)·그래프(`state/graph.db`)가 있으면 따라오게 한다. 캐시라 실패는 조용히 넘긴다.

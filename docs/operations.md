@@ -79,7 +79,8 @@ agent-wiki capabilities                             # InteropKit 계약 JSON
 ## 정기 작업과 동기화
 
 - `agent-wiki schedule`은 위 표의 LaunchAgent 다섯 개를 등록하고, `agent-wiki schedule list`는 등록 상태를 보여 준다.
-- `agent-wiki gujo …`는 `--root <경로>`가 없으면 등록된 `gujo-wiki` world 루트에서 동작한다. `agent-wiki gujo status`는 `--probe` 없이는 네트워크 없이 로컬 판정(마지막 sync 시각, 피어 ahead 수, 원격에만 있는 blob 수)을 낸다. `gujo sync`는 origin과 fetch·merge·push를, `gujo sync --peer <이름>`은 피어에서 fetch·merge만 한다.
+- `agent-wiki gujo …`는 `--root <경로>`가 없으면 등록된 `gujo-wiki` world 루트에서 동작한다. `agent-wiki gujo status`는 `--probe` 없이는 네트워크 없이 로컬 판정(마지막 sync 시각, 피어 ahead 수, 원격에만 있는 blob 수)을 낸다. `gujo sync`는 origin에서, `gujo sync --peer <이름>`은 피어에서 fetch·merge만 한다(전신은 읽기 pull 만, 결정 0007). push 하지 않는다.
+- `agent-wiki sync`는 agent-law 저장소(`~/agent-law`)에서 커밋 대기 기록을 기록마다 커밋하고, `origin`에서 받아 파일 합집합으로 합친 뒤 push 한다. 같은 경로에 다른 바이트가 오면 합치지 않고 실패(종료 코드 1)로 멈춘다. push 실패도 종료 코드 1이다. 공포 직후 커밋과 `sync`는 저장소 잠금(`.git/agent-law.lock`)을 쓰고, 대기 상한은 `AGENT_LAW_COMMIT_LOCK_SECONDS`(기본 30초)다. 마지막 결과는 `.git/agent-law-sync.json`, 커밋 대기 표시는 `.git/agent-law-pending`이다. 저장소 준비 때 `.gitignore`에 `exhibits/`·`state/`·`sessions/`를 넣는다.
 - `agent-wiki gujo blob status|pull|push`는 R2와 blob 차집합을 계산하고 옮긴다. 받은 blob은 sha256을 다시 계산해 맞지 않으면 버린다.
 - `agent-wiki backup`은 restic으로 `objects`·`events`·`blobs`를 백업한다. `state/`는 재생성할 수 있으므로 백업하지 않는다.
 

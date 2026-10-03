@@ -94,7 +94,7 @@ private func runGujoSync(sync: GujoSync, arguments: [String], json: Bool) {
     case .success(let outcome):
         emit(outcome, json: json) {
             print("fetch: \(outcome.fetched.joined(separator: ", "))")
-            print(CLILocalization.format("CommandGujo.print-9", outcome.merged ? CLILocalization.string("CommandGujo.done") : CLILocalization.string("CommandGujo.none"), outcome.pushed ? CLILocalization.string("CommandGujo.done") : (peer == nil ? CLILocalization.string("CommandGujo.fail") : CLILocalization.string("CommandGujo.skip-pullonly"))))
+            print(CLILocalization.format("CommandGujo.print-9", outcome.merged ? CLILocalization.string("CommandGujo.done") : CLILocalization.string("CommandGujo.none"), outcome.pushed ? CLILocalization.string("CommandGujo.done") : CLILocalization.string("CommandGujo.skip-pullonly")))
             print("HEAD \(outcome.head ?? "?")")
             for message in outcome.messages where !message.isEmpty { print("  \(message)") }
         }
@@ -134,7 +134,7 @@ private func printGujoUsage() {
     사용: agent-wiki gujo <명령>
 
       status [--probe] [--json]     ahead/behind·미커밋·피어·blobs (--probe 는 시드 도달성까지)
-      sync [--peer <이름>] [--json] 시드와 왕복. --peer 는 fetch·merge 만(pull-only)
+      sync [--peer <이름>] [--json] 시드에서 fetch·merge 만(전신은 읽기 pull 만, 결정 0007)
       peer list|add|remove          피어 관리 — 추가 시 push 는 자동 비활성
       blob status|pull|push [sha…]  blob 스토리지(S3) 왕복 — 기본 시드 R2 `gujo-wiki-blobs`
       blob config [--access-key … --secret-key …]  자격 저장(.git/gujo-s3.json, 0600)
