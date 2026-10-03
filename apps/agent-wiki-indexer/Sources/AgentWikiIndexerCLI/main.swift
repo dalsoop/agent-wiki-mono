@@ -39,7 +39,7 @@ Local-only commands:
 
 agent-law (ledger 3) commands — 결정 0007:
   enact / amend / repeal / restore / audit / finding / exhibit put|get / promote
-  sync · archive · redact · summon · dream · court · judgment · contents · report models · hook session (구현 전)
+  sync · archive · redact · summon · dream · court · judgment · contents · report models · hook session
   폐지(64): publish→enact · verify→audit · rollback→restore · classify→finding · capture→exhibit put
 
 Shared commands:

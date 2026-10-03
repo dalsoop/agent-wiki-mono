@@ -39,7 +39,6 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
   world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]
   world tenant-map <테넌트> <원장> | world device register <키> | world dream-device <키>
   sync · archive · redact · summon · dream · court · judgment · contents · report models · hook session
-                                  (자리만 있음 — 구현 전, 종료 코드 1)
   폐지(종료 코드 64): publish→enact · verify→audit · rollback→restore · classify→finding ·
                      capture→exhibit put · blob put|gc · hook authoring→hook session
 
