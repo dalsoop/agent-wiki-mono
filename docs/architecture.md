@@ -71,3 +71,24 @@ wiki-hub 주소는 환경 변수 `GUJO_HUB_URL`이 먼저이고, 없으면 Endpo
 ## 앱 4면 구성
 
 각 앱은 GUI 타깃, `*Core` 라이브러리, `*CLI` 실행 타깃, StateMirror 게시(`~/.swift-app-state/<슬러그>.json`)를 갖는다. CLI의 `capabilities`가 InteropKit 계약 JSON을 내고, 각 앱의 `interop.json`은 런타임 슬러그(`cli`)만 선언한다. GUI를 쓰지 않는 PATH CLI 타깃은 AppKit·SwiftUI를 import하지 않는다.
+
+## agent-law (ledger 3)
+
+근거: 결정 0007.
+
+| 대상 | 위치 | 쓰는 코드 |
+|---|---|---|
+| 원장 셋 | `~/agent-law/<원장 키>/objects/YYYY/MM/<id>.md` | 공포 경로(`enact` 계열, 화면 편집도 같은 경로) |
+| git 정본 | gitlab.com `gujoai/agents/agent-law` | 공포 직후 커밋, `sync` 가 pull·push |
+| 세션 등록 | `~/.agent-wiki/sessions/<세션 id>.json` | `hook session` |
+| 세션 조각 | R2 `agent-law` 버킷 `<원장 키>/sessions/<기기 키>/<runtime>/<세션 id>/v<yymmddhhmmss>.jsonl.gz` | `archive` |
+| 적재 실행 요약 | R2 `<원장 키>/runs/archive/<기기 키>/v<yymmddhhmmss>/manifest.json` | `archive`(맨 마지막) |
+| 드리밍 실행 | R2 `<원장 키>/runs/dream/v<yymmddhhmmss>/…` | `dream run` |
+| 증거물 | R2 `<원장 키>/exhibits/<앞 2자>/<sha256>`, 로컬 `<원장 키>/exhibits/` | `exhibit put`, `summon --record`, 동기화 |
+| 테넌트 미상 | R2 `unassigned/<테넌트 또는 none>/…` | `archive` |
+| 소환 색인 | 로컬 상태 폴더(파생, R2 에서 재생성) | `summon` |
+
+- `yymmddhhmmss` 는 실행 시작 한국 시간. 같은 초에 두 번째 폴더면 다음 초까지 기다린다. 요약이 없는 실행 폴더는 실패한 실행이다.
+- 세션 적재: 공용 세션 리더로 네 실행 도구(Claude Code·Codex·Grok·Antigravity) 세션을 읽고, 기능을 켠 뒤 시작한 세션만, 지난 적재 뒤 늘어난 발화만 조각으로 올린다. 세션별로 올린 위치를 기기마다 기록한다(R2 요약에서 재생성 가능). 모든 기기가 하루 한 번 적재하고, 드리밍 기기에서는 드리밍이 먼저 적재한다.
+- 예약 실행(LaunchAgent, CLI 를 부르는 순수 plist): 동기화 10분, 적재 하루, 드리밍 하루(조정 가능).
+- 드리밍과 중재는 지원 CLI 목록의 AI 실행 도구를 공용 실행기로 무인 호출한다.

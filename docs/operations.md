@@ -82,3 +82,13 @@ agent-wiki capabilities                             # InteropKit 계약 JSON
 - `agent-wiki gujo …`는 `--root <경로>`가 없으면 등록된 `gujo-wiki` world 루트에서 동작한다. `agent-wiki gujo status`는 `--probe` 없이는 네트워크 없이 로컬 판정(마지막 sync 시각, 피어 ahead 수, 원격에만 있는 blob 수)을 낸다. `gujo sync`는 origin과 fetch·merge·push를, `gujo sync --peer <이름>`은 피어에서 fetch·merge만 한다.
 - `agent-wiki gujo blob status|pull|push`는 R2와 blob 차집합을 계산하고 옮긴다. 받은 blob은 sha256을 다시 계산해 맞지 않으면 버린다.
 - `agent-wiki backup`은 restic으로 `objects`·`events`·`blobs`를 백업한다. `state/`는 재생성할 수 있으므로 백업하지 않는다.
+
+## agent-law (ledger 3)
+
+근거: 결정 0007.
+
+- 기기 등록: `agent-wiki world device register <기기 키>`. 드리밍 기기 지정: `agent-wiki world dream-device <기기 키>`.
+- 원장 만들기: `agent-wiki world add agent-law --key law --root ~/agent-law/law --predecessor gujo-wiki` 등(원장 구성표대로). 테넌트 대응: `agent-wiki world tenant-map personal agent-law-person-yun-jeonghan`.
+- R2 키: 금고에서 꺼내 키체인 서비스 `agent-law-r2` 에 넣는다(화면에 출력하지 않는다). 엔드포인트·버킷 이름은 호스트 설정에 둔다.
+- 예약 실행: `agent-wiki schedule` 이 동기화(10분)·적재(하루)·드리밍(하루, 드리밍 기기만) 틱을 함께 등록한다.
+- 확인: `agent-wiki audit`, `agent-wiki dream status`, `agent-wiki contents`.

@@ -92,3 +92,36 @@
 ## 그래프 질의 `agent-wiki-graph`
 
 `status`, `rebuild`, `orphans`, `centrality`, `impact <id>`, `path <a> <b>`, `context <질의>`, `capabilities`, `open`. 모든 명령이 `--json`을 받고, `orphans`·`centrality`는 `--limit N`, `--kinds cite,supersedes`, `context`는 `--limit N`을 받는다. 그 밖의 옵션은 작업 전에 종료 코드 64로 거부한다. 원장에 쓰지 않고, 파생 캐시만 `~/.swift-app-state/agent-wiki-graph/index.json`에 쓴다.
+
+## agent-law 명령 (ledger 3)
+
+근거: 결정 0007. 모든 명령은 앞에 `--world`·`--as` 를 받고 `--json` 을 지원한다. 공포류는 표준 출력에 id 한 줄만 낸다. 전역 CLI 의 기본 원장은 `agent-law` 다.
+
+| 명령 | 문법 |
+|---|---|
+| 공포 | `enact --title <t> [--type <유형>] [--tag <t>]… [--cite <id>[:<rel>]]… [--exhibit <sha>]… [--speaker <s>] [--batch <id>]` (본문 표준 입력) |
+| 개정 | `amend <id> [--also <id>]… --title <t> …` |
+| 폐지 | `repeal <id> [--reason <r>]` |
+| 연혁 | `history <id>` |
+| 감사 | `audit` |
+| 원상회복 | `restore <batch>` |
+| 사실인정 | `finding <id> --subject <s> --certainty <c> --domain <d> --reason <r> [--from <t>] [--until <t>]` |
+| 증거물 | `exhibit put <파일>` · `exhibit get <sha>` |
+| 가림 | `redact <R2 키 또는 sha> --reason <r>` |
+| 소환 | `summon [--session <id>] [--since <t>] [--until <t>] [--device <k>] [--runtime <r>] [--role user\|assistant\|tool] [--query <q>] [--record <발화 번호>]` |
+| 적재 | `archive [--dry-run]` |
+| 동기화 | `sync` |
+| 드리밍 | `dream run` · `dream status` · `dream resume` |
+| 심급 | `court appeal <id> --reason <r>` · `court propose <id> --scope <s>` · `court hear` · `court decide <건 id> --approve\|--reject --testimony <증거 id>` · `court list [--level appellate\|supreme]` |
+| 판결 | `judgment register --repo <r> --title <t> [--status provisional\|confirmed] [--path <p>]` · `judgment list [--repo <r>]` · `judgment show <번호>` |
+| 목차 | `contents` |
+| 보고 | `report models [--since <t>]` |
+| 승격 | `promote <id> --to <원장>` |
+| 원장 설정 | `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]` · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` |
+| 훅 | `hook session` |
+
+- `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다.
+- 폐지된 이름(`publish`, `verify`, `rollback`, `classify`, `capture`, `blob` 의 쓰기 하위 명령, `hook authoring`)은 종료 코드 64 와 새 이름 안내만 내고 아무것도 하지 않는다.
+- 그 밖의 옛 쓰기 명령(`discuss`, `learn`, `review`, `event`, `task`, `agent` 등)은 ledger 2 원장에서만 동작하고, ledger 3 원장에서는 64 와 새 명령 안내를 낸다. `checkpoint` 는 두 형식 모두에서 동작한다.
+- 종료 코드: 0 성공, 1 거부(모델 미상, 증언 불일치, 전신 쓰기, 소환 범위 밖, 기기 키 미등록, 드리밍 기기 아님, 허용되지 않은 관계, 안전장치 위반, 구현 전 명령), 2 감사 위반, 64 사용법 오류·폐지된 명령.
+- 읽기 전용 프록시는 공포·개정·폐지·원상회복·사실인정·`exhibit put`·가림·적재·동기화·`dream run|resume`·심급의 쓰기·판결 등록·승격·원장 설정·훅을 거부한다.

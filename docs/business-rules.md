@@ -63,3 +63,160 @@
 - 승격은 상위 world에 객체를 발행하고, 원본 world에 `promotion-receipt` 객체(원본을 `receipts`, 대상을 `promoted-as`로 인용)를 발행한다. 두 관계는 다른 world를 가리키므로 일반 참조 무결성 검사에서 빠지고 승격 검증기가 따로 확인한다.
 - 원본이 repo world면 영수증에 repoId와 commit이 들어가고, 그 commit에 같은 바이트의 객체가 있어야 한다. 원본이 비repo world면 world 이름만 들어가고 commit 필드는 비운다.
 - 영수증 객체 자신은 다시 승격할 수 없다. 같은 (원본 객체, 원본 world) 쌍의 영수증이 이미 있으면 새로 만들지 않는다.
+
+# agent-law(ledger 3)
+
+근거: 결정 0007. 위의 절들은 ledger 1·2 원장(전신 원장과 `novel-world`·repo world)에 계속 적용된다. ledger 3 원장에는 이 절이 적용된다.
+
+## 용어
+
+| 한국어 | 저장·명령 이름 | 뜻 |
+|---|---|---|
+| 공포 | `enact` | 기록 하나를 원장에 올림 |
+| 공포일 | `promulgated` | 원장에 들어온 시각(ms 정밀 UTC) |
+| 개정 | `amends`, 병합은 `amends-also` | 새 기록이 옛 기록을 대체 |
+| 폐지 | `repeals` | 기록을 무효로 함 |
+| 현행 | `in-force` | 개정·폐지되지 않았고 스스로 폐지 기록도 아닌 기록 |
+| 연혁 | `history` | 개정 사슬 |
+| 증거물 | `exhibit` | 원자료 바이트(세션 조각·인용 구절·파일). sha256 이 이름 |
+| 사실인정 | `finding` | 대상 기록에 대한 판단 축 기록 |
+| 원상회복 | `restore` | 묶음 하나를 되돌리는 새 기록들 |
+| 감사 | `audit` | 원장 무결성 검사 |
+| 전신 | `predecessor` | 새 원장이 이어받은 옛 원장(읽기 전용) |
+| 가림 | `redact` | 증거물을 실제로 지우는 유일한 예외 |
+
+`world`, `batch`, `checkpoint` 는 이름을 바꾸지 않는다.
+
+## 원장 구성
+
+| 원장 이름 | 원장 키 | 층 | 상위 | 전신 |
+|---|---|---|---|---|
+| `agent-law` | `law` | remoteShared | 없음 | `gujo-wiki` |
+| `agent-law-person-yun-jeonghan` | `person-yun-jeonghan` | tenant | `agent-law` | `person-yun-jeonghan` |
+| `agent-law-tenant-gujo` | `tenant-gujo` | tenant | `agent-law` | `tenant-gujo` |
+
+- 원장 키는 `^[a-z][a-z0-9-]{1,40}$` 이고 만든 뒤 바꿀 수 없다. 로컬 루트 `~/agent-law/<원장 키>/` 와 R2 키 앞부분에 쓰인다. 세 폴더가 git 저장소 하나(gitlab.com `gujoai/agents/agent-law`)를 이룬다.
+- 테넌트 → 원장 대응표: `personal` → `person-yun-jeonghan`, `gujo` → `tenant-gujo`. 테넌트 표시가 없으면 `personal` 이다. 표에 없는 테넌트는 `unassigned` 다. 표의 정본은 호스트 설정 파일이고 CLI(`world tenant-map`)로만 고친다.
+- 기기마다 기기 키(원장 키와 같은 형식, 불변)를 한 번 등록한다. 미등록 기기에서는 공포와 세션 적재를 거부한다. 드리밍 기기는 하나만 지정한다.
+
+## 전신
+
+- 새 원장은 옛 원장 하나를 전신으로 선언한다. 전신은 사슬이 아니다.
+- 전신으로 지정된 원장은 보관됨이다. 공포·개정·폐지·원상회복·체크포인트·승격 등 모든 쓰기를 거부한다.
+- 인용 허용 범위는 같은 원장, 상위 사슬, 그리고 그 각각의 전신이다. 형제·하위 원장과 그 전신은 거부한다. 검색·컨텍스트 범위도 같고, 전신 객체에는 표시가 붙는다.
+
+## 기록 정체성과 표기
+
+- `ledger: 3`, id = `sha256(canonicalCore)`. 코어 필드 순서는 `ledger`, `promulgated`, `author`, `author-kind`, `device`, `runtime`, `runtime-version`, `model`, `effort`, `app`, `app-version`, `speaker`, `title`, `type`, `origin`, `batch`, `tags`, 각 `cites`, 각 `exhibit`, `amends`, 각 `amends-also`, `repeals`, `source`, 모르는 필드다. canonicalCore 는 이 줄들 뒤에 `\n---\n` 과 본문을 붙인 문자열이다.
+- 코어 밖: `id`, `sha256`(본문 해시), `cost`(토큰 수·읽은 객체 수·세션 id).
+- 파일 표기: `---`, 머리 필드(`ledger`, `id`, `promulgated`, `author`, `sha256`, 나머지 코어 순서, `cost`), `---`, 본문. 한 줄에 `키: 값` 하나. 여러 값 필드는 값마다 한 줄(`cites: <id> <rel>`, `exhibit: <sha256>`, `amends-also: <id>`). `tags: [a, b]` 는 받은 순서. 값 없는 필드는 쓰지 않는다. 제목·태그는 NFC 정규화, 본문은 그대로. canonicalCore 의 줄은 머리 필드 줄과 바이트 단위로 같다.
+- 파서 정본은 공용 원장 읽기 킷(`swiftkit` WikiLedgerKit) 하나다.
+- 같은 id 파일이 있으면 바이트가 같을 때만 성공한다. 한 번 쓴 파일은 고치거나 지우지 않는다. 위치: `<원장 키>/objects/YYYY/MM/<id>.md`.
+
+## 작성자와 모델 기록
+
+| 필드 | 값 |
+|---|---|
+| `author` | `agent:<이름>@<기기>` · `user:<이름>` · `app:<앱 슬러그>` |
+| `author-kind` | `agent` · `human` · `app` |
+| `device` | 기기 키 |
+| `runtime` | `claude-code` · `codex` · `grok` · `antigravity` · `human` · `app` |
+| `runtime-version` | 실행 도구 버전 |
+| `model` | 정확한 모델 id |
+| `effort` | `low` · `medium` · `high` · `xhigh` · `max` · `unknown` |
+| `app`, `app-version` | 앱 슬러그·버전 |
+
+- `agent` 공포는 `runtime`·`model` 이 없으면 거부한다. 추론 강도를 모르면 `unknown`.
+- `app` 공포는 `app`·`app-version` 필수. AI 판단을 거친 앱 기록(드리밍·중재)은 그 판단의 `runtime`·`model`·`effort` 도 적는다. 판단 없이 기계적으로 만든 기록은 모델 칸을 비운다.
+- `human` 공포는 모델 칸을 비운다.
+- 아는 값만 적는다. 값의 우선순위는 명시 인자 > `AGENT_WIKI_RUNTIME`·`AGENT_WIKI_MODEL`·`AGENT_WIKI_EFFORT`·`AGENT_WIKI_RUNTIME_VERSION` > 실행 도구 환경 변수 > 세션 등록 파일이다.
+- 세션 등록 파일은 세션마다 하나(`~/.agent-wiki/sessions/<세션 id>.json`)이고, 공포하는 명령은 실행 도구의 세션 id 환경 변수로 자기 세션을 찾는다. 세션 id 도 명시 값도 없으면 다른 세션을 추정하지 않고 거부한다.
+
+## 화자
+
+- `speaker` 는 `user` · `agent` · `external` · `other-agent`. 기본값은 작성자가 에이전트면 `agent`, 사람이면 `user`, 증거 유형이면 `external`.
+- 증거 기록의 화자는 인용한 발화의 화자다. 공포할 때 인용 구절(가린 것)을, 같은 가림 규칙을 적용한 실제 세션 발화 하나의 연속된 부분 문자열과 글자 단위로 대조한다. 일치하면 그 발화의 역할을 화자로 적고, 아니면 거부한다.
+- 다른 기록의 `speaker: user` 는 `speaker: user` 인 증거 기록을 `testifies` 로 인용할 때만 인정한다.
+
+## 유형
+
+- 지식 기록: `record`(일반), `article`(저장소를 넘는 조문), `judgment`(저장소를 넘는 판결 본문).
+- 처리 기록(사실인정을 요구하지 않음): `evidence`, `finding`, `appeal`, `proposal`, `ruling`, `redaction`, `contents`(목차), `report`, `checkpoint`, `registration`(판결 등록), `promotion-receipt`.
+- 옛 분류(`domain`·`kind`·`knowledge`)와 분류 기준선은 ledger 3 에 없다. 분야는 사실인정의 `domain` 칸으로, 종류는 유형으로, 지식은 축 조합으로 대신한다.
+
+## 본문 머리 칸
+
+유형별 추가 칸은 본문 첫 줄부터 빈 줄 전까지 `키: 값` 으로 둔다. 정해진 키만 허용한다.
+
+| 유형 | 칸 |
+|---|---|
+| `finding` | `subject`(`person`·`agent-self`·`project`·`external`), `certainty`(`confirmed`·`probable`·`possible`), `effective-from`, `effective-until`, `domain`(8개 중 하나), `reason`(비면 거부) |
+| `ruling` | `level`(`appellate`·`supreme`), `outcome`(`uphold`·`overturn`·`refer`·`approve`·`reject`) |
+| `registration` | `repo`, `status`(`provisional`·`confirmed`), `path` |
+| `proposal` | `scope` |
+| `redaction` | `target`, `reason` |
+| `evidence` | `session`, `utterance-at`, `runtime`, `device` |
+
+분야 8개: `agent-memory-ssot`, `agent-orchestration`, `infra-hosting`, `secrets-identity`, `gujo-commerce`, `macos-apps`, `media-ai-pipeline`, `dev-workflow`.
+
+## 관계
+
+| 관계 | 출발 | 도착 | 뜻 |
+|---|---|---|---|
+| `cites` | 모든 유형 | 모든 기록 | 일반 참조(기본값) |
+| `finds` | `finding` | 지식 기록 | 사실인정 대상 |
+| `testifies` | 모든 유형 | `evidence` | 근거 증언 |
+| `migrated-from` | 이관 기록 | 전신 객체 | 옮겨 온 원본 |
+| `appeals` | `appeal` | 모든 기록 | 이의 대상 |
+| `proposes` | `proposal` | 모든 기록 | 개정 대상 |
+| `hears` | `ruling` | `appeal`·`proposal` | 다룬 건(그 심급에서 닫힘) |
+| `per-ruling` | 개정·원상회복·폐지 | `ruling` | 결정에 따른 조치 |
+| `checkpoints` | `checkpoint` | `checkpoint` | 이전 체크포인트 |
+| `receipts`, `promoted-as` | 승격 영수증 | 원본·결과 | 승격 |
+
+표 밖의 관계는 거부한다.
+
+## 사실인정과 4종류
+
+- 한 기록의 현행 사실인정은 그 기록을 `finds` 하는 사실인정 현행판 중 가장 늦게 공포된 것이다. 사실인정이 없는 지식 기록은 감사에서 "판단 대기"로 보고하되 위반은 아니다.
+- 4종류(계산, 저장하지 않음, `record` 에만): 사람 = `subject: person`, 지적 = `speaker: user` 이고 `subject: agent-self`, 진행 = `subject: project`, 위치 = `subject: external`. 그 밖은 미분류.
+
+## 출처 표시
+
+- `origin: dream` 정리본은 다음 드리밍의 재료에서 빠지고, `testifies`·`finds` 의 근거나 증거 인용 대상이 될 수 없다. `cites` 는 된다.
+- `origin: migration` 이관 기록은 재료·증거 인용이 되고, 전신 객체를 `migrated-from` 으로 반드시 인용한다. 옮기는 곳은 그 전신을 가진 원장으로 고정한다.
+
+## 공포·개정·폐지·원상회복
+
+- 본문은 표준 입력. 빈 본문 거부(폐지 예외). 참조 id 는 공포 시점에 허용 범위에 있어야 한다.
+- 공포 직후 그 원장 파일만 git 에 커밋한다. 커밋은 저장소 잠금(대기 상한 기본 30초) 안에서 하고, 못 얻으면 "커밋 대기"로 남겨 다음 `sync` 가 커밋한다.
+- `restore <batch>`: 개정이었으면 이전 판을 다시 공포, 신규였으면 폐지. 파일을 지우지 않는다.
+- 갈라진 현행은 감사가 보고하고 `amends-also` 병합 개정으로 푼다.
+
+## 드리밍
+
+- 지정 드리밍 기기에서만, 마지막 실행 뒤 24시간이 지났고 새로 적재된 세션이 있을 때 하루 한 번(조정 가능), 또는 `dream run`.
+- 단계: 둘러보기 → 재료 모으기(모든 기기의 새 세션 조각, 그 세션이 찾거나 인용한 전신 객체, 설정한 저장소의 판결·조문; 정리본 제외) → AI 실행 도구 무인 호출로 정리 제안 → 안전 검사 → 묶음 하나로 공포 → 목차 → 보고·동기화.
+- 할 수 없는 것: 저장소의 판결·조문 수정(알리기만), `judgment` 공포·개정·폐지, `speaker: user` 기록의 폐지·개정(항소심에 개정안), `article` 의 직접 개정(개정안), 정리본을 증거로 인용, 전신 판결 이관(항소심에 신청).
+- 안전장치(조정 가능): 한 번 최대 10건, 폐지 3건 초과 묶음은 미적용 + 경보, 드리밍 묶음이 원상회복되면(누가 했든) 자동 드리밍 정지. `dream resume` 은 `author-kind: human` 만.
+- 쓰일 때만 이관: 재료 세션에서 찾거나 인용한 전신 객체만 `origin: migration` 으로 옮기고 사실인정을 함께 공포한다.
+- 목차(`contents`): 원장마다 하나, 현행 기록 가리킴(id 앞 8자리 + 한 줄, 줄당 150자 이내, 200줄 이내), 맨 위에 경보·대법원 공지·이의 기간 중인 개정안.
+- 보고(`report`)와 `report models`: 모델·추론 강도·실행 도구별 공포 건수, 개정·폐지·뒤집힌 비율. 측정만 하고 자동 가중치로 쓰지 않는다.
+
+## 심급제
+
+| 심급 | 누가 | 다루는 것 |
+|---|---|---|
+| 1심 | 드리밍·공포한 에이전트 | 일반 기록·사실인정. 바로 적용 |
+| 항소심 | 대상 기록을 쓴 모델과 다른 모델 | 이의, 전신 판결 이관 신청, `speaker: user` 기록 개정안, 조문 개정안 |
+| 대법원 | 사용자 | 규칙 완화, 확정 판결 변경, 상고 |
+
+- 이의가 들어온 기록은 현행으로 남고 항소심 대기에 오른다.
+- 항소심 결정은 유지·뒤집기·회부. 조문 개정안이 완화이면 반드시 회부한다. 다른 모델이 없으면 회부한다.
+- 대법원 대기 건은 목차 맨 위에 공지되고, 이의 제기 기간(기본 72시간) 뒤에만 결정할 수 있다. 대법원 결정은 승인·기각을 말한 사용자 발화 증언(`testifies`)이 있어야 공포된다. 최종이다.
+- 규칙끼리 부딪히면 더 구체적인 쪽이 이긴다. 개정은 소급하지 않는다.
+
+## 판결 등록
+
+- `judgment register` 는 공유 원장에 `registration` 기록을 공포한다. 판결 번호는 그 id 의 앞 8자리이고 바뀌지 않는다. 상태 변경은 개정이다.
+- 저장소를 넘는 결정은 `judgment` 유형으로 본문까지 원장에 둔다. 저장소 판결 본문은 원장에 사본으로 두지 않는다. 저장소 쪽 번호 체계 전환 전까지는 각 저장소의 지금 번호가 정본이다.

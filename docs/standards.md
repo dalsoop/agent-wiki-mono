@@ -68,3 +68,14 @@ swift build --package-path apps/agent-wiki-reader
 
 - world 목록은 `~/.memo-citation-ledger/config.json` 하나가 정본이다. 경로는 StateRootKit `hostPath`로 해석하므로 테넌트 컨텍스트에서도 호스트 파일을 읽는다. 앱이 자기 설정에 world 경로를 따로 저장하지 않는다.
 - 원격 호스트 주소는 EndpointRouterKit이나 `~/.gitlab-status-ui/endpoints.json`에서 얻는다. 소스에 새 호스트 이름을 적지 않는다.
+
+## agent-law (ledger 3)
+
+근거: 결정 0007.
+
+- ledger 3 기록 형식의 파서·직렬화는 공용 원장 읽기 킷(`swiftkit` WikiLedgerKit) 하나에만 둔다. 엔진과 다른 앱은 그것을 쓴다. swift-app-mono 사본은 이 코드를 그대로 옮긴다.
+- 처리 기록 유형 집합, 관계 집합, 본문 머리 칸 키 목록은 각각 한 곳의 상수다. 다른 곳에 다시 적으면 위반이다.
+- 전신 쓰기 거부는 쓰기 게이트 한 곳에서 판정한다. 명령마다 판정을 복사하지 않는다.
+- 옛 `LedgerObject` 코어는 바꾸지 않는다. ledger 3 는 별도 타입이다.
+- 실행 도구별 세션 id 환경 변수 이름은 지원 CLI 목록 한 곳에 둔다.
+- R2 키는 키체인에서만 읽는다.
