@@ -15,7 +15,7 @@ public func runAudit(context: LawCommandContext, arguments: [String]) {
         return
     }
     let target = context.lawTarget()
-    let report = target.store.audit(context: LawEnactService.context(index: context.scopeIndex()))
+    let report = target.store.audit(context: LawEnactService.context(index: context.scopeIndex(), testimony: target.defaultTestimony))
     let count = target.store.scan().count
     if options.has("--json") {
         struct Violation: Encodable { let id: String; let problem: String }

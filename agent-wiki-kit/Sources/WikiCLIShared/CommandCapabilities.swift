@@ -25,7 +25,7 @@ private let wikiCommands: [Capabilities.Command] = [
             .init(name: "exhibit put", summary: "증거물 바이트를 sha256 이름으로 보관 → sha", json: true),
             .init(name: "exhibit get", summary: "증거물 바이트를 표준 출력으로", json: false),
             .init(name: "redact", summary: "증거물 가림 <R2 키 또는 sha> --reason <r>", json: true),
-            .init(name: "summon", summary: "세션 발화 소환 [--session --since --until --device --runtime --role --query --record] (구현 전)", json: true),
+            .init(name: "summon", summary: "세션 발화 소환 [--session --since --until --device --runtime --role --query --record]", json: true),
             .init(name: "archive", summary: "세션 조각 R2 적재 [--dry-run]", json: true),
             .init(name: "sync", summary: "agent-law git 동기화(pull·push, 커밋 대기 처리)", json: true),
             .init(name: "dream", summary: "드리밍 run|status|resume (구현 전)", json: true),

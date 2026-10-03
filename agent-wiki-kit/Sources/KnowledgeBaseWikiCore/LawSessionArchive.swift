@@ -63,6 +63,15 @@ public protocol LawSessionSource: Sendable {
     func sessions(activeSince: Date) -> [LawSessionCandidate]
     /// 세션 전체 발화(읽은 순서).
     func utterances(of candidate: LawSessionCandidate) -> [LawSessionUtterance]
+    /// 세션 id 로 세션 하나(정확히 같은 id 만). 소환·증언 확인이 쓴다.
+    func session(id: String) -> LawSessionCandidate?
+}
+
+extension LawSessionSource {
+    /// 기본: 모든 세션을 훑어 같은 id 를 찾는다. 실제 리더는 id 조회로 바꾼다.
+    public func session(id: String) -> LawSessionCandidate? {
+        sessions(activeSince: .distantPast).first { $0.sessionID == id }
+    }
 }
 
 /// 공용 세션 리더 위의 얇은 자리. 네 실행 도구만 본다.
@@ -94,6 +103,14 @@ public struct LawAgentSessionSource: LawSessionSource {
             let created = (try? FileManager.default.attributesOfItem(atPath: ref.path))?[.creationDate] as? Date
             return LawSessionCandidate(runtime: runtime, sessionID: ref.id, startedAt: created, ref: ref)
         }
+    }
+
+    /// 공용 리더의 id 조회(접두 일치는 받지 않는다 — 다른 세션을 추정하지 않는다).
+    public func session(id: String) -> LawSessionCandidate? {
+        let index = SessionIndex(grok: grok, claude: claude, codex: codex, agy: agy)
+        guard let ref = try? index.find(id: id), ref.id == id, let runtime = LawRuntime(cli: ref.tool) else { return nil }
+        let created = (try? FileManager.default.attributesOfItem(atPath: ref.path))?[.creationDate] as? Date
+        return LawSessionCandidate(runtime: runtime, sessionID: ref.id, startedAt: created, ref: ref)
     }
 
     public func utterances(of candidate: LawSessionCandidate) -> [LawSessionUtterance] {

@@ -49,7 +49,8 @@ public enum LawPromotionService {
         }
         let target = LawLedgerTarget(
             worldName: targetName, root: URL(fileURLWithPath: targetBinding.rootPath), catalog: source.catalog,
-            registeredDevices: source.registeredDevices, currentDevice: source.currentDevice)
+            registeredDevices: source.registeredDevices, currentDevice: source.currentDevice, file: source.file,
+            summonSources: source.summonOverride)
         guard let stored = source.store.scan().first(where: { $0.id == sourceID }) else {
             throw LawPromotionError.sourceMissing(sourceID)
         }
