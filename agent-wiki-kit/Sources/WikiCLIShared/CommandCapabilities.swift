@@ -30,7 +30,7 @@ private let wikiCommands: [Capabilities.Command] = [
             .init(name: "sync", summary: "agent-law git 동기화(pull·push, 커밋 대기 처리) + 가림 로컬 삭제·증거물 R2 동기화", json: true),
             .init(name: "dream", summary: "드리밍 run|status|resume", json: true),
             .init(name: "court", summary: "심급 appeal|propose|hear|decide|list", json: true),
-            .init(name: "judgment", summary: "판결 등록 register|amend|list|show", json: true),
+            .init(name: "judgment", summary: "판결 등록 register|amend|repeal|list|show (확정은 --testimony, 확정 판결 변경은 court 대법원)", json: true),
             .init(name: "contents", summary: "원장 목차", json: true),
             .init(name: "report models", summary: "모델·추론 강도·실행 도구별 공포 보고 [--since]", json: true),
             .init(name: "world add", summary: "원장 등록 <이름> --key <k> --root <경로> [--parent] [--predecessor]", json: false),

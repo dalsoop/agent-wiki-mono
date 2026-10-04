@@ -41,11 +41,27 @@ import WikiLedgerKit
         author: "agent:claude@mac", kind: .agent, device: "mac", runtime: "claude-code",
         model: "claude-opus-5-5", effort: "high")
 
+    struct FakeTestimony: LawTestimonyVerifying {
+        func speaker(for request: LawTestimonyRequest) throws -> LawSpeaker? { .user }
+    }
+
+    /// 공유 원장의 사용자 발화 증거(증언 확인은 가짜 확인자).
+    static func userEvidence(_ fx: Fixture, text: String = "확정한다") throws -> LawStoredRecord {
+        let store = fx.target("agent-law").store
+        let sha = try store.putExhibit(Data(text.utf8))
+        return try store.enact(
+            LawDraft(actor: agent, speaker: "user", title: "증언", type: "evidence", exhibits: [sha],
+                     body: "session: s-1\nutterance-at: 2026-10-04T00:00:00Z\n\n인용"),
+            context: LawEnactContext(testimony: FakeTestimony()))
+    }
+
     static func register(
-        _ fx: Fixture, repo: String, title: String, status: String? = nil, path: String? = nil
+        _ fx: Fixture, repo: String, title: String, status: String? = nil, path: String? = nil,
+        testimony: String? = nil
     ) throws -> LawStoredRecord {
         try JudgmentRegistry.checkRegistrationTarget(worldName: "agent-law", catalog: fx.catalog)
-        let draft = try JudgmentRegistry.draft(actor: agent, repo: repo, title: title, status: status, path: path)
+        let draft = try JudgmentRegistry.draft(
+            actor: agent, repo: repo, title: title, status: status, path: path, testimony: testimony)
         return try LawEnactService.enact(draft, target: fx.target("agent-law"), path: .judgment)
     }
 
@@ -87,7 +103,8 @@ import WikiLedgerKit
         let fx = Self.fixture()
         defer { fx.cleanup() }
         let a = try Self.register(fx, repo: "laravel-mono", title: "A")
-        let b = try Self.register(fx, repo: "agent-wiki-mono", title: "B", status: "confirmed")
+        let b = try Self.register(
+            fx, repo: "agent-wiki-mono", title: "B", status: "confirmed", testimony: try Self.userEvidence(fx).id)
         let c = try Self.register(fx, repo: "laravel-mono", title: "C")
         let records = fx.target("agent-law").store.scan()
         #expect(Set(JudgmentRegistry.entries(records: records).map(\.id)) == [a.id, b.id, c.id])
@@ -104,10 +121,14 @@ import WikiLedgerKit
         defer { fx.cleanup() }
         let law = fx.target("agent-law")
         let first = try Self.register(fx, repo: "laravel-mono", title: "판결 X")
+        let evidence = try Self.userEvidence(fx)
         // 상태 변경은 개정(`judgment amend`) — 본문 머리 칸만 바꾼다. 일반 공포(amend)는 판결 등록 유형을 받지 않는다.
+        // 잠정 → 확정은 사용자 발화 증언(`--testimony`)을 `testifies` 로 인용한다.
         let entry = try JudgmentRegistry.find(String(first.id.prefix(8)), records: law.store.scan())
-        let draft = try JudgmentRegistry.amendDraft(actor: Self.agent, entry: entry, title: nil, status: "confirmed", path: nil)
+        let draft = try JudgmentRegistry.amendDraft(
+            actor: Self.agent, entry: entry, title: nil, status: "confirmed", path: nil, testimony: evidence.id)
         #expect(draft.title == "판결 X")
+        #expect(draft.cites == [LawCite(id: evidence.id, rel: "testifies")])
         #expect(throws: LawEnactServiceError.self) { try LawEnactService.enact(draft, target: law) }
         let amended = try LawEnactService.enact(draft, target: law, path: .judgment)
         let records = law.store.scan()
@@ -124,17 +145,127 @@ import WikiLedgerKit
         let listed = JudgmentRegistry.entries(records: records)
         #expect(listed.map(\.id) == [amended.id])
         #expect(listed.map(\.number) == [number])
-        // 판결 등록의 폐지는 judgment 경로만 한다(일반 repeal 은 거부). 폐지되면 현행판이 없다.
-        let repeal = LawDraft(
-            actor: Self.agent, title: "폐지: 판결 X", type: "registration", repeals: amended.id, body: "")
-        #expect(throws: LawEnactServiceError.self) { try LawEnactService.enact(repeal, target: law) }
+        #expect(throws: JudgmentRegistryError.notFound("ffffffff")) {
+            try JudgmentRegistry.find("ffffffff", records: law.store.scan())
+        }
+    }
+
+    /// 거부되면 그 공포 오류를, 통과하면 nil.
+    static func refusal(_ body: () throws -> Void) -> LawEnactError? {
+        do {
+            try body()
+            return nil
+        } catch LawEnactServiceError.enact(let error) {
+            return error
+        } catch {
+            Issue.record("예상하지 못한 오류: \(error)")
+            return nil
+        }
+    }
+
+    @Test func judgmentRepealRepealsProvisionalRegistrationOnJudgmentPathOnly() throws {
+        let fx = Self.fixture()
+        defer { fx.cleanup() }
+        let law = fx.target("agent-law")
+        let first = try Self.register(fx, repo: "r", title: "판결 Y")
+        let number = String(first.id.prefix(8))
+        let entry = try JudgmentRegistry.find(number, records: law.store.scan())
+        let repeal = JudgmentRegistry.repealDraft(actor: Self.agent, entry: entry, reason: "잘못 등록")
+        #expect(repeal.repeals == first.id)
+        #expect(repeal.type == "registration")
+        #expect(repeal.title == "폐지: 판결 Y")
+        #expect(repeal.body == "잘못 등록")
+        // 일반 repeal 은 판결 등록을 폐지하지 못한다.
+        #expect(Self.refusal { try LawEnactService.enact(repeal, target: law) }
+                == .targetRequiresDedicatedCommand(target: first.id, type: "registration", command: "judgment"))
         _ = try LawEnactService.enact(repeal, target: law, path: .judgment)
         #expect(throws: JudgmentRegistryError.noInForce(number)) {
             try JudgmentRegistry.find(number, records: law.store.scan())
         }
-        #expect(throws: JudgmentRegistryError.notFound("ffffffff")) {
-            try JudgmentRegistry.find("ffffffff", records: law.store.scan())
+    }
+
+    @Test func confirmingRequiresUserTestimony() throws {
+        let fx = Self.fixture()
+        defer { fx.cleanup() }
+        let law = fx.target("agent-law")
+        let first = try Self.register(fx, repo: "r", title: "판결 Z")
+        let entry = try JudgmentRegistry.find(String(first.id.prefix(8)), records: law.store.scan())
+        // 증언 없이 확정하지 못한다(개정·처음 등록 모두).
+        let bare = try JudgmentRegistry.amendDraft(actor: Self.agent, entry: entry, title: nil, status: "confirmed", path: nil)
+        #expect(Self.refusal { try LawEnactService.enact(bare, target: law, path: .judgment) } == .judgmentConfirmRequiresTestimony)
+        #expect(Self.refusal {
+            try LawEnactService.enact(
+                try JudgmentRegistry.draft(actor: Self.agent, repo: "r", title: "t", status: "confirmed", path: nil),
+                target: law, path: .judgment)
+        } == .judgmentConfirmRequiresTestimony)
+        // 사용자 화자가 아닌 증거는 증언이 아니다.
+        let external = try LawEnactService.enact(
+            LawDraft(actor: Self.agent, title: "외부", type: "evidence", body: "외부 문서"), target: law)
+        let withExternal = try JudgmentRegistry.amendDraft(
+            actor: Self.agent, entry: entry, title: nil, status: "confirmed", path: nil, testimony: external.id)
+        #expect(Self.refusal { try LawEnactService.enact(withExternal, target: law, path: .judgment) }
+                == .judgmentConfirmRequiresTestimony)
+        // 잠정 판결의 경로·제목 수정은 증언 없이 바로 된다.
+        let retitled = try LawEnactService.enact(
+            try JudgmentRegistry.amendDraft(actor: Self.agent, entry: entry, title: "판결 Z'", status: nil, path: "docs/z.md"),
+            target: law, path: .judgment)
+        let current = try JudgmentRegistry.find(String(first.id.prefix(8)), records: law.store.scan())
+        #expect(current.id == retitled.id)
+        #expect(current.status == "provisional")
+        #expect(current.path == "docs/z.md")
+        // 증언이 있으면 처음부터 확정으로 등록할 수도 있다.
+        let confirmed = try Self.register(
+            fx, repo: "r", title: "확정 등록", status: "confirmed", testimony: try Self.userEvidence(fx, text: "확정 등록").id)
+        #expect(try JudgmentRegistry.find(String(confirmed.id.prefix(8)), records: law.store.scan()).status == "confirmed")
+    }
+
+    @Test func confirmedRegistrationChangesOnlyBySupremeRuling() throws {
+        let fx = Self.fixture()
+        defer { fx.cleanup() }
+        let law = fx.target("agent-law")
+        let store = law.store
+        let evidence = try Self.userEvidence(fx)
+        let confirmed = try Self.register(fx, repo: "r", title: "확정 판결", status: "confirmed", testimony: evidence.id)
+        let number = String(confirmed.id.prefix(8))
+        let entry = try JudgmentRegistry.find(number, records: store.scan())
+        // 판결 경로라도 대법원 결정 인용 없이는 개정(잠정으로 되돌림·경로 수정)·폐지 모두 거부.
+        let back = try JudgmentRegistry.amendDraft(actor: Self.agent, entry: entry, title: nil, status: "provisional", path: nil)
+        let moved = try JudgmentRegistry.amendDraft(
+            actor: Self.agent, entry: entry, title: nil, status: nil, path: "docs/new.md", testimony: evidence.id)
+        let repeal = JudgmentRegistry.repealDraft(actor: Self.agent, entry: entry, reason: "폐지")
+        for draft in [back, moved, repeal] {
+            for path in [LawEnactPath.judgment, .court] {
+                #expect(Self.refusal { try LawEnactService.enact(draft, target: law, path: path) }
+                        == .confirmedJudgmentRequiresSupreme(target: confirmed.id), "\(path)")
+            }
         }
+        // 항소심 결정 인용으로도 안 된다.
+        let proposal = try store.enact(LawDraft(
+            actor: Self.agent, title: "개정안", type: "proposal", cites: [LawCite(id: confirmed.id, rel: "proposes")],
+            body: "scope: 상태\n\nrepo: r\nstatus: provisional\n"))
+        let appellate = try store.enact(LawDraft(
+            actor: Self.agent, title: "항소심 결정", type: "ruling", cites: [LawCite(id: proposal.id, rel: "hears")],
+            body: "level: appellate\noutcome: refer\n\n회부\n"))
+        var viaAppellate = back
+        viaAppellate.cites = [LawCite(id: appellate.id, rel: "per-ruling")]
+        #expect(Self.refusal { try LawEnactService.enact(viaAppellate, target: law, path: .judgment) }
+                == .confirmedJudgmentRequiresSupreme(target: confirmed.id))
+        #expect(try JudgmentRegistry.find(number, records: store.scan()).id == confirmed.id)
+        // 대법원 결정을 per-ruling 으로 인용하면 된다(court·judgment 어느 경로든).
+        let supreme = try store.enact(LawDraft(
+            actor: Self.agent, speaker: "user", title: "대법원 결정", type: "ruling",
+            cites: [LawCite(id: proposal.id, rel: "hears"), LawCite(id: evidence.id, rel: "testifies")],
+            body: "level: supreme\noutcome: approve\n\n승인\n"))
+        var viaSupreme = back
+        viaSupreme.cites = [LawCite(id: supreme.id, rel: "per-ruling")]
+        let reverted = try LawEnactService.enact(viaSupreme, target: law, path: .court)
+        let current = try JudgmentRegistry.find(number, records: store.scan())
+        #expect(current.id == reverted.id)
+        #expect(current.status == "provisional")
+        // 잠정이 된 판결은 다시 판결 경로로 바로 폐지된다.
+        _ = try LawEnactService.enact(
+            JudgmentRegistry.repealDraft(actor: Self.agent, entry: current, reason: "폐지"), target: law, path: .judgment)
+        #expect(throws: JudgmentRegistryError.noInForce(number)) { try JudgmentRegistry.find(number, records: store.scan()) }
     }
 
     @Test func statusOutsideValueSetIsRefused() throws {

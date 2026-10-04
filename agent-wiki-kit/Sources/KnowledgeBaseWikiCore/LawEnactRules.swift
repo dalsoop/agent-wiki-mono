@@ -214,6 +214,9 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
     case targetRequiresDedicatedCommand(target: String, type: String, command: String)
     case targetIrreversible(target: String, type: String)
     case restoreRefused([String])
+    case restoreDecidedCase(target: String, type: String)
+    case confirmedJudgmentRequiresSupreme(target: String)
+    case judgmentConfirmRequiresTestimony
 
     public var description: String {
         switch self {
@@ -248,11 +251,20 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
         case .targetRequiresDedicatedCommand(let id, let t, let command):
             return "대상 \(id) (유형 \(t)) 의 개정·폐지는 전용 경로 `\(command)` 만 한다"
         case .targetIrreversible(let id, let t):
-            return t == LawRecordType.redaction.rawValue
-                ? "가림 기록 \(id) 는 되돌릴 수 없음 — 지운 증거물은 돌아오지 않는다"
-                : "대상 \(id) (유형 \(t)) 는 개정·폐지할 수 없음 — 대법원 결정은 최종"
+            switch t {
+            case LawRecordType.redaction.rawValue: return "가림 기록 \(id) 는 되돌릴 수 없음 — 지운 증거물은 돌아오지 않는다"
+            case LawRecordType.promotionReceipt.rawValue:
+                return "승격 영수증 \(id) 는 개정·폐지할 수 없음 — 승격본의 무결성 기록"
+            default: return "대상 \(id) (유형 \(t)) 는 개정·폐지할 수 없음 — 대법원 결정은 최종"
+            }
         case .restoreRefused(let reasons):
             return "원상회복 거부(아무것도 쓰지 않음) — 되돌릴 수 없는 기록:\n" + reasons.map { "- \($0)" }.joined(separator: "\n")
+        case .restoreDecidedCase(let id, let t):
+            return "드리밍 묶음의 \(t) \(id) 는 이미 결정이 났음 — 원상회복으로 지우지 않는다(다툼은 상고로)"
+        case .confirmedJudgmentRequiresSupreme(let id):
+            return "확정 판결 등록 \(id) 의 개정·폐지는 대법원 결정(level: supreme)을 per-ruling 으로 인용해야 함 — court 로"
+        case .judgmentConfirmRequiresTestimony:
+            return "판결 등록의 확정(status: confirmed)은 speaker: user 증거 기록을 testifies 로 인용해야 함(--testimony)"
         }
     }
 }

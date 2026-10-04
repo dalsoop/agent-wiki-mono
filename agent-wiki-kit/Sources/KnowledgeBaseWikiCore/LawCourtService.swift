@@ -305,10 +305,7 @@ public struct LawCourtService: Sendable {
     /// 확정 판결 — `judgment` 유형, 또는 `status: confirmed` 인 판결 등록.
     static func isConfirmedJudgment(_ object: LawScopeObject) -> Bool {
         guard let law = object.law else { return false }
-        if law.type == LawRecordType.judgment.rawValue { return true }
-        guard law.type == LawRecordType.registration.rawValue else { return false }
-        return (try? LawHeadFields.parse(body: law.body, type: law.type))?["status"]
-            == LawRegistrationStatus.confirmed.rawValue
+        return law.type == LawRecordType.judgment.rawValue || LawEnactPath.isConfirmedRegistration(law)
     }
 
     // MARK: - 대법원

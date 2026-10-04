@@ -2,17 +2,20 @@ import Foundation
 import KnowledgeBaseWikiCore
 import WikiLedgerKit
 
-// judgment register|list|show — 판결 등록. 공유 원장(층 remoteShared 인 ledger 3 원장)에 `registration`
+// judgment register|amend|repeal|list|show — 판결 등록. 공유 원장(층 remoteShared 인 ledger 3 원장)에 `registration`
 // 기록을 공포한다. 판결 번호는 처음 등록 기록 id 의 앞 8자리이고 개정해도 바뀌지 않는다.
-// 상태·경로 변경은 개정(`judgment amend`)이다 — 일반 `amend` 는 판결 등록 유형을 공포하지 못한다(`LawEnactPath`).
+// 상태·경로 변경은 개정(`judgment amend`), 폐지는 `judgment repeal` 이다 — 일반 `amend`·`repeal` 은 판결 등록을 다루지 못한다(`LawEnactPath`).
+// 확정(`status: confirmed`)은 사용자 발화 증언(`--testimony <speaker: user 증거 id>`)이 있어야 하고, 확정 판결의 개정·폐지는
+// 대법원 결정(`court decide`)의 조치로만 된다 — 판정은 `LawEnactPath.checkRegistration` 한 곳.
 // 저장소 판결 본문은 받지 않는다(본문은 머리 칸만).
 // 근거: docs/contracts.md "agent-law 명령 (ledger 3)" 판결 행, docs/business-rules.md "판결 등록"·"본문 머리 칸"·"유형".
 
 let judgmentUsage = """
-사용법: judgment register --repo <r> --title <t> [--status provisional|confirmed] [--path <p>] [--batch <id>]
-                          [모델 기록 옵션] [--json]
-        judgment amend <번호> [--status provisional|confirmed] [--path <p>] [--title <t>] [--batch <id>]
-                       [모델 기록 옵션] [--json]
+사용법: judgment register --repo <r> --title <t> [--status provisional|confirmed] [--testimony <증거 id>] [--path <p>]
+                          [--batch <id>] [모델 기록 옵션] [--json]
+        judgment amend <번호> [--status provisional|confirmed] [--testimony <증거 id>] [--path <p>] [--title <t>]
+                       [--batch <id>] [모델 기록 옵션] [--json]
+        judgment repeal <번호> [--reason <r>] [--batch <id>] [모델 기록 옵션] [--json]
         judgment list [--repo <r>] [--json]
         judgment show <번호> [--json]
 """
@@ -102,21 +105,40 @@ public enum JudgmentRegistry {
         return body
     }
 
+    /// 등록 초안. `testimony`(사용자 발화 증거 id)를 주면 `testifies` 로 인용한다 — 확정으로 등록하려면 필요하다.
     public static func draft(
-        actor: LawActor, repo: String, title: String, status: String?, path: String?, batch: String? = nil
+        actor: LawActor, repo: String, title: String, status: String?, path: String?, batch: String? = nil,
+        testimony: String? = nil
     ) throws -> LawDraft {
         LawDraft(
             actor: actor, title: title, type: LawRecordType.registration.rawValue, batch: batch,
+            cites: testimonyCites(testimony),
             body: try body(repo: repo, status: status ?? LawRegistrationStatus.provisional.rawValue, path: path))
     }
 
     /// 개정 초안 — 현행판을 `amends` 로 대체한다. 비운 칸은 현행판의 값을 그대로 쓴다.
+    /// 잠정 → 확정은 `testimony`(사용자 발화 증거 id)가 있어야 하고, 확정 판결의 개정은 거부된다(대법원으로).
     public static func amendDraft(
-        actor: LawActor, entry: JudgmentEntry, title: String?, status: String?, path: String?, batch: String? = nil
+        actor: LawActor, entry: JudgmentEntry, title: String?, status: String?, path: String?, batch: String? = nil,
+        testimony: String? = nil
     ) throws -> LawDraft {
         LawDraft(
             actor: actor, title: title ?? entry.title, type: LawRecordType.registration.rawValue, batch: batch,
-            amends: entry.id, body: try body(repo: entry.repo, status: status ?? entry.status, path: path ?? entry.path))
+            cites: testimonyCites(testimony), amends: entry.id,
+            body: try body(repo: entry.repo, status: status ?? entry.status, path: path ?? entry.path))
+    }
+
+    /// 폐지 초안 — 현행판을 `repeals` 한다. 본문은 이유(비어도 된다). 확정 판결의 폐지는 거부된다(대법원으로).
+    public static func repealDraft(
+        actor: LawActor, entry: JudgmentEntry, reason: String?, batch: String? = nil
+    ) -> LawDraft {
+        LawDraft(
+            actor: actor, title: "폐지: \(entry.title ?? entry.number)", type: LawRecordType.registration.rawValue,
+            batch: batch, repeals: entry.id, body: reason ?? "")
+    }
+
+    static func testimonyCites(_ testimony: String?) -> [LawCite] {
+        testimony.map { [LawCite(id: $0, rel: LawRelation.testifies.rawValue)] } ?? []
     }
 
     public static func number(of id: String) -> String { String(id.prefix(numberLength)) }
@@ -177,6 +199,7 @@ public func runJudgment(context: LawCommandContext, arguments: [String]) {
     switch sub {
     case "register": runJudgmentRegister(context: context, arguments: arguments)
     case "amend": runJudgmentAmend(context: context, arguments: arguments)
+    case "repeal": runJudgmentRepeal(context: context, arguments: arguments)
     case "list": runJudgmentList(context: context, arguments: arguments)
     case "show": runJudgmentShow(context: context, arguments: arguments)
     default: usageFail(judgmentUsage)
@@ -186,7 +209,7 @@ public func runJudgment(context: LawCommandContext, arguments: [String]) {
 func runJudgmentRegister(context: LawCommandContext, arguments: [String]) {
     let options = LawOptions.parse(
         arguments, skip: 2,
-        valued: Set(["--repo", "--title", "--status", "--path", "--batch"]).union(LawOptions.modelOptions),
+        valued: Set(["--repo", "--title", "--status", "--path", "--batch", "--testimony"]).union(LawOptions.modelOptions),
         usage: judgmentUsage)
     guard options.positionals.isEmpty, let repo = options.value("--repo"), let title = options.value("--title")
     else { usageFail(judgmentUsage) }
@@ -202,7 +225,8 @@ func runJudgmentRegister(context: LawCommandContext, arguments: [String]) {
         draft = try JudgmentRegistry.draft(
             actor: context.actor(explicit: options.modelRecord), repo: repo, title: title,
             status: options.value("--status"), path: options.value("--path"),
-            batch: options.value("--batch") ?? context.environment["MEMO_LEDGER_BATCH"])
+            batch: options.value("--batch") ?? context.environment["MEMO_LEDGER_BATCH"],
+            testimony: judgmentTestimony(options, index: index))
     } catch {
         lawFail(error)
     }
@@ -221,12 +245,13 @@ func runJudgmentRegister(context: LawCommandContext, arguments: [String]) {
 func runJudgmentAmend(context: LawCommandContext, arguments: [String]) {
     let options = LawOptions.parse(
         arguments, skip: 2,
-        valued: Set(["--title", "--status", "--path", "--batch"]).union(LawOptions.modelOptions),
+        valued: Set(["--title", "--status", "--path", "--batch", "--testimony"]).union(LawOptions.modelOptions),
         usage: judgmentUsage)
     guard options.positionals.count == 1,
           options.value("--status") != nil || options.value("--path") != nil || options.value("--title") != nil
     else { usageFail(judgmentUsage) }
     let world = context.requireWorld()
+    let index = context.scopeIndex()
     let draft: LawDraft
     do {
         try JudgmentRegistry.checkRegistrationTarget(worldName: world.name, catalog: context.catalog)
@@ -234,12 +259,38 @@ func runJudgmentAmend(context: LawCommandContext, arguments: [String]) {
         draft = try JudgmentRegistry.amendDraft(
             actor: context.actor(explicit: options.modelRecord), entry: entry, title: options.value("--title"),
             status: options.value("--status"), path: options.value("--path"),
+            batch: options.value("--batch") ?? context.environment["MEMO_LEDGER_BATCH"],
+            testimony: judgmentTestimony(options, index: index))
+    } catch {
+        lawFail(error)
+    }
+    let stored = enactLaw(draft, context: context, index: index, path: .judgment)
+    printEnacted([stored.id], asJSON: options.has("--json"))
+}
+
+/// judgment repeal <번호> [--reason <r>] — 판결 등록 폐지(`judgment` 경로). 확정 판결은 거부된다(대법원 결정의 조치로만).
+func runJudgmentRepeal(context: LawCommandContext, arguments: [String]) {
+    let options = LawOptions.parse(
+        arguments, skip: 2, valued: Set(["--reason", "--batch"]).union(LawOptions.modelOptions), usage: judgmentUsage)
+    guard options.positionals.count == 1 else { usageFail(judgmentUsage) }
+    let world = context.requireWorld()
+    let draft: LawDraft
+    do {
+        try JudgmentRegistry.checkRegistrationTarget(worldName: world.name, catalog: context.catalog)
+        let entry = try JudgmentRegistry.find(options.positionals[0], records: context.lawTarget().store.scan())
+        draft = JudgmentRegistry.repealDraft(
+            actor: context.actor(explicit: options.modelRecord), entry: entry, reason: options.value("--reason"),
             batch: options.value("--batch") ?? context.environment["MEMO_LEDGER_BATCH"])
     } catch {
         lawFail(error)
     }
     let stored = enactLaw(draft, context: context, index: context.scopeIndex(), path: .judgment)
     printEnacted([stored.id], asJSON: options.has("--json"))
+}
+
+/// `--testimony` 증거 토큰 → 기록 id(없으면 nil).
+func judgmentTestimony(_ options: LawOptions, index: LawScopeIndex) -> String? {
+    options.value("--testimony").map { resolveLawReferences([$0], index: index)[0] }
 }
 
 /// 조회 대상 공유 원장의 기록들.
@@ -275,7 +326,7 @@ func runJudgmentShow(context: LawCommandContext, arguments: [String]) {
     } catch {
         lawFail(error)
     }
-    let howToAmend = "상태·경로 변경은 개정: judgment amend \(entry.number) [--status provisional|confirmed] [--path <p>] [--title <t>]"
+    let howToAmend = "상태·경로 변경은 개정: judgment amend \(entry.number) [--status provisional|confirmed] [--testimony <증거 id>] [--path <p>] [--title <t>] · 폐지: judgment repeal \(entry.number) [--reason <r>] · 확정 판결의 변경은 대법원(court)"
     if options.has("--json") {
         struct Envelope: Encodable { let ok: Bool; let result: JudgmentEntry; let amend: String }
         printJSON(Envelope(ok: true, result: entry, amend: howToAmend))
