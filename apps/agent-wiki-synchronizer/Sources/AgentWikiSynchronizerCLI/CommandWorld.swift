@@ -9,6 +9,8 @@ import LocalizationKit
 
 func runWorld(arguments: [String]) {
     var file = loadBoundFile()
+    // ledger 3 원장 설정(add --key·tenant-map·device register·dream-device)은 공용 구현이 먼저 맡는다.
+    if runWorldLedgerSubcommand(file: &file, arguments: arguments) { return }
     let sub = arguments.count >= 2 && !arguments[1].hasPrefix("-") ? arguments[1] : "list"
     switch sub {
     case "list":

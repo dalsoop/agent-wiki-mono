@@ -38,8 +38,8 @@
 ## `gujo sync`는 커밋을 만들지 않는다
 
 - 증상: 발행했는데 다른 Mac에서 `gujo sync` 후에도 새 객체가 보이지 않는다.
-- 원인: `GujoSync.sync`는 `git fetch origin` → `merge --no-edit origin/main` → `push origin HEAD:main`만 한다. `git add`·`commit`은 이 저장소 코드 어디에도 없다. push 실패는 오류가 아니라 결과의 `pushed=false`와 메시지로만 남는다.
-- 대응: sync 결과 JSON의 `pushed`를 확인한다. 새 객체를 커밋하는 주체는 이 저장소 밖에 있다.
+- 원인: `GujoSync.sync`는 `git fetch origin` → `merge --no-edit origin/main`만 한다(옛 원장용, 커밋하지 않는다).
+- 대응: 결정 0007 이후 `gujo sync`는 전신 읽기 pull 만 하고 push 하지 않는다(`pushed`는 늘 false). 새 기록은 agent-law 로 공포하고, 공포 경로(`LawEnactAftermath` → `LawGitCommit.commit`)가 그 기록 파일만 커밋하며 `sync`(`LawGitSync.sync`)가 pull·push 한다.
 
 ## 발행마다 그래프를 전부 다시 만든다
 
@@ -75,6 +75,12 @@
 
 - 증상: 이 Mac의 에이전트 세션에서 `swift build`·`swift test`를 직접 실행하면 훅이 막는다. 셸 `for` 반복문 안의 `swift build`도 막힌다.
 - 대응: `build-queue-manager submit '<swift 명령>' --workdir <저장소 루트> --wait`로 하나씩 보낸다. 출력은 파일로 받아 종료 코드를 확인한다. 대기열이 "job vanished"를 내면 같은 명령을 다시 제출한다.
+
+## 앱 패키지의 `.build` 가 kit 의 새 파일을 보지 못한다
+
+- 증상: kit(`agent-wiki-kit`)에 새 파일을 더한 뒤 앱 패키지를 빌드하면 'cannot find type'·'missing inputs' 로 실패할 때가 있다.
+- 원인: 앱마다 kit 소스를 따로 컴파일하는 낡은 빌드 설명.
+- 대응: 소스 문제가 아님을 먼저 kit 빌드로 확인한 뒤, 그 앱의 `.build/arm64-apple-macosx/debug/KnowledgeBaseWikiCore.build` 와 `description.json` 을 지우고 다시 빌드한다.
 
 ## 변경 점검 절차
 

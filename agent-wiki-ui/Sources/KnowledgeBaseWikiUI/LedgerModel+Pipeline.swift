@@ -289,7 +289,7 @@ extension LedgerModel {
 
     /// 정의 저장 — 파일 갱신 + 원장 개정판 발행(supersedes 사슬 = 버전관리).
     func saveRoleDefinition(_ name: String, text: String, reason: String) {
-        guard let store, let roleStore = repositoryAgentRoleStore else { return }
+        guard let roleStore = repositoryAgentRoleStore, let store = legacyWritableStore() else { return }
         do {
             let role = try roleStore.save(id: name, definition: text)
             let previousHead = store.heads(roleDefinitionHistory(name)).first

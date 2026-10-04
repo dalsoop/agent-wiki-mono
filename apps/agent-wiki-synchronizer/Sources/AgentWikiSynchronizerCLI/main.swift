@@ -14,7 +14,7 @@ SingleInstanceCLI.autoGuard()
 GujoManaged.exitIfNotEntitledSync()
 
 // agent-wiki-global — global-scope Agent Wiki CLI.
-// No cwd auto-detection; defaults to gujo-wiki world.
+// No cwd auto-detection; defaults to the agent-law ledger (결정 0007).
 
 var arguments = Array(CommandLine.arguments.dropFirst())
 let defaultAuthor = ProcessInfo.processInfo.environment["MEMO_LEDGER_AUTHOR"] ?? CitationActor.resolve()
@@ -41,6 +41,10 @@ let allowedOptions: Set<String> = [
     "--supersedes", "--tag", "--target-world", "--text", "--title", "--to", "--type", "--layer", "--verification",
     "--version", "--w", "--weight", "--workspace", "--world", "-h", "-j", "-V",
     "--no-studio-adopt",
+    // agent-law (ledger 3) — docs/contracts.md "agent-law 명령". 두 CLI 목록을 같게 유지한다.
+    "--also", "--app", "--app-version", "--approve", "--certainty", "--device", "--dry-run", "--effort",
+    "--exhibit", "--from", "--key", "--predecessor", "--record", "--scheduled", "--reject", "--repo", "--role", "--runtime",
+    "--runtime-version", "--scope", "--session", "--speaker", "--status", "--testimony", "--until",
 ]
 let suppliedOptions = Set(arguments.filter { $0.hasPrefix("-") && $0 != "-" })
 let unknownOptions = suppliedOptions.subtracting(allowedOptions)
@@ -66,9 +70,15 @@ if command == "skill-install" || command == "skill-uninstall" || command == "ski
     || command == "skill" || command == "skills" {
     runSkillSurface(arguments: arguments); exit(0)
 }
+// 폐지된 이름은 원장을 열기 전에 64 와 새 이름 안내만 낸다(docs/contracts.md "agent-law 명령").
+if let guidance = CommandSurfaceRouting.retiredGuidance(arguments) { usageFail(guidance) }
 if command == "hook" {
-    AuthoringHook.run()
-    exit(0)
+    runHook(
+        context: LawCommandContext(
+            author: author, worldOverride: worldOverride, world: nil, config: LedgerConfig.load(),
+            file: loadBoundFile(), catalog: loadWorldCatalog(),
+            ledgerTwo: LedgerTwoWriteHooks(publishCopy: .fromLocalization())),
+        arguments: arguments)
 }
 if command == "schedule" { runSchedule(arguments: arguments); exit(0) }
 if command == "init" { runInit(arguments: arguments) }
@@ -95,12 +105,12 @@ let pathOverride: String? = {
 }()
 let cwd = pathOverride ?? FileManager.default.currentDirectoryPath
 
-// World resolution: --world flag, default to gujo-wiki (NO cwd auto-detection)
+// World resolution: --world flag, default to agent-law (NO cwd auto-detection, 결정 0007)
 let config = LedgerConfig.load()
 let tenantWorld = TenantWikiBinding.activeWorldName()
 guard let world = config.resolveWorld(
     cwd: cwd,
-    explicitWorld: worldOverride ?? "gujo-wiki",
+    explicitWorld: worldOverride ?? "agent-law",
     tenantWikiWorld: tenantWorld
 ) else {
     fail(
@@ -131,6 +141,14 @@ func enforceWritePermission() {
     }
 }
 
+// 새 명령 표면 — 형식별 분기·쓰기 게이트·ledger 3 명령(WikiCLIShared). 처리하지 않은 명령만 아래로 간다.
+let surfaceContext = LawCommandContext(
+    author: author, worldOverride: worldOverride, world: world, config: config,
+    file: loadBoundFile(), catalog: loadWorldCatalog(), repository: repository,
+    ledgerTwo: LedgerTwoWriteHooks(
+        checkWritePermission: { enforceWritePermission() }, publishCopy: .fromLocalization()))
+if runCommandSurface(arguments, context: surfaceContext) { exit(0) }
+
 switch command {
     case "agent":
         switch arguments.dropFirst().first {
@@ -145,22 +163,6 @@ switch command {
 
 case "root": print(root.path)
 case "batch": runBatchNew(arguments: arguments)
-case "publish":
-    if let denial = WorldEnvLock.denial(
-        environment: ProcessInfo.processInfo.environment,
-        explicitWorld: worldOverride,
-        isWrite: true)
-    {
-        fail(denial)
-    }
-    enforceWritePermission()
-    runWorldAwarePublish(
-        store: store,
-        worldName: world.name,
-        author: author,
-        arguments: arguments,
-        catalog: loadWorldCatalog(),
-        copy: .fromLocalization())
 case "promotion", "promote":
     runPromotion(
         store: store,
@@ -171,12 +173,6 @@ case "promotion", "promote":
         arguments: arguments,
         worldOverride: worldOverride,
         cwd: cwd)
-case "classify":
-    enforceWritePermission()
-    runClassify(store: store, author: author, arguments: arguments)
-case "capture":
-    enforceWritePermission()
-    runCapture(store: store, author: author, arguments: arguments)
 case "show": runShow(store: store, arguments: arguments)
 case "list": runList(store: store, arguments: arguments)
 case "status": runStatus(store: store, worldName: world.name, arguments: arguments)
@@ -194,12 +190,8 @@ case "search", "context":
 case "path": runPath(store: store, arguments: arguments)
 case "history": runHistory(store: store, arguments: arguments)
 case "cited-by": runCitedBy(store: store, arguments: arguments)
-case "rollback":
-    enforceWritePermission()
-    runRollback(store: store, author: author, arguments: arguments)
 case "policy": runPolicy(store: store, author: author, arguments: arguments)
 case "structure": runStructure(store: store, arguments: arguments)
-case "verify": runVerify(store: store, worlds: config.effectiveWorlds, repository: repository)
 case "task": runTask(store: store, author: author, repository: repository, arguments: arguments)
 case "orchestration": runTask(
     store: store,
@@ -210,7 +202,7 @@ case "repository-summary": runRepositorySummary(
     store: store, repository: repository, worlds: config.effectiveWorlds, arguments: arguments)
 case "repository": runRepository(
     store: store, repository: repository, worlds: config.effectiveWorlds, arguments: arguments)
-case "run", "sync", "evolve", "role":
+case "run", "evolve", "role":
     runAgentCommand(store: store, root: root, author: author, arguments: ["agent", command] + Array(arguments.dropFirst()))
     exit(0)
 case "migrate":

@@ -34,6 +34,10 @@ let package = Package(
                 .product(name: "StateRootKit", package: "swiftkit"),
                 .product(name: "SelfTestKit", package: "swiftkit"),
                 .product(name: "InteropKit", package: "swiftkit"),
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
+                .product(name: "SessionKit", package: "swiftkit"),
+                .product(name: "AgentSessionStorageKit", package: "swiftkit"),
+                .product(name: "SecretMaskKit", package: "swiftkit"),
             ],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
@@ -46,14 +50,29 @@ let package = Package(
                 .product(name: "StateRootKit", package: "swiftkit"),
                 .product(name: "AgentSurfaceKit", package: "swiftkit"),
                 .product(name: "LocalizationKit", package: "swiftkit"),
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
             ],
             resources: [.process("Resources")]
         ),
         .testTarget(
             name: "KnowledgeBaseWikiCoreTests",
-            dependencies: ["KnowledgeBaseWikiCore"],
+            dependencies: [
+                "KnowledgeBaseWikiCore",
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
+                .product(name: "CommandKit", package: "swiftkit"),
+                .product(name: "SessionKit", package: "swiftkit"),
+            ],
             path: "Tests/KnowledgeBaseWikiCoreTests",
             resources: [.copy("Fixtures")]
+        ),
+        .testTarget(
+            name: "WikiCLISharedTests",
+            dependencies: [
+                "WikiCLIShared",
+                "KnowledgeBaseWikiCore",
+                .product(name: "WikiLedgerKit", package: "swiftkit"),
+            ],
+            path: "Tests/WikiCLISharedTests"
         ),
     ]
 )

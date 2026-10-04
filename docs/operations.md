@@ -37,17 +37,17 @@ swift build --package-path apps/agent-wiki-reader
 | `~/.config/citation-ledger/actor` | 기본 작성자 한 줄(예: `agent:claude@macbook`) | 사람이 직접 |
 | `<world 루트>/state/` | 파생 색인·그래프 | `index`, `graph rebuild`, 발행 후 자동 갱신 |
 | `~/.swift-app-state/<슬러그>.json` | 앱별 StateMirror 관측 상태 | 각 앱 |
-| `~/Library/LaunchAgents/net.ranode.memo-citation-ledger.<역할>.plist` | 정기 작업(checkpoint 매일 21:30, librarian 매일 03:30, run-reaper 매시 45분, verifier 일요일 04:30, retrospective 일요일 05:00) | `agent-wiki schedule` |
+| `~/Library/LaunchAgents/net.ranode.memo-citation-ledger.<역할>.plist` | 정기 작업 다섯 개(아래 "정기 작업과 동기화" 표) | `agent-wiki schedule` |
 
 환경 변수:
 
 | 변수 | 역할 | 범위 |
 |---|---|---|
 | `SWIFT_APP_STATE_ROOT` | 호스트 상태 루트(`~` 대신). `config.json`·`fleet.json` 위치가 이 아래로 옮겨진다 | 모든 CLI·앱 |
-| `AGENT_WIKI_WORLD` | 설정되면 다른 world로의 `publish`·`promotion publish`를 거부 | 전역 CLI |
+| `AGENT_WIKI_WORLD` | 설정되면 다른 world로의 공포 계열(`enact`·`amend`·`repeal`·`restore`·`finding`·`checkpoint`·`promote` 등)과 `promotion publish`를 거부 | 전역 CLI |
 | `MEMO_LEDGER_AUTHOR` | 기본 작성자 | 전역·repo CLI |
 | `CITATION_ACTOR` | `MEMO_LEDGER_AUTHOR`가 없을 때 작성자 | 모든 원장 쓰기 |
-| `MEMO_LEDGER_BATCH` | `publish`의 기본 batch id | `runPublish` 경로 |
+| `MEMO_LEDGER_BATCH` | `enact`·`amend`·`repeal`·`finding`·`judgment register` 의 기본 batch id | 공포 계열 |
 | `GUJO_S3_ACCESS_KEY`, `GUJO_S3_SECRET_KEY`, `GUJO_S3_ENDPOINT`, `GUJO_S3_BUCKET`, `GUJO_S3_REGION` | blob 원격 저장소 접속 설정 | `gujo blob` |
 | `GUJO_HUB_URL` | wiki-hub 기본 주소 덮어쓰기 | `--fleet`/`--remote` 검색 |
 | `RESTIC_PASSWORD` | 백업 설정 파일에 password가 없을 때 쓰는 백업 비밀번호. 둘 다 없으면 `backup`이 실패한다 | `backup` |
@@ -60,8 +60,8 @@ swift build --package-path apps/agent-wiki-reader
 export SWIFT_APP_STATE_ROOT="$(mktemp -d)"
 BIN=apps/agent-wiki-indexer/.build/debug/agent-wiki-indexer   # 빌드되는 CLI
 $BIN init "$SWIFT_APP_STATE_ROOT/scratch-wiki"
-echo "시험 본문" | $BIN --world scratch-wiki publish --title "시험" --allow-unclassified
-$BIN --world scratch-wiki verify
+echo "시험 본문" | $BIN --world scratch-wiki enact --title "시험" --allow-unclassified   # ledger 2 world: 옛 발행 경로
+$BIN --world scratch-wiki audit
 ```
 
 테스트 코드 안에서는 StateRootKit이 테스트 실행을 감지해 임시 디렉터리를 호스트 루트로 쓴다. 테스트는 `LedgerStore(root: <임시 디렉터리>)`로 직접 원장을 만든다.
@@ -78,7 +78,27 @@ agent-wiki capabilities                             # InteropKit 계약 JSON
 
 ## 정기 작업과 동기화
 
-- `agent-wiki schedule`은 위 표의 LaunchAgent 다섯 개를 등록하고, `agent-wiki schedule list`는 등록 상태를 보여 준다.
-- `agent-wiki gujo …`는 `--root <경로>`가 없으면 등록된 `gujo-wiki` world 루트에서 동작한다. `agent-wiki gujo status`는 `--probe` 없이는 네트워크 없이 로컬 판정(마지막 sync 시각, 피어 ahead 수, 원격에만 있는 blob 수)을 낸다. `gujo sync`는 origin과 fetch·merge·push를, `gujo sync --peer <이름>`은 피어에서 fetch·merge만 한다.
-- `agent-wiki gujo blob status|pull|push`는 R2와 blob 차집합을 계산하고 옮긴다. 받은 blob은 sha256을 다시 계산해 맞지 않으면 버린다.
+- `agent-wiki schedule`은 아래 LaunchAgent 다섯 개를 등록하고, `agent-wiki schedule list`는 등록 상태를 보여 준다. 이미 있는 plist 의 인자가 다르면(옛 `tick checkpoint`·`tick verifier`) 거두고 새 인자로 다시 등록하며, ledger 3 대응이 없어 뺀 옛 틱(`librarian`·`run-reaper`·`retrospective`)의 plist 는 거둔다.
+
+| 역할 | 실행 | 시각 |
+|---|---|---|
+| `checkpoint` | `agent-wiki --as app:agent-wiki checkpoint`(기본 원장 `agent-law`) | 매일 21:30 |
+| `verifier` | `agent-wiki audit`(기본 원장) | 일요일 04:30 |
+| `law-sync` | `agent-wiki sync` | 10분마다 |
+| `law-archive` | `agent-wiki archive` | 매일 02:00 |
+| `law-dream` | `agent-wiki dream run --scheduled`(드리밍 기기가 아니면 아무것도 하지 않고 종료 코드 0) | 매일 02:30 |
+
+- `agent-wiki gujo …`는 `--root <경로>`가 없으면 등록된 `gujo-wiki` world 루트에서 동작한다. `agent-wiki gujo status`는 `--probe` 없이는 네트워크 없이 로컬 판정(마지막 sync 시각, 피어 ahead 수, 원격에만 있는 blob 수)을 낸다. `gujo sync`는 origin에서, `gujo sync --peer <이름>`은 피어에서 fetch·merge만 한다(전신은 읽기 pull 만, 결정 0007). push 하지 않는다.
+- `agent-wiki sync`는 agent-law 저장소(`~/agent-law`)에서 커밋 대기 기록을 기록마다 커밋하고, `origin`에서 받아 파일 합집합으로 합친 뒤 push 한다. 같은 경로에 다른 바이트가 오면 합치지 않고 실패(종료 코드 1)로 멈춘다. push 실패도 종료 코드 1이다. 공포 직후 커밋과 `sync`는 저장소 잠금(`.git/agent-law.lock`)을 쓰고, 대기 상한은 `AGENT_LAW_COMMIT_LOCK_SECONDS`(기본 30초)다. 마지막 결과는 `.git/agent-law-sync.json`, 커밋 대기 표시는 `.git/agent-law-pending`이다. 저장소 준비 때 `.gitignore`에 `exhibits/`·`state/`·`sessions/`를 넣는다. git 동기화 뒤에는 원장마다 `redact` 가 공포한 가림 기록에 따라 증거물·세션 조각의 로컬 사본을 지우고, 증거물을 R2 `<원장 키>/exhibits/` 와 차집합으로 올리고 받는다(받은 것은 sha256 재계산, 가린 것은 옮기지 않음). 드리밍 끝 동기화도 같은 순서다.
+- `agent-wiki gujo blob status|pull`은 R2와 blob 차집합을 계산하고 받는다. 받은 blob은 sha256을 다시 계산해 맞지 않으면 버린다. 전신은 받기만 하므로 `gujo blob push` 와 `gujo blob config --access-key/--secret-key` 는 종료 코드 64로 거부한다.
 - `agent-wiki backup`은 restic으로 `objects`·`events`·`blobs`를 백업한다. `state/`는 재생성할 수 있으므로 백업하지 않는다.
+
+## agent-law (ledger 3)
+
+근거: 결정 0007.
+
+- 기기 등록: `agent-wiki world device register <기기 키>`. 드리밍 기기 지정: `agent-wiki world dream-device <기기 키>`.
+- 원장 만들기: `agent-wiki world add agent-law --key law --root ~/agent-law/law --predecessor gujo-wiki` 등(원장 구성표대로). 테넌트 대응: `agent-wiki world tenant-map personal agent-law-person-yun-jeonghan`.
+- R2 키: 금고에서 꺼내 키체인 서비스 `agent-law-r2` 에 넣는다(화면에 출력하지 않는다). 엔드포인트·버킷 이름은 `agent-wiki world storage --endpoint … --bucket agent-law` 로 호스트 설정에 둔다(생략하면 기존 R2 계정 엔드포인트와 버킷 `agent-law`).
+- 예약 실행: `agent-wiki schedule` 이 체크포인트·감사·동기화(10분)·적재(하루)·드리밍(하루, 드리밍 기기만) 틱을 등록한다(위 "정기 작업과 동기화" 표).
+- 확인: `agent-wiki audit`, `agent-wiki dream status`, `agent-wiki contents`.

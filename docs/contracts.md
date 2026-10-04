@@ -81,7 +81,7 @@
 - `promotion preview <id> --to <world> [--json]`: 쓰기 없이 결과를 미리 보여 준다.
 - `promotion publish <id> --to <world> --confirm [토큰] [--json]`: 대상 world에 객체를, 원본 world에 영수증을 발행한다. `--confirm`이 없으면 발행하지 않는다. 토큰을 생략하면 preview가 계산한 확인 토큰을 쓴다.
 - repo world에서는 `--path <repo 경로>`로 저장소 위치를 지정할 수 있다.
-- 오류: parent 사슬 밖 대상, 알 수 없는 대상 world, 원본이 영수증, 원본이 저장된 바이트와 다름, repo 출처의 commit에 객체가 없음.
+- 오류: parent 사슬 밖 대상, 알 수 없는 대상 world, 원본이 영수증, 원본이 저장된 바이트와 다름, repo 출처의 commit에 객체가 없음, 대상 world 쓰기 거부(보관된 전신·미등록 기기, 쓰기 게이트), 대상이 ledger 3 원장(ledger 3 승격은 `promote`). 대상 판정은 아무것도 쓰기 전에 한다.
 
 ## 읽기 전용 프록시 `agent-wiki-reader`
 
@@ -92,3 +92,42 @@
 ## 그래프 질의 `agent-wiki-graph`
 
 `status`, `rebuild`, `orphans`, `centrality`, `impact <id>`, `path <a> <b>`, `context <질의>`, `capabilities`, `open`. 모든 명령이 `--json`을 받고, `orphans`·`centrality`는 `--limit N`, `--kinds cite,supersedes`, `context`는 `--limit N`을 받는다. 그 밖의 옵션은 작업 전에 종료 코드 64로 거부한다. 원장에 쓰지 않고, 파생 캐시만 `~/.swift-app-state/agent-wiki-graph/index.json`에 쓴다.
+
+## agent-law 명령 (ledger 3)
+
+근거: 결정 0007. 모든 명령은 앞에 `--world`·`--as` 를 받고 `--json` 을 지원한다. 공포류는 표준 출력에 id 한 줄만 낸다. 전역 CLI 의 기본 원장은 `agent-law` 다.
+
+| 명령 | 문법 |
+|---|---|
+| 공포 | `enact --title <t> [--type <유형>] [--tag <t>]… [--cite <id>[:<rel>]]… [--exhibit <sha>]… [--speaker <s>] [--batch <id>] [--runtime <r>] [--runtime-version <v>] [--model <m>] [--effort <e>] [--app <a>] [--app-version <v>]` (본문 표준 입력. 모델 기록 인자는 환경 변수·세션 등록보다 우선) |
+| 개정 | `amend <id> [--also <id>]… --title <t> …` |
+| 폐지 | `repeal <id> [--reason <r>]` |
+| 연혁 | `history <id>` |
+| 감사 | `audit` |
+| 원상회복 | `restore <batch>` |
+| 사실인정 | `finding <id> --subject <s> --certainty <c> --domain <d> --reason <r> [--from <t>] [--until <t>]` |
+| 증거물 | `exhibit put <파일>` · `exhibit get <sha>` |
+| 가림 | `redact <R2 키 또는 sha> --reason <r>` |
+| 소환 | `summon [--session <id>] [--since <t>] [--until <t>] [--device <k>] [--runtime <r>] [--role user\|assistant\|tool] [--query <q>] [--record <발화 번호>]` |
+| 적재 | `archive [--dry-run]` |
+| 동기화 | `sync` (git 동기화 뒤 원장마다 가림 기록에 따른 로컬 삭제와 증거물 R2 동기화) |
+| 드리밍 | `dream run [--scheduled]` · `dream status` · `dream resume` |
+| 심급 | `court appeal <id> --reason <r>` · `court propose <id> --scope <s>` · `court hear` · `court decide <건 id> --approve\|--reject --testimony <증거 id>` · `court list [--level appellate\|supreme]` |
+| 판결 | `judgment register --repo <r> --title <t> [--status provisional\|confirmed] [--testimony <증거 id>] [--path <p>]` · `judgment amend <번호> [--status provisional\|confirmed] [--testimony <증거 id>] [--path <p>] [--title <t>]` · `judgment repeal <번호> [--reason <r>]` · `judgment list [--repo <r>]` · `judgment show <번호>` |
+| 목차 | `contents` |
+| 보고 | `report models [--since <t>]` |
+| 승격 | `promote <id> --to <원장>` |
+| 원장 설정 | `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]` · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` · `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]` |
+| 훅 | `hook session [--session <id>] [--runtime <r>] [--runtime-version <v>] [--model <m>] [--effort <e>]` (표준 입력에 실행 도구의 세션 시작 훅 JSON. 표준 출력 없음, 항상 종료 코드 0) |
+
+- `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다. ledger 3 의 `show` 는 현행 여부·4종류 보기·현행 사실인정을 텍스트 모드에서는 표준 에러에, `--json` 에서는 필드로 낸다. 검색 결과의 전신 객체는 `[전신 <원장>]`(JSON `predecessor: true`)로 표시한다.
+- ledger 2 원장(`novel-world`, repo world)에 쓰는 일도 `enact`·`amend`·`repeal`·`restore`·`audit`·`checkpoint` 로 하며, ledger 2 의 `enact` 는 옛 분류 옵션(`--domain`·`--kind`·`--knowledge`·`--classification-reason`·`--allow-unclassified`·`--origin`·`--alias`·`--observes`)을 계속 받는다.
+- ledger 3 승격의 대상 기록은 원본을 인용하지 않는다(상위 원장은 하위를 인용할 수 없다). 원본 id 는 영수증 본문에 적힌다.
+- 증거(`evidence`) 기록의 ledger 3 승격은 원본 원장 범위에서 증언을 다시 확인하고, 실패하면 아무것도 쓰지 않고 종료 코드 1 로 거부한다. 증거물은 대상 원장 `exhibits/` 에 복사한다(대상 원장 키의 R2 사본은 다음 `sync`). 승격본은 화자를 그대로 가지며, 그 표지는 대상 원장의 승격 영수증(승격본을 `receipts` 로 인용)과 `promoted` 태그다. `testifies` 인용과 `audit` 은 표지만 믿지 않고 영수증 본문의 원본 원장(대상의 하위 원장)을 읽어 같은 영수증과 원본 증거 기록(화자·증거물·본문)을 찾을 때만 승격본으로 인정한다. 확인되지 않은 승격본 주장은 `speaker: user` 증언이 되지 못하고 감사 위반이다.
+- 폐지된 이름(`publish`, `verify`, `rollback`, `classify`, `capture`, `blob` 의 쓰기 하위 명령, `hook authoring`)은 종료 코드 64 와 새 이름 안내만 내고 아무것도 하지 않는다. 전신 blob 은 받기만 하므로 `gujo blob push` 와 `gujo blob config --access-key/--secret-key` 도 64 다.
+- `enact`·`amend`(와 화면 편집)는 처리 유형 `ruling`·`appeal`·`proposal`·`redaction`·`registration`·`contents`·`report`·`promotion-receipt`·`finding` 을 공포하지 않고 종료 코드 1 과 전용 명령 안내를 낸다. `repeal`·`amend`·화면 편집·`restore` 의 개정·폐지는 대상 기록의 실제 유형으로 판정한다: 대법원 결정(`ruling` 의 `level: supreme`)·가림 기록·승격 영수증(`promotion-receipt`)은 어느 명령으로도 개정·폐지하지 못하고, 항소심 결정·이의·개정안·판결 등록·목차·보고·사실인정은 전용 명령(`court`·`judgment`·`dream`/`contents`·`finding`)의 경로만 개정·폐지한다(그 밖은 종료 코드 1). `restore <batch>` 는 묶음 안에 되돌릴 수 없는 기록이 하나라도 있으면 아무것도 쓰지 않고 종료 코드 1 과 이유 목록을 낸다. 드리밍 묶음(드리밍 보고가 적은 묶음)은 예외로, 드리밍이 만든 사실인정·목차·보고와 아직 심리되지 않은 이의·개정안까지 CLI `restore` 가 되돌린다(이미 결정이 난 이의·개정안이 있으면 종료 코드 1). 판결 등록의 확정(`status: confirmed` 로 등록·개정)은 `--testimony <speaker: user 증거 id>` 가 없으면, 확정 판결 등록의 개정·폐지(`judgment amend`·`judgment repeal`·`restore`)는 대법원 결정의 `per-ruling` 인용이 없으면 종료 코드 1 이다(확정 판결의 변경은 `court` 개정안 → 대법원 결정의 조치). `promote` 는 지식 기록(`record`·`article`·`judgment`)과 `evidence` 만 승격하고 그 밖의 유형은 종료 코드 1 이다. 에이전트 세션(실행 도구 세션 id 환경 변수·`AI_AGENT`·`CLAUDECODE`·`human` 이 아닌 `AGENT_WIKI_RUNTIME`)에서 작성자가 사람(`user:`)이면 공포·`dream resume` 은 종료 코드 1 이다. 사람 공포의 `--speaker` 는 `user` 만 받는다.
+- ledger 2 원장의 `enact`·`amend`·`repeal` 은 모델 기록 옵션(`--runtime`·`--model` 등)을 쓰지 않고, 받으면 무시함을 표준 에러에 알린다.
+- `dream run --scheduled` 는 드리밍 기기가 아닌 곳에서 아무것도 하지 않고 종료 코드 0 이다(`dream run` 은 거부 1).
+- 그 밖의 옛 쓰기 명령(`discuss`, `learn`, `review`, `event`, `task`, `agent` 등)은 ledger 2 원장에서만 동작하고, ledger 3 원장에서는 64 와 새 명령 안내를 낸다. `checkpoint` 는 두 형식 모두에서 동작한다.
+- 종료 코드: 0 성공, 1 거부(모델 미상, 증언 불일치, 전신 쓰기, 소환 범위 밖, 기기 키 미등록, 드리밍 기기 아님, 허용되지 않은 관계, 안전장치 위반, 처리 유형의 일반 공포, 되돌릴 수 없거나 전용 경로가 필요한 대상의 개정·폐지·원상회복, 승격할 수 없는 유형, 에이전트 세션의 사람 작성자), 2 감사 위반, 64 사용법 오류·폐지된 명령.
+- 읽기 전용 프록시는 공포·개정·폐지·원상회복·사실인정·`exhibit put`·가림·적재·동기화·`dream run|resume`·심급의 쓰기·판결 등록·승격·원장 설정·훅을 거부한다.

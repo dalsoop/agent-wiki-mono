@@ -72,7 +72,8 @@ import Testing
         #expect(GujoSync(root: work).status().dirty == 1)
     }
 
-    @Test func syncPushesLocalCommitsToSeed() throws {
+    /// 결정 0007: 전신(옛 원장)은 읽기 pull 만 — 로컬 커밋이 있어도 시드로 push 하지 않는다.
+    @Test func predecessorSyncPullsButNeverPushes() throws {
         let (work, seed) = try makeRepoPair()
         defer { try? FileManager.default.removeItem(at: work.deletingLastPathComponent()) }
         try "pushed".write(
@@ -85,11 +86,12 @@ import Testing
         guard case .success(let outcome) = result else {
             Issue.record("sync 실패: \(result)"); return
         }
-        #expect(outcome.pushed)
-        #expect(sync.status().ahead == 0)
-        // seed 가 실제로 받았는지 — 커밋 수로 확인
+        #expect(outcome.pushed == false)
+        #expect(outcome.fetched == ["origin"])
+        #expect(sync.status().ahead == 1)
+        // seed 는 받지 않았다 — 커밋 수 그대로
         let seedLog = GujoSync.run("git", ["-C", seed.path, "rev-list", "--count", "main"], cwd: nil)
-        #expect(seedLog.out == "2")
+        #expect(seedLog.out == "1")
     }
 
     @Test func syncStampsLastSyncTime() throws {

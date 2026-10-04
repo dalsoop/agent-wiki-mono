@@ -27,9 +27,11 @@ extension LedgerIndex {
                 let mtime = values?.contentModificationDate?.timeIntervalSince1970 ?? 0
                 let size = values?.fileSize ?? -1
                 if let k = known[p], k.mtime == mtime, k.size == size { continue }
+                // ledger 3 파일은 읽기 전용 투영으로 같은 색인에 싣는다(결정 0007).
                 guard let text = try? String(contentsOf: url, encoding: .utf8),
-                      let parsed = LedgerObject.parse(text) else { continue }
-                upsert(parsed.object, path: p, mtime: mtime, size: size)
+                      let object = LedgerObject.parse(text)?.object ?? LawLedgerProjection.object(fromText: text)
+                else { continue }
+                upsert(object, path: p, mtime: mtime, size: size)
                 upserted += 1
             }
         }

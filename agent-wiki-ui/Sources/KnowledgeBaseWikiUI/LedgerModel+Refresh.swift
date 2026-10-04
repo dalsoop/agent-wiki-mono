@@ -156,9 +156,16 @@ extension LedgerModel {
             objects = []
             return
         }
-        let result = store.scan(cache: &scanCache)
-        guard result.changed || objects.isEmpty || worldChanged else { return }  // 무변경 → 렌더 무효화 없음
-        objects = result.objects
+        if isLedgerThreeWorld {
+            // ledger 3 원장 — 읽기 전용 투영으로 같은 화면에 싣는다(결정 0007).
+            let projected = ledgerThreeObjects(root: store.root)
+            guard projected.map(\.id) != objects.map(\.id) || worldChanged else { return }
+            objects = projected
+        } else {
+            let result = store.scan(cache: &scanCache)
+            guard result.changed || objects.isEmpty || worldChanged else { return }  // 무변경 → 렌더 무효화 없음
+            objects = result.objects
+        }
         rebuildDerived(store: store)
         refreshRepositoryPresentation()
         publishState()

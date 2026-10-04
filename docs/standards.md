@@ -68,3 +68,19 @@ swift build --package-path apps/agent-wiki-reader
 
 - world 목록은 `~/.memo-citation-ledger/config.json` 하나가 정본이다. 경로는 StateRootKit `hostPath`로 해석하므로 테넌트 컨텍스트에서도 호스트 파일을 읽는다. 앱이 자기 설정에 world 경로를 따로 저장하지 않는다.
 - 원격 호스트 주소는 EndpointRouterKit이나 `~/.gitlab-status-ui/endpoints.json`에서 얻는다. 소스에 새 호스트 이름을 적지 않는다.
+
+## agent-law (ledger 3)
+
+근거: 결정 0007.
+
+- ledger 3 기록 형식의 파서·직렬화는 공용 원장 읽기 킷(`swiftkit` WikiLedgerKit) 하나에만 둔다. 엔진과 다른 앱은 그것을 쓴다. swift-app-mono 사본은 이 코드를 그대로 옮긴다.
+- 처리 기록 유형 집합, 관계 집합, 본문 머리 칸 키 목록은 각각 한 곳의 상수다. 다른 곳에 다시 적으면 위반이다.
+- 전신 쓰기 거부는 쓰기 게이트 한 곳에서 판정한다. 명령마다 판정을 복사하지 않는다. 옛 승격(`promotion publish`)도 대상 원장에 같은 게이트를 적용한다(`PromotionTargetGate`).
+- 처리 유형별 허용 공포 경로(일반 공포의 처리 유형 거부, 개정·폐지 대상의 실제 유형 판정, 판결 등록의 확정·확정 판결 변경 규칙, 가림 기록의 예약 태그)는 `LawEnactPath` 한 곳에서 판정한다. 전용 명령의 서비스는 `LawEnactService.enact(…, path:)` 로 자기 경로를 넘기고, 원상회복(`LawStore.restore`·`LawEnactService.restore(…, path:)`)도 만드는 기록마다 같은 판정을 쓰기 전에 거친다. 원상회복의 기록별 경로(드리밍 묶음의 드리밍 기록은 `dream`·`court`, 결정이 난 사건은 거부)도 `LawEnactPath.swift` 의 `LawRestorePaths` 한 곳에서 정한다. 공포 검증(`LawEnactValidator`)은 개정·폐지 허용을 다시 판정하지 않는다.
+- 사람 작성자의 에이전트 세션 거부는 `LawActorResolution` 한 곳에서 판정한다.
+- 옛 `LedgerObject` 코어는 바꾸지 않는다. ledger 3 는 별도 타입이다.
+- ledger 3 원장 파일에 쓰는 코드는 `LawStore.enact`(와 그것을 부르는 원상회복 등)만 사용한다. 위 "원장 쓰기" 절의 `LedgerStore.publish` 규칙과 같은 뜻이다.
+- `LawRuntime` 의 값(`claude-code`·`codex` 등)은 실행 파일 이름이 아니라 기록 어휘이므로 그 상수에만 둔다. 실행 도구를 부를 때는 지원 CLI 목록을 쓴다.
+- 분야 8개는 ledger 2 분류(`LedgerClassificationInput.domains`)와 ledger 3 사실인정(`LawDomain`)에 따로 있다. ledger 2 는 전신으로만 남으므로 새 값은 `LawDomain` 에만 더한다.
+- 실행 도구별 세션 id 환경 변수 이름은 지원 CLI 목록 한 곳에 둔다.
+- R2 키는 키체인에서만 읽는다.

@@ -20,15 +20,8 @@ public struct AgentWikiGlobalService: Sendable {
         try DurableAppLayout.ensureDatabase(at: AppPaths.sqliteFile)
     }
 
-    /// 데모 상태: `uname -s`. 실제 앱에서 도메인 명령으로 교체.
-    /// 실패는 문자열로 삼키지 않는다.
+    /// 동기화 표시: `agent-law` 의 마지막 동기화 시각·커밋 대기 수·push 여부(`AgentLawSyncSummary`).
     public func status() async throws -> String {
-        let r = await runner.run(AppPaths.uname, ["-s"])
-        guard r.ok else {
-            let detail = r.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-            let message = detail.isEmpty ? "uname failed (exit \(r.exitCode))" : detail
-            throw AgentWikiGlobalError.commandFailed(message)
-        }
-        return r.trimmedStdout
+        AgentLawSyncSummary.current()
     }
 }

@@ -10,6 +10,10 @@ public struct BoundWorld: Codable, Equatable, Sendable {
     public var parent: String?
     /// 사람용 표시 이름 — 없으면 slug(name) 그대로.
     public var display: String?
+    /// ledger 3 원장 키(`LedgerKeyFormat`). 등록 후 바꿀 수 없다. 근거: 결정 0007.
+    public var key: String?
+    /// 이 원장이 이어받은 옛 원장(world 이름) 하나. 전신은 사슬이 아니다. parent 와 별개.
+    public var predecessor: String?
 
     /// 사람용 표시 이름 (display 가 있으면 사용, 없으면 표준 기본값 매핑 또는 name).
     public var displayName: String {
@@ -18,13 +22,15 @@ public struct BoundWorld: Codable, Equatable, Sendable {
 
     public init(
         name: String, rootPath: String, layer: String? = nil, parent: String? = nil,
-        display: String? = nil
+        display: String? = nil, key: String? = nil, predecessor: String? = nil
     ) {
         self.name = name
         self.rootPath = rootPath
         self.layer = layer
         self.parent = parent
         self.display = display
+        self.key = key
+        self.predecessor = predecessor
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -34,6 +40,8 @@ public struct BoundWorld: Codable, Equatable, Sendable {
         try container.encodeIfPresent(layer, forKey: .layer)
         try container.encodeIfPresent(parent, forKey: .parent)
         try container.encodeIfPresent(display, forKey: .display)
+        try container.encodeIfPresent(key, forKey: .key)
+        try container.encodeIfPresent(predecessor, forKey: .predecessor)
     }
 }
 
@@ -41,22 +49,50 @@ public struct BoundLedgerFile: Codable, Equatable, Sendable {
     public var rootPath: String?
     public var worlds: [BoundWorld]?
     public var currentWorld: String?
+    /// 테넌트 slug → world 이름. 정본은 이 호스트 설정. 근거: 결정 0007.
+    public var tenantMap: [String: String]?
+    /// 등록된 기기 키 목록(형식은 `LedgerKeyFormat`, 등록 후 불변).
+    public var devices: [String]?
+    /// 이 기기의 기기 키.
+    public var currentDevice: String?
+    /// 드리밍 기기 키(하나).
+    public var dreamDevice: String?
+    /// agent-law R2 엔드포인트·버킷(비밀 아님). 키는 키체인에만 둔다. 근거: docs/security.md "R2 와 세션".
+    public var lawStorage: LawStorageSettings?
+    /// 심급(중재자 후보·대법원 이의 기간). 비우면 기본값. 근거: docs/business-rules.md "심급제".
+    public var court: LawCourtSettings?
+    /// 드리밍(실행 도구·모델·간격·안전장치·저장소 목록). 비우면 기본값. 근거: docs/business-rules.md "드리밍".
+    public var dream: LawDreamSettings?
     /// 앱이 주입. Codable 에는 안 실린다.
     public var fallbackWorldName: String
 
     enum CodingKeys: String, CodingKey {
-        case rootPath, worlds, currentWorld
+        case rootPath, worlds, currentWorld, tenantMap, devices, currentDevice, dreamDevice, lawStorage, court, dream
     }
 
     public init(
         rootPath: String? = nil,
         worlds: [BoundWorld]? = nil,
         currentWorld: String? = nil,
+        tenantMap: [String: String]? = nil,
+        devices: [String]? = nil,
+        currentDevice: String? = nil,
+        dreamDevice: String? = nil,
+        lawStorage: LawStorageSettings? = nil,
+        court: LawCourtSettings? = nil,
+        dream: LawDreamSettings? = nil,
         fallbackWorldName: String = "gujo-wiki"
     ) {
         self.rootPath = rootPath
         self.worlds = worlds
         self.currentWorld = currentWorld
+        self.tenantMap = tenantMap
+        self.devices = devices
+        self.currentDevice = currentDevice
+        self.dreamDevice = dreamDevice
+        self.lawStorage = lawStorage
+        self.court = court
+        self.dream = dream
         self.fallbackWorldName = fallbackWorldName
     }
 
@@ -65,6 +101,13 @@ public struct BoundLedgerFile: Codable, Equatable, Sendable {
         rootPath = try container.decodeIfPresent(String.self, forKey: .rootPath)
         worlds = try container.decodeIfPresent([BoundWorld].self, forKey: .worlds)
         currentWorld = try container.decodeIfPresent(String.self, forKey: .currentWorld)
+        tenantMap = try container.decodeIfPresent([String: String].self, forKey: .tenantMap)
+        devices = try container.decodeIfPresent([String].self, forKey: .devices)
+        currentDevice = try container.decodeIfPresent(String.self, forKey: .currentDevice)
+        dreamDevice = try container.decodeIfPresent(String.self, forKey: .dreamDevice)
+        lawStorage = try container.decodeIfPresent(LawStorageSettings.self, forKey: .lawStorage)
+        court = try container.decodeIfPresent(LawCourtSettings.self, forKey: .court)
+        dream = try container.decodeIfPresent(LawDreamSettings.self, forKey: .dream)
         fallbackWorldName = "gujo-wiki"
     }
 
@@ -125,6 +168,28 @@ public struct WorldBindingCatalog: Equatable, Sendable {
         ancestorNames(of: name).contains(candidate)
     }
 
+    /// 이 world 가 선언한 전신(하나). 전신의 전신은 따라가지 않는다.
+    public func predecessorName(of name: String) -> String? {
+        guard let predecessor = world(named: name)?.predecessor, predecessor != name else { return nil }
+        return predecessor
+    }
+
+    /// 이 world 를 전신으로 선언한 world 들(후신).
+    public func successorNames(of name: String) -> [String] {
+        worlds.filter { $0.name != name && $0.predecessor == name }.map(\.name)
+    }
+
+    /// 다른 world 의 전신으로 지정된 world 는 보관됨(모든 쓰기 거부). 근거: 결정 0007.
+    public func isArchived(_ name: String) -> Bool {
+        !successorNames(of: name).isEmpty
+    }
+
+    /// ledger 3 world = 원장 키나 전신을 가진 world. 기기 키 판정은 이 world 에만 적용한다.
+    public func isLedgerThree(_ name: String) -> Bool {
+        guard let world = world(named: name) else { return false }
+        return world.key != nil || world.predecessor != nil
+    }
+
     public static func merging(refs: [(name: String, rootPath: String)], bindings: [BoundWorld]) -> WorldBindingCatalog {
         let byName = Dictionary(uniqueKeysWithValues: bindings.map { ($0.name, $0) })
         let merged = refs.map { ref in
@@ -134,7 +199,9 @@ public struct WorldBindingCatalog: Equatable, Sendable {
                 rootPath: ref.rootPath,
                 layer: extra?.layer,
                 parent: extra?.parent,
-                display: extra?.display)
+                display: extra?.display,
+                key: extra?.key,
+                predecessor: extra?.predecessor)
         }
         return WorldBindingCatalog(worlds: merged)
     }
@@ -195,6 +262,7 @@ public enum WorldConfigStore {
     }
 
     /// worlds 목록을 갈아끼우되 같은 이름의 layer/parent/display 는 유지한다.
+    /// 원장 키와 전신은 불변이므로 새 항목에 값이 없으면 항상 옛 값을 유지한다.
     public static func replacingWorlds(
         _ file: BoundLedgerFile,
         with worlds: [BoundWorld]
@@ -202,15 +270,15 @@ public enum WorldConfigStore {
         let previous = Dictionary(
             uniqueKeysWithValues: file.effectiveWorlds.map { ($0.name, $0) })
         let merged = worlds.map { world in
-            guard world.layer == nil, world.parent == nil, world.display == nil,
-                  let old = previous[world.name]
-            else { return world }
-            return BoundWorld(
-                name: world.name,
-                rootPath: world.rootPath,
-                layer: world.layer ?? old.layer,
-                parent: world.parent ?? old.parent,
-                display: world.display ?? old.display)
+            guard let old = previous[world.name] else { return world }
+            var next = world
+            next.key = world.key ?? old.key
+            next.predecessor = world.predecessor ?? old.predecessor
+            guard world.layer == nil, world.parent == nil, world.display == nil else { return next }
+            next.layer = old.layer
+            next.parent = old.parent
+            next.display = old.display
+            return next
         }
         var next = file
         next.worlds = merged
@@ -339,7 +407,9 @@ public enum WorldMutation {
         path: String,
         layer: String?,
         parent: String?,
-        display: String? = nil
+        display: String? = nil,
+        key: String? = nil,
+        predecessor: String? = nil
     ) -> Result<BoundLedgerFile, WorldMutationFailure> {
         if let error = WorldTenantBinding.requireTenantFlags(layer: layer, parent: parent) {
             return .failure(WorldMutationFailure(error))
@@ -350,9 +420,27 @@ public enum WorldMutation {
         {
             return .failure(WorldMutationFailure(error))
         }
+        let existing = catalog.world(named: name)
+        if let error = WorldLedgerKeyBinding.validate(
+            worldName: name, key: key, existing: existing, catalog: catalog)
+        {
+            return .failure(WorldMutationFailure(error))
+        }
+        let resolvedKey = key ?? existing?.key
+        let resolvedPredecessor = predecessor ?? existing?.predecessor
         var worlds = file.effectiveWorlds
         worlds.removeAll { $0.name == name }
-        worlds.append(BoundWorld(name: name, rootPath: path, layer: layer, parent: parent, display: display))
+        worlds.append(BoundWorld(
+            name: name, rootPath: path, layer: layer, parent: parent, display: display,
+            key: resolvedKey, predecessor: resolvedPredecessor))
+        if let error = WorldPredecessorBinding.validate(
+            worldName: name,
+            requested: predecessor,
+            existing: existing?.predecessor,
+            catalog: WorldBindingCatalog(worlds: worlds))
+        {
+            return .failure(WorldMutationFailure(error))
+        }
         var next = file
         next.worlds = worlds
         return .success(next)
@@ -412,7 +500,9 @@ public enum WorldCatalogLoader {
                     rootPath: current.rootPath,
                     layer: extra?.layer,
                     parent: extra?.parent,
-                    display: extra?.display ?? current.display))
+                    display: extra?.display ?? current.display,
+                    key: extra?.key,
+                    predecessor: extra?.predecessor))
         }
         return next
     }

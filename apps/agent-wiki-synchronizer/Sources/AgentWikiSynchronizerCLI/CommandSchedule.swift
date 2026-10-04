@@ -5,20 +5,10 @@ import WikiCLIShared
 import LocalizationKit
 import CommandKit
 
-private struct ScheduleTick {
-    let role: String
-    let tickArg: String
-    let interval: [String: Int]
-}
+// 예약 틱 목록(`scheduleTicks`)과 거둘 옛 틱(`retiredScheduleRoles`)은 WikiCLIShared `ScheduleTicks.swift` 한 곳.
 
 func runSchedule(arguments: [String]) {
-    let ticks: [ScheduleTick] = [
-        ScheduleTick(role: "checkpoint", tickArg: "checkpoint", interval: ["Hour": 21, "Minute": 30]),
-        ScheduleTick(role: "librarian", tickArg: "librarian", interval: ["Hour": 3, "Minute": 30]),
-        ScheduleTick(role: "run-reaper", tickArg: "reaper", interval: ["Minute": 45]),
-        ScheduleTick(role: "verifier", tickArg: "verifier", interval: ["Hour": 4, "Minute": 30, "Weekday": 1]),
-        ScheduleTick(role: "retrospective", tickArg: "retrospective", interval: ["Hour": 5, "Minute": 0, "Weekday": 1]),
-    ]
+    let ticks = scheduleTicks
     let agentsDir = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/LaunchAgents")
 
@@ -43,7 +33,28 @@ func runSchedule(arguments: [String]) {
     } catch {
         fail("LaunchAgents 디렉터리 생성 실패: \(error.localizedDescription)")
     }
+    reapRetiredScheduleTicks(agentsDir: agentsDir)
     registerScheduleTicks(ticks, agentsDir: agentsDir, cliPath: cliPath, logDir: logDir)
+}
+
+/// 등록된 plist 하나를 내리고 지운다(불안전 plist 수리·옛 틱 거두기·인자 바뀐 틱 재등록이 함께 쓴다).
+private func reapSchedulePlist(_ url: URL) {
+    _ = launchctl(["unload", "-w", url.path])
+    do {
+        try FileManager.default.removeItem(at: url)
+    } catch {
+        fail("plist 제거 실패(\(url.path)): \(error.localizedDescription)")
+    }
+}
+
+/// 예약에서 뺀 옛 틱의 plist 를 거둔다.
+private func reapRetiredScheduleTicks(agentsDir: URL) {
+    for role in retiredScheduleRoles {
+        let url = plistURL(role: role, agentsDir: agentsDir)
+        guard FileManager.default.fileExists(atPath: url.path) else { continue }
+        reapSchedulePlist(url)
+        print("옛 예약 틱 거둠: \(role) (ledger 3 대응 없음)") // allow:debug — 명령 결과 출력
+    }
 }
 
 private func plistURL(role: String, agentsDir: URL) -> URL {
@@ -76,14 +87,13 @@ private func registerScheduleTicks(
         if FileManager.default.fileExists(atPath: url.path) {
             if let prog = programArg0(at: url),
                DualEntry.isGUIMasquerading(at: prog) || !DualEntry.isSafeCLIExecutable(prog) {
-                _ = launchctl(["unload", "-w", url.path])
-                do {
-                    try FileManager.default.removeItem(at: url)
-                } catch {
-                    fail("불안전 plist 제거 실패(\(url.path)): \(error.localizedDescription)")
-                }
+                reapSchedulePlist(url)
                 print(CLILocalization.format("CommandSchedule.print-4", t.role, prog))
                 repaired += 1
+            } else if programArguments(at: url).map({ Array($0.dropFirst()) }) != t.arguments {
+                // 인자가 바뀐 틱(옛 `tick checkpoint|verifier` 등)은 거두고 새 인자로 다시 등록한다.
+                reapSchedulePlist(url)
+                print("인자가 바뀐 예약 틱 다시 등록: \(t.role)") // allow:debug — 명령 결과 출력
             } else {
                 continue
             }
@@ -105,13 +115,7 @@ private func writeSchedulePlist(
     cliPath: String,
     logDir: String
 ) -> Bool {
-    let dict: [String: Any] = [
-        "Label": "net.ranode.memo-citation-ledger.\(tick.role)",
-        "ProgramArguments": [cliPath, "tick", tick.tickArg],
-        "StandardOutPath": "\(logDir)/\(tick.role).log",
-        "StandardErrorPath": "\(logDir)/\(tick.role).err.log",
-        "StartCalendarInterval": tick.interval,
-    ]
+    let dict = schedulePlist(tick: tick, cliPath: cliPath, logDir: logDir)
     let data: Data
     do {
         data = try PropertyListSerialization.data(fromPropertyList: dict, format: .xml, options: 0)
@@ -130,7 +134,27 @@ private func writeSchedulePlist(
     }
 }
 
+/// 순수 plist 내용 — CLI 경로와 인자, 로그, 간격만(RunAtLoad·KeepAlive 없음).
+func schedulePlist(tick: ScheduleTick, cliPath: String, logDir: String) -> [String: Any] {
+    var dict: [String: Any] = [
+        "Label": "net.ranode.memo-citation-ledger.\(tick.role)",
+        "ProgramArguments": [cliPath] + tick.arguments,
+        "StandardOutPath": "\(logDir)/\(tick.role).log",
+        "StandardErrorPath": "\(logDir)/\(tick.role).err.log",
+    ]
+    switch tick.interval {
+    case .calendar(let calendar): dict["StartCalendarInterval"] = calendar
+    case .every(let seconds): dict["StartInterval"] = seconds
+    }
+    return dict
+}
+
 private func programArg0(at url: URL) -> String? {
+    guard let first = programArguments(at: url)?.first, !first.isEmpty else { return nil }
+    return first
+}
+
+private func programArguments(at url: URL) -> [String]? {
     let data: Data
     do {
         data = try Data(contentsOf: url)
@@ -143,10 +167,15 @@ private func programArg0(at url: URL) -> String? {
     } catch {
         return nil
     }
-    guard let plist = object as? [String: Any],
-          let args = plist["ProgramArguments"] as? [String],
-          let first = args.first, !first.isEmpty else { return nil }
-    return first
+    guard let plist = object as? [String: Any], let args = plist["ProgramArguments"] as? [String] else { return nil }
+    return args
+}
+
+private func fmt(_ interval: ScheduleInterval) -> String {
+    switch interval {
+    case .every(let seconds): return "\(seconds / 60)분마다"
+    case .calendar(let calendar): return fmt(calendar)
+    }
 }
 
 private func fmt(_ i: [String: Int]) -> String {

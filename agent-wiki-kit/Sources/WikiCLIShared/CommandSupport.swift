@@ -23,25 +23,33 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
        leading --as/--world only
 
   help | --help | -h              이 도움말 출력(원장 설정 불필요)
-  hook authoring                  하네스 훅 stdin → ~/.agent-wiki/authoring.json (원장 설정 불필요)
+  기본 원장: 전역 CLI 는 agent-law (ledger 3). 옛 원장(gujo-wiki 등)은 읽기 전용 전신.
+
+  agent-law (ledger 3) — 결정 0007
+  enact --title <t> [--type <유형>] [--tag <t>]… [--cite <id>[:<rel>]]… [--exhibit <sha>]…
+        [--speaker <s>] [--batch <id>] [--runtime <r>] [--model <m>] [--effort <e>]
+                                  stdin 본문 공포 → id 한 줄. 모델 기록은 인자 또는 AGENT_WIKI_* 환경 변수
+  amend <id> [--also <id>]… --title <t> …     개정(stdin 본문)
+  repeal <id> [--reason <r>]                  폐지
+  restore <batch>                             원상회복(되돌리는 새 기록)
+  audit                                       무결성 감사(위반이면 종료 코드 2)
+  finding <id> --subject <s> --certainty <c> --domain <d> --reason <r> [--from <t>] [--until <t>]
+  exhibit put <파일> | get <sha>               증거물
+  promote <id> --to <원장>                     승격(영수증 규칙은 옛 승격과 같음)
+  world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]
+  world tenant-map <테넌트> <원장> | world device register <키> | world dream-device <키>
+  sync · archive · redact · summon · dream · court · judgment · contents · report models · hook session
+  폐지(종료 코드 64): publish→enact · verify→audit · rollback→restore · classify→finding ·
+                     capture→exhibit put · blob put|gc · hook authoring→hook session
+
   init <경로>                      원장 루트 지정·생성
-  capture <url> [--title <제목>]   웹 원자료 수집 → 수집함(트리아지 대기)으로 발행. 본문은 stdin(발췌)
-  publish [--title <제목>] [--type <유형>] [--origin <url>] [--tag <tag>|--alias <별칭>]...
-          [--cite <id> [rel]]... [--observes <event-id>]... [--supersedes <id>]...
-          [--retracts <id>] [--batch <id>] [--domain <d> --kind <k> --knowledge <n>
-          --classification-reason <근거>] [--allow-unclassified]
-                                  stdin 본문으로 새 객체 발행. 3축+근거를 주면 선별 객체도 같은 batch에 자동 발행
-  classify <id|제목> --domain <d> --kind <k> --knowledge <n> --reason <근거>
-                                  기존 객체에 선별 객체를 발행. 기존 선별은 개정해 최신 분류만 투영
   show <id접두어|제목>             객체 출력(본문 포함) — id 접두어 또는 제목 부분일치
   list [--all] [--json]           head 목록(--all 이면 전체, 시간순)
   history <id접두어>               개정 계보(supersedes 사슬, 병합 개정은 갈래도)
   cited-by <id접두어>              이 객체를 인용한 객체들
-  rollback <batch-id>             작업 묶음 일괄 롤백(재발행/철회 — 역사에 남음)
   search <질의어> [--fleet] [--as-agent <id>] [--domain <d>] [--kind <k>] [--knowledge <tech|domain|preference>] [--limit N] [--json]
   context <질문> [--fleet] [--as-agent <id>]
   path <id접두어> <id접두어>        두 객체 사이 인용 경로 추적(BFS) — "이 결론이 어디서 왔나"
-  verify                          전 객체 무결성 검사(변조·참조·중복·삭제)
   \(tool) repository summary [--path <repo>] --json
                                   canonical repository·task·knowledge·promotion·integrity v1 계약
   task bind <task> --runtime-task <id> --dispatch <id> [--knowledge <id>] [--rule <text>] --json
@@ -88,7 +96,7 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
   diff <id> [<id2>]               개정 비교(라인 diff) — 나무위키 비교/역사
   learn                           학습 지표(일자별 성공률·개정·철회·경험칙) — 경험학습 측정
   rules [역할]                    주입될 경험칙 미리보기(SPL — 회고를 실행 프롬프트로)
-  blob put [<파일>]|get <sha>|open <sha>|info <sha>|refs <sha>|path|verify|list|gc   원본 blob (불변, 사건이 sha 로 참조)
+  blob get <sha>|open <sha>|info <sha>|refs <sha>|path|verify|list   원본 blob 읽기(ledger 2)
                                   open=기본앱으로(PDF·MP3) · info=종류·크기·연결 · refs=역참조
   event start --subject <> --rel <> [--source <sha>]   작업(run) 시작 → run-id 출력 (outcome=pending)
   event step --parent <run-id> --subject <> --rel <> [--source <sha>]   작업 안 단계 기록
@@ -99,7 +107,7 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
                                   실행 중인 앱 조종 (상태 미러로 확인)
   root                            원장 루트 출력
 
-exit: 0 성공 · 1 실패 · 2 verify 위반 발견
+exit: 0 성공 · 1 실패·거부 · 2 audit 위반 · 64 사용법 오류·폐지된 명령
 """
 }
 

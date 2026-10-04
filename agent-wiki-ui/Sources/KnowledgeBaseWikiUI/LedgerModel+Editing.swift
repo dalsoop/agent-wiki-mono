@@ -34,16 +34,16 @@ extension LedgerModel {
     }
 
     private func saveRevision() {
-        guard let store, let headID = loadedHeadID,
+        guard let headID = loadedHeadID,
               let current = objects.first(where: { $0.id == headID }) else { return }
         let title = editorTitle.trimmingCharacters(in: .whitespaces)
         guard editorBody != current.body || title != (current.title ?? "") else { return }
         do {
-            let revision = try store.publish(
-                author: "human", title: title.isEmpty ? nil : title,
-                body: editorBody, cites: current.cites, supersedes: headID)
-            loadedHeadID = revision.id
-            selectedDocumentID = revision.id
+            // 저장 = 개정. ledger 3 는 공포 경로, ledger 2 는 옛 발행(LedgerHumanEdit 한 자리).
+            let revisionID = try performEdit(.amend(
+                target: headID, title: title.isEmpty ? nil : title, body: editorBody, cites: current.cites))
+            loadedHeadID = revisionID
+            selectedDocumentID = revisionID
             refresh()
             errorMessage = nil
         } catch {
@@ -53,11 +53,11 @@ extension LedgerModel {
 
     func newDocument() {
         flushPendingSave()
-        guard let store else { return }
         do {
-            let object = try store.publish(author: "human", title: nil, body: "")
+            // ledger 3 는 빈 본문 공포를 거부하므로 자리 표시 본문으로 시작한다.
+            let objectID = try performEdit(.create(title: nil, body: isLedgerThreeWorld ? "(새 기록)\n" : "", cites: []))
             refresh()
-            select(documents.first { $0.id == object.id })
+            select(documents.first { $0.id == objectID })
         } catch {
             errorMessage = "생성 실패: \(error)"
         }
@@ -66,9 +66,8 @@ extension LedgerModel {
     /// 사용자에겐 "삭제" — 배관은 철회 발행. 기록은 남고 복구 가능.
     func delete(_ document: LedgerDocument) {
         flushPendingSave()
-        guard let store else { return }
         do {
-            _ = try store.publish(author: "human", body: "deleted by user", retracts: document.head.id)
+            _ = try performEdit(.repeal(target: document.head.id, reason: "deleted by user"))
             if selectedDocumentID == document.id { select(nil) }
             refresh()
         } catch {
@@ -78,14 +77,11 @@ extension LedgerModel {
 
     /// 삭제 복구 — 철회 발행을 철회할 수는 없으니 내용을 새 판으로 재발행.
     func restoreDeleted(_ document: LedgerDocument) {
-        guard let store else { return }
         do {
-            let object = try store.publish(
-                author: "human", title: document.head.title, body: document.head.body,
-                cites: [.init(id: document.head.id, rel: "restores")])
+            let objectID = try performEdit(.restore(target: document.head.id))
             showDeleted = false
             refresh()
-            select(documents.first { $0.id == object.id })
+            select(documents.first { $0.id == objectID } ?? documents.first { $0.id == document.head.id })
         } catch {
             errorMessage = "복구 실패: \(error)"
         }
@@ -94,15 +90,13 @@ extension LedgerModel {
     /// 내 기록에 근거 인용 부착 — 기존 인용 + 새 인용으로 개정판 발행.
     func attachCitation(to document: LedgerDocument, evidenceID: String, rel: String) {
         flushPendingSave()
-        guard let store else { return }
         var cites = document.head.cites.filter { $0.id != evidenceID }
         cites.append(.init(id: evidenceID, rel: rel))
         do {
-            let revision = try store.publish(
-                author: "human", title: document.head.title, body: document.head.body,
-                cites: cites, supersedes: document.head.id)
+            let revisionID = try performEdit(.amend(
+                target: document.head.id, title: document.head.title, body: document.head.body, cites: cites))
             refresh()
-            select(documents.first { $0.id == revision.id })
+            select(documents.first { $0.id == revisionID })
         } catch {
             errorMessage = "인용 부착 실패: \(error)"
         }
@@ -110,14 +104,12 @@ extension LedgerModel {
 
     func detachCitation(from document: LedgerDocument, evidenceID: String) {
         flushPendingSave()
-        guard let store else { return }
         let cites = document.head.cites.filter { $0.id != evidenceID }
         do {
-            let revision = try store.publish(
-                author: "human", title: document.head.title, body: document.head.body,
-                cites: cites, supersedes: document.head.id)
+            let revisionID = try performEdit(.amend(
+                target: document.head.id, title: document.head.title, body: document.head.body, cites: cites))
             refresh()
-            select(documents.first { $0.id == revision.id })
+            select(documents.first { $0.id == revisionID })
         } catch {
             errorMessage = "인용 해제 실패: \(error)"
         }
@@ -156,13 +148,11 @@ extension LedgerModel {
     /// 기록 패널에서 옛 판으로 복원 — 그 내용을 새 판으로 발행(역사는 그대로).
     func restore(version: LedgerObject, in document: LedgerDocument) {
         flushPendingSave()
-        guard let store else { return }
         do {
-            let revision = try store.publish(
-                author: "human", title: version.title, body: version.body,
-                cites: version.cites, supersedes: document.head.id)
+            let revisionID = try performEdit(.amend(
+                target: document.head.id, title: version.title, body: version.body, cites: version.cites))
             refresh()
-            select(documents.first { $0.id == revision.id })
+            select(documents.first { $0.id == revisionID })
         } catch {
             errorMessage = "복원 실패: \(error)"
         }
