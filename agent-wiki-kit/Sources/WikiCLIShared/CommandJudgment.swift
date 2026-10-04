@@ -32,7 +32,7 @@ public enum JudgmentRegistryError: Error, Equatable, CustomStringConvertible {
     public var description: String {
         switch self {
         case .notSharedLedger(let world):
-            return "판결 등록은 공유 원장(층 remoteShared 인 ledger 3 원장)에만 한다 — \(world) 는 아님. --world agent-law 로 주세요"
+            return "판결 등록은 공유 원장(층 remoteShared 인 ledger 3 원장)에만 한다 — \(world) 는 아님. --world \(LawLedgerDefaults.sharedWorldName) 로 주세요"
         case .noSharedLedger(let world):
             return "\(world) 와 그 상위에 공유 원장(층 remoteShared 인 ledger 3 원장)이 없음"
         case .invalidValue(let key, let value):

@@ -30,6 +30,8 @@ public enum LawDreamTrigger: String, Codable, Sendable {
 
 public enum LawDreamError: Error, Equatable, CustomStringConvertible {
     case dreamDeviceUnset
+    /// 드리밍 AI(실행 도구·모델)가 설정에 없다(`world ai dream`).
+    case aiUnset
     case notDreamDevice(current: String?, dream: String)
     case storageUnavailable(String)
     case notHuman(String)
@@ -38,6 +40,7 @@ public enum LawDreamError: Error, Equatable, CustomStringConvertible {
     public var description: String {
         switch self {
         case .dreamDeviceUnset: return "드리밍 기기가 지정되지 않음 — world dream-device <키>"
+        case .aiUnset: return LawDreamSettings.missingAIGuidance
         case .notDreamDevice(let current, let dream):
             return "드리밍 기기가 아님(이 기기 \(current ?? "미등록"), 드리밍 기기 \(dream)) — dream run 거부"
         case .storageUnavailable(let detail): return "드리밍에 R2 가 필요함: \(detail)"
@@ -233,7 +236,7 @@ public struct LawDreamService: Sendable {
             nextDue: state.lastRunDate.map { LawTime.format($0.addingTimeInterval(settings.interval)) },
             paused: pause.isPaused, pausedBy: pause.unacknowledgedRestores, alerts: alerts,
             deferred: state.deferred.count,
-            runner: "\(settings.resolvedCLI.rawValue):\(settings.resolvedModel):\(settings.resolvedEffort)")
+            runner: settings.runnerLabel ?? "(미설정)")
     }
 
     /// `dream resume` — 사람만. 확인하지 않은 원상회복 기록을 적은 재개 기록을 공포한다. 정지 상태가 아니면 nil.
@@ -252,6 +255,7 @@ public struct LawDreamService: Sendable {
 
     public func run(trigger: LawDreamTrigger) throws -> LawDreamOutcome {
         try checkDevice()
+        guard settings.ai != nil else { throw LawDreamError.aiUnset }
         var state = try loadState()
         var outcome = LawDreamOutcome(trigger: trigger)
         let started = clock.now()
@@ -305,7 +309,7 @@ public struct LawDreamService: Sendable {
         // 3~4. 원장마다 정리.
         var recordsByWorld: [String: [LawStoredRecord]] = [:]
         for target in targets { recordsByWorld[target.worldName] = target.store.scan() }
-        let request = settings.request(prompt: "")
+        let request = try settings.request(prompt: "")
         let actor = appActor(request.modelRecord)
         var nextDeferred: [LawDreamDeferred] = []
         var consumed: [String] = []

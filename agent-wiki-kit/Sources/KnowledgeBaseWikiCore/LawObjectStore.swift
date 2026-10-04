@@ -22,6 +22,8 @@ public enum LawObjectStoreError: Error, Equatable, Sendable, CustomStringConvert
     /// 그 밖의 HTTP 거부.
     case rejected(status: Int, detail: String)
     case configuration(String)
+    /// 호스트 설정에 엔드포인트가 없다(`world storage --endpoint`).
+    case endpointMissing
 
     public var description: String {
         switch self {
@@ -31,6 +33,7 @@ public enum LawObjectStoreError: Error, Equatable, Sendable, CustomStringConvert
         case .unreachable(let detail): return "R2 도달 실패: \(detail)"
         case .rejected(let status, let detail): return detail.isEmpty ? "R2 \(status)" : "R2 \(status): \(detail)"
         case .configuration(let detail): return "R2 설정 오류: \(detail)"
+        case .endpointMissing: return LawStorageSettings.missingEndpointGuidance
         }
     }
 
@@ -88,10 +91,11 @@ public struct LawStorageSettings: Codable, Equatable, Sendable {
     public var region: String?
 
     /// 버킷 이름은 결정 0007 이 정한 전용 버킷.
-    public static let defaultBucket = "agent-law"
+    public static let defaultBucket = LawLedgerDefaults.bucketName
     public static let defaultRegion = "auto"
-    /// 기존 R2 계정 엔드포인트(옛 원장 blob 과 같은 계정). 설정이 있으면 설정이 이긴다.
-    public static let defaultEndpoint = "https://3512fb9ec3513c795ed6293dc7210a8c.r2.cloudflarestorage.com"
+    /// 엔드포인트가 없을 때의 안내. 엔드포인트는 소스에 두지 않고 호스트 설정에서만 받는다
+    /// (docs/standards.md "원격 호스트 주소는 … 설정에서 얻는다", docs/security.md "R2 와 세션").
+    public static let missingEndpointGuidance = "R2 엔드포인트 미설정 — `agent-wiki world storage --endpoint <url>`"
 
     public init(endpoint: String? = nil, bucket: String? = nil, region: String? = nil) {
         self.endpoint = endpoint
@@ -99,7 +103,8 @@ public struct LawStorageSettings: Codable, Equatable, Sendable {
         self.region = region
     }
 
-    public var resolvedEndpoint: String { nonEmpty(endpoint) ?? Self.defaultEndpoint }
+    /// 설정한 엔드포인트. 없으면 nil — R2 를 쓰는 명령은 `missingEndpointGuidance` 로 실패하거나 그 단계를 건너뛴다.
+    public var resolvedEndpoint: String? { nonEmpty(endpoint) }
     public var resolvedBucket: String { nonEmpty(bucket) ?? Self.defaultBucket }
     public var resolvedRegion: String { nonEmpty(region) ?? Self.defaultRegion }
 
@@ -250,11 +255,14 @@ public struct LawR2Client: LawObjectStore {
         self.now = now
     }
 
-    /// 호스트 설정 + 키체인. 키가 없으면 `LawR2CredentialError.missing`.
+    /// 호스트 설정 + 키체인. 엔드포인트가 없으면 `LawObjectStoreError.endpointMissing`(키체인을 읽기 전),
+    /// 키가 없으면 `LawR2CredentialError.missing`.
     public static func standard(
         file: BoundLedgerFile, provider: any LawR2CredentialProviding = LawKeychainCredentialProvider()
     ) throws -> LawR2Client {
-        LawR2Client(settings: file.lawStorage ?? LawStorageSettings(), credentials: try provider.credentials())
+        let settings = file.lawStorage ?? LawStorageSettings()
+        guard settings.resolvedEndpoint != nil else { throw LawObjectStoreError.endpointMissing }
+        return LawR2Client(settings: settings, credentials: try provider.credentials())
     }
 
     public func putIfAbsent(key: String, data: Data, contentType: String) throws {
@@ -329,8 +337,9 @@ public struct LawR2Client: LawObjectStore {
         method: String, key: String?, query: [(String, String)], body: Data?,
         extraHeaders: [(String, String)] = []
     ) throws -> URLRequest {
-        guard let endpoint = URL(string: settings.resolvedEndpoint), let host = endpoint.host else {
-            throw LawObjectStoreError.configuration("엔드포인트가 URL 이 아님: \(settings.resolvedEndpoint)")
+        guard let raw = settings.resolvedEndpoint else { throw LawObjectStoreError.endpointMissing }
+        guard let endpoint = URL(string: raw), let host = endpoint.host else {
+            throw LawObjectStoreError.configuration("엔드포인트가 URL 이 아님: \(raw)")
         }
         let path = Self.encodedPath(bucket: settings.resolvedBucket, key: key)
         let canonicalQuery = SigV4Signer.canonicalQuery(query)

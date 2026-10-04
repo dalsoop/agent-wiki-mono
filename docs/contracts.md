@@ -73,7 +73,7 @@
 | `world list [--json]` | 등록된 world와 층·parent·표시 이름 |
 | `world add <name> <path> [--layer <층>] [--parent <world>]` | 설정에 world 추가. `--layer tenant`는 `--parent <remoteShared world>` 필수. 파서는 `--display <이름>`도 읽지만 허용 옵션 목록에 없어서 종료 코드 64로 거부된다 |
 | `world use <name>` | `currentWorld` 변경(전역 CLI는 이 값을 쓰지 않고 `--world` 없으면 `gujo-wiki`) |
-| `world set-layer <name> <층>` | 층 변경 |
+| `world set-layer <name> <층> [--parent <world>]` | 층 변경. 층은 `localPerson`·`tenant`·`remoteShared`·`repository`·`other` 중 하나(그 밖은 1). `tenant` 는 `--parent <remoteShared world>` 필수, `--parent` 는 `tenant` 에만. 공유 원장(`agent-law`)의 층도 이 값이 정본이다(이름으로 판정하지 않음) |
 | `init <path>` | `objects/`와 규약 파일·역할 정의를 만들고, 설정에 world를 등록하고 `currentWorld`로 지정 |
 
 ## 승격
@@ -117,7 +117,8 @@
 | 목차 | `contents` |
 | 보고 | `report models [--since <t>]` |
 | 승격 | `promote <id> --to <원장>` |
-| 원장 설정 | `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]` · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` · `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]` |
+| 원장 설정 | `world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>]`(`--parent` 만 주면 층 tenant) · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` · `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]`(엔드포인트 기본값 없음 — 없으면 R2 명령은 "R2 엔드포인트 미설정" 으로 1 또는 그 단계 건너뜀) |
+| AI 설정 | `world ai dream --runtime <r> --model <m> [--effort <e>]` · `world ai arbiters --add <runtime>:<model>[:<effort>]…` \| `--clear` · `world ai show [--json]`. 실행 도구는 지원 CLI 목록(`claude`·`codex`·`grok`·`agy`·`opencode`·`cursor`)으로, 강도는 `low`·`medium`·`high`·`xhigh`·`max` 로 해석하고 그 밖은 1. 드리밍 AI 가 없으면 `dream run` 1, 중재자가 없으면 `court hear` 는 대법원 회부 |
 | 훅 | `hook session [--session <id>] [--runtime <r>] [--runtime-version <v>] [--model <m>] [--effort <e>]` (표준 입력에 실행 도구의 세션 시작 훅 JSON. 표준 출력 없음, 항상 종료 코드 0) |
 
 - `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다. ledger 3 의 `show` 는 현행 여부·4종류 보기·현행 사실인정을 텍스트 모드에서는 표준 에러에, `--json` 에서는 필드로 낸다. 검색 결과의 전신 객체는 `[전신 <원장>]`(JSON `predecessor: true`)로 표시한다.

@@ -29,7 +29,8 @@ import WikiLedgerKit
 
         func service(_ ai: FakeAI, settings: LawDreamSettings? = nil) -> LawDreamService {
             LawDreamService(
-                file: file, settings: settings, runner: ai.runner, objectStore: store,
+                file: file, settings: settings ?? LawDreamSettings(cli: .claude, model: "claude-opus-5-5", effort: "high"),
+                runner: ai.runner, objectStore: store,
                 stateStore: LawDreamStateStore(directory: stateDirectory), finish: { ["synced"] },
                 appVersion: "9.9.9", clock: clock.clock)
         }
@@ -407,7 +408,7 @@ import WikiLedgerKit
             ["kind": "alert", "message": "저장소 판결 2026-0001 과 원장이 어긋남"],
             ["kind": "bogus"],
         ])])
-        let outcome = try fx.service(ai, settings: LawDreamSettings(model: "claude-sonnet-5-5", effort: "max"))
+        let outcome = try fx.service(ai, settings: LawDreamSettings(cli: .claude, model: "claude-sonnet-5-5", effort: "max"))
             .run(trigger: .manual)
         #expect(outcome.ok)
         let person = try #require(outcome.ledgers.first { $0.world == "agent-law-person-a" })
@@ -539,7 +540,53 @@ import WikiLedgerKit
         #expect(settings.interval == 12 * 3600 && settings.resolvedMaxChanges == 5)
         #expect(LawDreamSettings().resolvedMaxChanges == 10 && LawDreamSettings().resolvedMaxRepeals == 3)
         #expect(LawDreamSettings().resolvedContentsMaxLines == 200 && LawDreamSettings().interval == 24 * 3600)
-        let request = settings.request(prompt: "p")
+        let request = try settings.request(prompt: "p")
         #expect(request.modelRecord == LawModelRecord(runtime: "codex", model: "gpt-6", effort: "xhigh"))
+    }
+
+    /// 드리밍 AI 는 설정에서만 받는다 — 없으면 안내와 함께 거부, 상태는 미설정으로 보인다.
+    @Test func dreamRunRefusedWithoutConfiguredAI() throws {
+        let fx = try Self.fixture()
+        defer { fx.cleanup() }
+        let service = fx.service(FakeAI([]), settings: LawDreamSettings(intervalHours: 1))
+        #expect(throws: LawDreamError.aiUnset) { try service.run(trigger: .manual) }
+        #expect(service.status().runner == "(미설정)")
+        #expect(LawDreamSettings(model: "m").ai == nil)
+        #expect(LawDreamSettings(cli: .claude).ai == nil)
+        #expect(throws: LawDreamError.aiUnset) { try LawDreamSettings().request(prompt: "p") }
+        #expect("\(LawDreamError.aiUnset)".contains("world ai dream"))
+    }
+
+    /// `world ai dream`·`world ai arbiters` 설정 변경 — 실행 도구는 지원 CLI 목록으로 해석한다.
+    @Test func aiConfigMutation() throws {
+        let base = BoundLedgerFile(dream: LawDreamSettings(intervalHours: 6))
+        let set = try LawAIConfigMutation.settingDream(in: base, runtime: "Codex", model: "gpt-6", effort: "high").get()
+        #expect(set.dream?.ai == LawAISelection(cli: .codex, model: "gpt-6", effort: "high"))
+        #expect(set.dream?.intervalHours == 6)
+        #expect(set.dream?.runnerLabel == "codex:gpt-6:high")
+        let noEffort = try LawAIConfigMutation.settingDream(in: base, runtime: "claude", model: "m", effort: nil).get()
+        #expect(noEffort.dream?.ai?.effort == nil)
+        #expect(try noEffort.dream?.request(prompt: "p").modelRecord.effort == "unknown")
+        guard case .failure = LawAIConfigMutation.settingDream(in: base, runtime: "nope", model: "m", effort: nil) else {
+            Issue.record("목록 밖 실행 도구를 받음"); return
+        }
+        guard case .failure = LawAIConfigMutation.settingDream(in: base, runtime: "claude", model: "m", effort: "huge") else {
+            Issue.record("어휘 밖 강도를 받음"); return
+        }
+        guard case .failure = LawAIConfigMutation.settingDream(in: base, runtime: "claude", model: " ", effort: nil) else {
+            Issue.record("빈 모델을 받음"); return
+        }
+
+        let added = try LawAIConfigMutation.addingArbiters(in: base, specs: ["claude:a:high", "codex:b", "claude:a:high"]).get()
+        #expect(added.court?.resolvedArbiters == [
+            LawArbiterCandidate(cli: .claude, model: "a", effort: "high"), LawArbiterCandidate(cli: .codex, model: "b"),
+        ])
+        #expect(added.court?.arbiter(forTargetModel: "a")?.model == "b")
+        guard case .failure = LawAIConfigMutation.addingArbiters(in: base, specs: ["claude"]) else {
+            Issue.record("형식 밖 후보를 받음"); return
+        }
+        let cleared = LawAIConfigMutation.clearingArbiters(in: added)
+        #expect(cleared.court?.resolvedArbiters.isEmpty == true)
+        #expect(cleared.court?.arbiter(forTargetModel: nil) == nil)
     }
 }

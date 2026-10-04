@@ -55,7 +55,13 @@ import WikiLedgerKit
         func cleanup() { try? FileManager.default.removeItem(at: dir) }
     }
 
-    static func fixture(court: LawCourtSettings? = nil) -> Fixture {
+    /// 시험용 중재자 후보(설정에서만 받으므로 시험이 직접 넣는다).
+    static let testArbiters = LawCourtSettings(arbiters: [
+        LawArbiterCandidate(cli: .claude, model: "claude-opus-5-5", effort: "high"),
+        LawArbiterCandidate(cli: .claude, model: "claude-sonnet-5-5", effort: "high"),
+    ])
+
+    static func fixture(court: LawCourtSettings? = testArbiters) -> Fixture {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("agent-law-court-\(UUID().uuidString)", isDirectory: true)
         let file = BoundLedgerFile(
@@ -382,7 +388,9 @@ import WikiLedgerKit
     // MARK: - 설정
 
     @Test func arbiterSelectionSkipsTargetModel() {
-        let settings = LawCourtSettings()
+        // 설정이 없으면 중재자가 없다(모델 이름 기본값 없음) — 항소심은 대법원으로 간다.
+        #expect(LawCourtSettings().arbiter(forTargetModel: "x") == nil)
+        let settings = Self.testArbiters
         #expect(settings.arbiter(forTargetModel: "claude-opus-5-5")?.model == "claude-sonnet-5-5")
         #expect(settings.arbiter(forTargetModel: "gpt-5")?.model == "claude-opus-5-5")
         #expect(settings.arbiter(forTargetModel: nil)?.model == "claude-opus-5-5")
