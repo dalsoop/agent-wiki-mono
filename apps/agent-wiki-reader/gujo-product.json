@@ -7,7 +7,7 @@
     "gujo_api": "https://gujo.ai",
     "support_url": "https://support.gujo.ai",
     "account_url": "https://app.gujo.ai/downloads",
-    "note": "Phase 2 초안. 출처=package-identity+catalog.name+listing. catalog.id를 storeProductID로 쓰지 않음.",
+    "note": "CUTOFF 2026-10-04 — not distributed (decision 0008). Phase 2 초안. 출처=package-identity+catalog.name+listing. catalog.id를 storeProductID로 쓰지 않음.",
     "distribution_doc": "DISTRIBUTION.md"
   },
   "content": {

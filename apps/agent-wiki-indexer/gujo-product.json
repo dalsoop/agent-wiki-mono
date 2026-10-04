@@ -8,7 +8,8 @@
     "gujo_api": "https://gujo.ai",
     "support_url": "https://support.gujo.ai",
     "account_url": "https://app.gujo.ai/downloads",
-    "distribution_doc": "DISTRIBUTION.md"
+    "distribution_doc": "DISTRIBUTION.md",
+    "note": "CUTOFF 2026-10-04 — not distributed (decision 0008). "
   },
   "content": {
     "ko": {

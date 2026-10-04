@@ -83,7 +83,7 @@
 - repo world에서는 `--path <repo 경로>`로 저장소 위치를 지정할 수 있다.
 - 오류: parent 사슬 밖 대상, 알 수 없는 대상 world, 원본이 영수증, 원본이 저장된 바이트와 다름, repo 출처의 commit에 객체가 없음, 대상 world 쓰기 거부(보관된 전신·미등록 기기, 쓰기 게이트), 대상이 ledger 3 원장(ledger 3 승격은 `promote`). 대상 판정은 아무것도 쓰기 전에 한다.
 
-## 읽기 전용 프록시 `agent-wiki-reader`
+## 읽기 전용 프록시 `agent-wiki-reader` (퇴역, 결정 0008 — 배포하지 않음. 아래는 소스의 동작 기록)
 
 - 자체 명령: `help`, `version`, `status`(설치된 `agent-wiki world list` 결과), `capabilities`, `open`(GUI 실행).
 - 그 밖의 인자는 앞쪽 `--world`·`--as`·`--json`·`--all`·`--fleet`를 건너뛴 첫 단어로 판정한다. 허용: `help`, `version`, `list`, `show`, `search`, `context`, `path`, `structure`, `history`, `cited-by`, `verify`, `world list|use`, `graph status|timeline|neighbors|interpretations`, `recent`, `root`, `discuss`, `diff`, `learn`, `rules`, `blob get|info|refs|path|verify|list|open`, `event tree|tail|count`, `gujo status`, `gujo peer list`. `fleet`은 거부 목록이 먼저 판정되어 `fleet list`도 거부된다(capabilities에는 "읽기 전용 fleet 프록시"로 적혀 있다). 허용되면 설치된 `agent-wiki`에 그대로 넘기고 그 출력과 종료 코드를 돌려준다.

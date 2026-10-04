@@ -32,9 +32,9 @@ agent-wiki-mono/
 │   ├── agent-wiki-synchronizer/
 │   │   └── AGENTS.md                  ← 설치된 agent-wiki(전역 CLI) + 메뉴바 앱
 │   ├── agent-wiki-indexer/
-│   │   └── AGENTS.md                  ← repo .wiki 전용 CLI(agent-wiki-local)
+│   │   └── AGENTS.md                  ← repo .wiki 전용 CLI(agent-wiki-local) — 퇴역(결정 0008)
 │   ├── agent-wiki-reader/
-│   │   └── AGENTS.md                  ← 읽기 전용 프록시 CLI + 메뉴바 앱
+│   │   └── AGENTS.md                  ← 읽기 전용 프록시 CLI + 메뉴바 앱 — 퇴역(결정 0008)
 │   ├── agent-wiki-editor/
 │   │   └── AGENTS.md                  ← Studio GUI + 분기된 full CLI 사본
 │   └── agent-wiki-grapher/

@@ -20,8 +20,8 @@ swiftkit-sparkle ─────────────────────
 | `agent-wiki-kit` / `WikiCLIShared` | CLI 명령 구현 공용 라이브러리(`runPublish`, `runVerify`, `runScopedSearchOrContext` 등) | `KnowledgeBaseWikiCore`, `swiftkit` |
 | `agent-wiki-kit` / `BlobStoreKit` | `KnowledgeBaseWikiCore`가 재수출하는 blob 저장 모듈 | 없음 |
 | `apps/agent-wiki-synchronizer` | 전역 CLI(제품명 `agent-wiki-synchronizer`, 런타임 슬러그 `agent-wiki-global`)와 메뉴바 앱 `AgentWikiSynchronizer`. 설치된 `agent-wiki`의 원천 | `agent-wiki-kit`, `citationledgerkit`, `swiftkit*` |
-| `apps/agent-wiki-indexer` | repo `.wiki/` 전용 CLI(제품명 `agent-wiki-indexer`, 슬러그 `agent-wiki-local`)와 메뉴바 앱 | `agent-wiki-kit`, `citationledgerkit`, `swiftkit*` |
-| `apps/agent-wiki-reader` | 설치된 `agent-wiki`를 하위 프로세스로 부르는 읽기 전용 프록시 CLI와 메뉴바 앱 | `agent-wiki-kit`, `agent-wiki-ui`, `swiftkit*` |
+| `apps/agent-wiki-indexer` | **퇴역(결정 0008, 배포 컷오프)**. repo `.wiki/` 전용 CLI(제품명 `agent-wiki-indexer`, 슬러그 `agent-wiki-local`)와 메뉴바 앱 | `agent-wiki-kit`, `citationledgerkit`, `swiftkit*` |
+| `apps/agent-wiki-reader` | **퇴역(결정 0008, 배포 컷오프)**. 설치된 `agent-wiki`를 하위 프로세스로 부르는 읽기 전용 프록시 CLI와 메뉴바 앱 | `agent-wiki-kit`, `agent-wiki-ui`, `swiftkit*` |
 | `apps/agent-wiki-editor` | Studio GUI(`AgentWikiStudio`), 얇은 CLI(`agent-wiki-editor`, 슬러그 `agent-wiki-studio`), 그리고 분기된 full CLI 사본(제품명 `agent-wiki`) | `agent-wiki-kit`, `agent-wiki-ui`, `swiftkit*` |
 | `apps/agent-wiki-grapher` | 원장을 읽기 전용으로 읽어 인용 그래프 질의(orphans·centrality·impact·path·context)를 내는 창 앱과 CLI(슬러그 `agent-wiki-graph`) | `swiftkit`(WikiLedgerKit·GraphEngineKit·GraphRAGKit) |
 | `swiftkit` | 공용 킷 약 100개의 사본. 이 저장소의 패키지가 쓰는 것은 CommandKit, StateRootKit, InteropKit, AgentCLIKit, SigV4Kit, EndpointRouterKit, LocalizationKit, StateMirrorKit 등 일부다 | 외부 SwiftPM 패키지 |
