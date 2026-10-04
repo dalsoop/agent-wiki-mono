@@ -119,17 +119,25 @@ public struct LawCourtDocket: Sendable {
         let view = LawLedgerView(records: records)
         let byID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        // 현행 결정 → 심급·결과·다룬 건.
+        // 현행 결정 → 심급·결과·다룬 건. 규칙을 지킨 결정만 사건을 닫는다(위조 결정으로 사건이 닫히지 않게):
+        // 항소심은 `app:agent-wiki` 가 대상 기록과 다른 모델로, 대법원은 이의 기간 뒤 사용자 발화 증언을 인용해야 한다.
         var appellate: [String: LawStoredRecord] = [:]
-        var supreme: Set<String> = []
+        var supremeRulings: [(caseID: String, ruling: LawStoredRecord)] = []
         for ruling in records where ruling.record.type == LawRecordType.ruling.rawValue && view.isInForce(ruling.id) {
             guard let head = Self.rulingHead(ruling) else { continue }
             for cite in ruling.record.cites where cite.rel == LawRelation.hears.rawValue {
                 switch head.level {
-                case .supreme: supreme.insert(cite.id)
-                case .appellate: appellate[cite.id] = ruling  // 공포 순이라 마지막이 가장 늦다
+                case .supreme: supremeRulings.append((cite.id, ruling))
+                case .appellate:
+                    guard Self.isValidAppellate(ruling, outcome: head.outcome, caseID: cite.id, byID: byID) else { continue }
+                    appellate[cite.id] = ruling  // 공포 순이라 마지막이 가장 늦다
                 }
             }
+        }
+        var supreme: Set<String> = []
+        for entry in supremeRulings where Self.isValidSupreme(
+            entry.ruling, caseID: entry.caseID, appellate: appellate, byID: byID, objectionPeriod: objectionPeriod) {
+            supreme.insert(entry.caseID)
         }
 
         var open: [LawCourtCase] = []
@@ -176,6 +184,56 @@ public struct LawCourtDocket: Sendable {
             proposalsInObjection: open.filter {
                 $0.kind == .proposal && $0.isInObjectionPeriod(now: now, period: objectionPeriod)
             })
+    }
+
+    /// 사건 기록이 다투는 대상 id(`appeals`·`proposes`).
+    static func caseTarget(_ caseID: String, byID: [String: LawStoredRecord]) -> String? {
+        guard let stored = byID[caseID], let kind = LawCourtCaseKind(recordType: stored.record.type) else { return nil }
+        return stored.record.cites.first { $0.rel == kind.relation.rawValue }?.id
+    }
+
+    /// 항소심 결정이 사건을 닫을 수 있나 — 작성자 `app:agent-wiki`(앱 공포), 판단한 모델이 대상 기록을 쓴 모델과 다름.
+    /// 유지·뒤집기는 판단한 모델이 있어야 하고, 다른 모델이 없어 AI 없이 낸 회부만 모델 칸이 빈다.
+    static func isValidAppellate(
+        _ ruling: LawStoredRecord, outcome: LawRulingOutcome, caseID: String, byID: [String: LawStoredRecord]
+    ) -> Bool {
+        let record = ruling.record
+        guard record.author == "app:\(LawCourtService.appSlug)", record.authorKind == LawAuthorKind.app.rawValue,
+              record.app == LawCourtService.appSlug, byID[caseID] != nil
+        else { return false }
+        let model = record.model?.trimmingCharacters(in: .whitespaces)
+        let targetModel = caseTarget(caseID, byID: byID).flatMap { byID[$0]?.record.model }?
+            .trimmingCharacters(in: .whitespaces)
+        if let model, !model.isEmpty {
+            return model != targetModel
+        }
+        return outcome == .refer
+    }
+
+    /// 대법원 결정이 사건을 닫을 수 있나 — 대법원 대기였던 사건(항소심 회부 또는 상고)이고, 공지 뒤 이의 기간이 지나
+    /// 공포됐고, `speaker: user` 증거를 `testifies` 로 인용했다. 같은 원장에 없는 증언(상위 사슬)은 공포 검증이 확인했다.
+    static func isValidSupreme(
+        _ ruling: LawStoredRecord, caseID: String, appellate: [String: LawStoredRecord],
+        byID: [String: LawStoredRecord], objectionPeriod: TimeInterval
+    ) -> Bool {
+        guard let caseRecord = byID[caseID], let kind = LawCourtCaseKind(recordType: caseRecord.record.type),
+              let target = caseTarget(caseID, byID: byID)
+        else { return false }
+        let noticedAt: Date
+        if let referral = appellate[caseID], rulingHead(referral)?.outcome == .refer {
+            noticedAt = referral.record.promulgated
+        } else if kind == .appeal, byID[target]?.record.type == LawRecordType.ruling.rawValue {
+            noticedAt = caseRecord.record.promulgated
+        } else {
+            return false
+        }
+        guard ruling.record.promulgated >= noticedAt.addingTimeInterval(objectionPeriod) else { return false }
+        return ruling.record.cites.contains { cite in
+            guard cite.rel == LawRelation.testifies.rawValue else { return false }
+            guard let evidence = byID[cite.id]?.record else { return true }
+            return evidence.type == LawRecordType.evidence.rawValue && evidence.speaker == LawSpeaker.user.rawValue
+                && evidence.origin != LawOrigin.dream.rawValue
+        }
     }
 
     /// 결정 기록의 머리 칸(`level`·`outcome`).

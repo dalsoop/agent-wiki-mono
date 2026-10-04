@@ -354,9 +354,12 @@ import WikiLedgerKit
         let missingSHA = LawHash.sha256Hex("사라진 증거물")
         _ = try store.enact(draft(type: "evidence", body: "외부", exhibits: [present]), now: at(3))
         let redactedEvidence = try store.enact(draft(type: "evidence", body: "외부 2", exhibits: [redactedSHA]), now: at(4))
-        _ = try store.enact(draft(type: "redaction",
-                                  body: "target: law/exhibits/\(redactedSHA.prefix(2))/\(redactedSHA)\nreason: 비밀\n",
-                                  cites: [LawCite(id: redactedEvidence.id)]), now: at(5))
+        // `redact` 경로가 공포한 가림 기록(예약 태그)만 감사가 믿는다(LawEnactPath.admit 가 붙이는 표지).
+        var redaction = draft(type: "redaction",
+                              body: "target: law/exhibits/\(redactedSHA.prefix(2))/\(redactedSHA)\nreason: 비밀\n",
+                              cites: [LawCite(id: redactedEvidence.id)])
+        redaction.tags = [LawEnactPath.redactionMarkerTag]
+        _ = try store.enact(redaction, now: at(5))
         let lost = try store.enact(draft(type: "evidence", body: "외부 3", exhibits: [missingSHA]), now: at(6))
 
         let report = store.audit()

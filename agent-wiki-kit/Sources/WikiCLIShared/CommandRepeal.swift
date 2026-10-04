@@ -13,6 +13,7 @@ public func runRepeal(context: LawCommandContext, arguments: [String]) {
     guard options.positionals.count == 1 else { usageFail(repealUsage) }
     let reason = options.value("--reason") ?? ""
     guard context.isLedgerThree else {
+        noteIgnoredModelOptions(options)
         context.ledgerTwo.checkWritePermission()
         let store = context.ledgerStore
         let target = resolve(store, options.positionals[0])

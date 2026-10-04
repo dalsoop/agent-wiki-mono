@@ -35,9 +35,11 @@ func resolveLawReferences(_ tokens: [String], index: LawScopeIndex) -> [String] 
 }
 
 /// ledger 3 공포 공통: 쓰기는 `LawEnactService.enact` 하나.
-func enactLaw(_ draft: LawDraft, context: LawCommandContext, index: LawScopeIndex) -> LawStoredRecord {
+func enactLaw(
+    _ draft: LawDraft, context: LawCommandContext, index: LawScopeIndex, path: LawEnactPath = .general
+) -> LawStoredRecord {
     do {
-        return try LawEnactService.enact(draft, target: context.lawTarget(), index: index)
+        return try LawEnactService.enact(draft, target: context.lawTarget(), index: index, path: path)
     } catch {
         lawFail(error)
     }
@@ -84,11 +86,21 @@ func runLedgerTwoEnact(context: LawCommandContext, arguments: [String]) {
     runLedgerTwoPublish(context: context, arguments: publish)
 }
 
-/// enact/amend 공통 옵션 → 옛 발행 인자. ledger 2 형식에 없는 칸(`--speaker`·`--exhibit`)은 거부한다.
+/// ledger 2 원장은 모델 기록 칸이 없다 — 받은 모델 기록 옵션을 버리고 그 사실을 표준 에러에 알린다.
+func noteIgnoredModelOptions(_ options: LawOptions) {
+    let ignored = LawOptions.modelOptions.filter { !options.all($0).isEmpty }.sorted()
+    guard !ignored.isEmpty else { return }
+    FileHandle.standardError.write(Data(
+        "ledger 2 원장은 모델 기록 칸이 없어 \(ignored.joined(separator: "·")) 를 무시함\n".utf8))
+}
+
+/// enact/amend 공통 옵션 → 옛 발행 인자. ledger 2 형식에 없는 칸(`--speaker`·`--exhibit`)은 거부하고,
+/// 모델 기록 옵션은 무시함을 알린다.
 func ledgerTwoCommonArguments(_ options: LawOptions) -> [String] {
     if options.value("--speaker") != nil || !options.all("--exhibit").isEmpty {
         fail("ledger 2 원장은 --speaker·--exhibit 를 받지 않는다")
     }
+    noteIgnoredModelOptions(options)
     var out: [String] = []
     for flag in ["--title", "--type", "--batch"] + ledgerTwoPublishOptions.sorted() {
         for value in options.all(flag) { out += [flag, value] }

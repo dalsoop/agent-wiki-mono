@@ -132,7 +132,7 @@ public struct LawCourtService: Sendable {
         let draft = LawDraft(
             actor: actor, title: "이의: \(Self.label(object))", type: LawRecordType.appeal.rawValue, batch: batch,
             cites: [LawCite(id: object.id, rel: LawRelation.appeals.rawValue)], body: reason + "\n")
-        return try LawEnactService.enact(draft, target: target, now: now)
+        return try LawEnactService.enact(draft, target: target, path: .court, now: now)
     }
 
     /// 개정안 — 대상을 `proposes` 로 인용하고, 본문에 `scope` 머리 칸과 바꿀 내용 전체.
@@ -148,7 +148,7 @@ public struct LawCourtService: Sendable {
             actor: actor, title: "개정안: \(Self.label(object))", type: LawRecordType.proposal.rawValue, batch: batch,
             cites: [LawCite(id: object.id, rel: LawRelation.proposes.rawValue)],
             body: "scope: \(scope)\n\n\(content)")
-        return try LawEnactService.enact(draft, target: target, now: now)
+        return try LawEnactService.enact(draft, target: target, path: .court, now: now)
     }
 
     /// 이의·개정 대상. 대법원 결정은 최종이라 받지 않는다.
@@ -394,7 +394,7 @@ public struct LawCourtService: Sendable {
             type: LawRecordType.ruling.rawValue, batch: batch,
             cites: [LawCite(id: item.id, rel: LawRelation.hears.rawValue), LawCite(id: object.id)] + extraCites,
             body: lines.joined(separator: "\n") + "\n")
-        return try LawEnactService.enact(draft, target: target, now: now)
+        return try LawEnactService.enact(draft, target: target, path: .court, now: now)
     }
 
     /// 결정이 요구한 조치를 결정 기록을 `per-ruling` 으로 인용해 공포한다. 개정은 이 원장의 현행 기록에만 한다.
@@ -421,7 +421,7 @@ public struct LawCourtService: Sendable {
                 batch: LedgerID.generate(now: now), tags: current.tags,
                 cites: current.cites + [LawCite(id: ruling.id, rel: LawRelation.perRuling.rawValue)],
                 exhibits: current.exhibits, amends: object.id, source: current.source, body: body)
-            let stored = try LawEnactService.enact(draft, target: target, now: now)
+            let stored = try LawEnactService.enact(draft, target: target, path: .court, now: now)
             return ([stored.id], [])
         }
     }

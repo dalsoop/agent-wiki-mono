@@ -5,36 +5,7 @@ import WikiCLIShared
 import LocalizationKit
 import CommandKit
 
-/// 예약 실행 간격 — 달력 시각(StartCalendarInterval) 또는 초 간격(StartInterval).
-enum ScheduleInterval: Equatable {
-    case calendar([String: Int])
-    case every(seconds: Int)
-}
-
-/// LaunchAgent 하나 = CLI 를 부르는 순수 plist 하나(RunAtLoad 없음).
-struct ScheduleTick: Equatable {
-    let role: String
-    /// CLI 뒤에 붙는 인자.
-    let arguments: [String]
-    let interval: ScheduleInterval
-}
-
-/// 예약 실행 틱 목록. 옛 운영 틱은 그대로 두고, agent-law 의 동기화 10분·적재 하루·드리밍 하루를 더한다
-/// (docs/architecture.md "agent-law" 예약 실행, 결정 0007). 실제 동작은 각 명령(T5·T7·T10)이 채운다.
-let scheduleTicks: [ScheduleTick] = [
-    ScheduleTick(role: "checkpoint", arguments: ["tick", "checkpoint"], interval: .calendar(["Hour": 21, "Minute": 30])),
-    ScheduleTick(role: "librarian", arguments: ["tick", "librarian"], interval: .calendar(["Hour": 3, "Minute": 30])),
-    ScheduleTick(role: "run-reaper", arguments: ["tick", "reaper"], interval: .calendar(["Minute": 45])),
-    ScheduleTick(
-        role: "verifier", arguments: ["tick", "verifier"],
-        interval: .calendar(["Hour": 4, "Minute": 30, "Weekday": 1])),
-    ScheduleTick(
-        role: "retrospective", arguments: ["tick", "retrospective"],
-        interval: .calendar(["Hour": 5, "Minute": 0, "Weekday": 1])),
-    ScheduleTick(role: "law-sync", arguments: ["sync"], interval: .every(seconds: 600)),
-    ScheduleTick(role: "law-archive", arguments: ["archive"], interval: .calendar(["Hour": 2, "Minute": 0])),
-    ScheduleTick(role: "law-dream", arguments: ["dream", "run", "--scheduled"], interval: .calendar(["Hour": 2, "Minute": 30])),
-]
+// 예약 틱 목록(`scheduleTicks`)과 거둘 옛 틱(`retiredScheduleRoles`)은 WikiCLIShared `ScheduleTicks.swift` 한 곳.
 
 func runSchedule(arguments: [String]) {
     let ticks = scheduleTicks
@@ -62,7 +33,28 @@ func runSchedule(arguments: [String]) {
     } catch {
         fail("LaunchAgents 디렉터리 생성 실패: \(error.localizedDescription)")
     }
+    reapRetiredScheduleTicks(agentsDir: agentsDir)
     registerScheduleTicks(ticks, agentsDir: agentsDir, cliPath: cliPath, logDir: logDir)
+}
+
+/// 등록된 plist 하나를 내리고 지운다(불안전 plist 수리·옛 틱 거두기·인자 바뀐 틱 재등록이 함께 쓴다).
+private func reapSchedulePlist(_ url: URL) {
+    _ = launchctl(["unload", "-w", url.path])
+    do {
+        try FileManager.default.removeItem(at: url)
+    } catch {
+        fail("plist 제거 실패(\(url.path)): \(error.localizedDescription)")
+    }
+}
+
+/// 예약에서 뺀 옛 틱의 plist 를 거둔다.
+private func reapRetiredScheduleTicks(agentsDir: URL) {
+    for role in retiredScheduleRoles {
+        let url = plistURL(role: role, agentsDir: agentsDir)
+        guard FileManager.default.fileExists(atPath: url.path) else { continue }
+        reapSchedulePlist(url)
+        print("옛 예약 틱 거둠: \(role) (ledger 3 대응 없음)") // allow:debug — 명령 결과 출력
+    }
 }
 
 private func plistURL(role: String, agentsDir: URL) -> URL {
@@ -95,14 +87,13 @@ private func registerScheduleTicks(
         if FileManager.default.fileExists(atPath: url.path) {
             if let prog = programArg0(at: url),
                DualEntry.isGUIMasquerading(at: prog) || !DualEntry.isSafeCLIExecutable(prog) {
-                _ = launchctl(["unload", "-w", url.path])
-                do {
-                    try FileManager.default.removeItem(at: url)
-                } catch {
-                    fail("불안전 plist 제거 실패(\(url.path)): \(error.localizedDescription)")
-                }
+                reapSchedulePlist(url)
                 print(CLILocalization.format("CommandSchedule.print-4", t.role, prog))
                 repaired += 1
+            } else if programArguments(at: url).map({ Array($0.dropFirst()) }) != t.arguments {
+                // 인자가 바뀐 틱(옛 `tick checkpoint|verifier` 등)은 거두고 새 인자로 다시 등록한다.
+                reapSchedulePlist(url)
+                print("인자가 바뀐 예약 틱 다시 등록: \(t.role)") // allow:debug — 명령 결과 출력
             } else {
                 continue
             }
@@ -159,6 +150,11 @@ func schedulePlist(tick: ScheduleTick, cliPath: String, logDir: String) -> [Stri
 }
 
 private func programArg0(at url: URL) -> String? {
+    guard let first = programArguments(at: url)?.first, !first.isEmpty else { return nil }
+    return first
+}
+
+private func programArguments(at url: URL) -> [String]? {
     let data: Data
     do {
         data = try Data(contentsOf: url)
@@ -171,10 +167,8 @@ private func programArg0(at url: URL) -> String? {
     } catch {
         return nil
     }
-    guard let plist = object as? [String: Any],
-          let args = plist["ProgramArguments"] as? [String],
-          let first = args.first, !first.isEmpty else { return nil }
-    return first
+    guard let plist = object as? [String: Any], let args = plist["ProgramArguments"] as? [String] else { return nil }
+    return args
 }
 
 private func fmt(_ interval: ScheduleInterval) -> String {

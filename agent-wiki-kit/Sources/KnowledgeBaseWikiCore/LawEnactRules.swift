@@ -206,6 +206,11 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
     case speakerUserRequiresTestimony
     case duplicateID(String)
     case batchNotFound(String)
+    case typeRequiresDedicatedCommand(type: String, command: String)
+    case reservedTag(String)
+    case findingTargetCount(Int)
+    case supremeRulingRequiresTestimony
+    case humanSpeakerFixed(String)
 
     public var description: String {
         switch self {
@@ -230,6 +235,13 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
         case .speakerUserRequiresTestimony: return "speaker: user 는 speaker: user 증거 기록을 testifies 로 인용해야 함"
         case .duplicateID(let id): return "이미 공포된 id 에 다른 바이트: \(id)"
         case .batchNotFound(let b): return "묶음을 찾을 수 없음: \(b)"
+        case .typeRequiresDedicatedCommand(let t, let command):
+            return "유형 \(t) 는 일반 공포(enact·amend·화면 편집)로 만들 수 없음 — 전용 명령 `\(command)` 를 쓰세요"
+        case .reservedTag(let tag): return "예약 태그 \(tag) 는 전용 경로만 붙인다"
+        case .findingTargetCount(let n): return "사실인정은 finds 대상이 정확히 1건이어야 함(받은 수 \(n))"
+        case .supremeRulingRequiresTestimony:
+            return "대법원 결정(level: supreme)은 speaker: user 증거 기록을 testifies 로 인용해야 함"
+        case .humanSpeakerFixed(let s): return "사람 공포의 화자는 user 로 고정 — 받은 값 \(s)"
         }
     }
 }

@@ -61,7 +61,7 @@ world 목록은 호스트 파일 `~/.memo-citation-ledger/config.json`(`LedgerCo
 | 대상 | 쓰는 코드 | 전송 | 방향 |
 |---|---|---|---|
 | gujo-wiki git 원격(GitLab, seed) | `GujoSync` | `/usr/bin/env git` 하위 프로세스 | origin과 fetch·merge·push, 피어는 fetch·merge만 |
-| blob 저장소(Cloudflare R2, S3 호환) | `GujoBlobSync` | URLSession + SigV4 서명 | 로컬에만 있는 blob push, 원격에만 있는 blob pull |
+| blob 저장소(Cloudflare R2, S3 호환) | `GujoBlobSync` | URLSession + SigV4 서명 | 원격에만 있는 blob pull(전신은 받기만 한다. push 는 64로 거부) |
 | wiki-hub | `GujoHubClient` | HTTPS GET, 응답은 `FleetPullResult` JSON | 읽기 전용 검색 |
 | restic 백업 | `CommandBackup` | `restic` 하위 프로세스 | `objects`·`events`·`blobs`만 백업 |
 | Gujo 스토어 메타데이터 | 각 앱 `gujo-product.json` | 파일(스토어 쪽이 읽음) | 이 저장소는 선언만 한다 |
@@ -90,5 +90,5 @@ wiki-hub 주소는 환경 변수 `GUJO_HUB_URL`이 먼저이고, 없으면 Endpo
 
 - `yymmddhhmmss` 는 실행 시작 한국 시간. 같은 초에 두 번째 폴더면 다음 초까지 기다린다. 요약이 없는 실행 폴더는 실패한 실행이다.
 - 세션 적재: 공용 세션 리더로 네 실행 도구(Claude Code·Codex·Grok·Antigravity) 세션을 읽고, 기능을 켠 뒤 시작한 세션만, 지난 적재 뒤 늘어난 발화만 조각으로 올린다. 세션별로 올린 위치를 기기마다 기록한다(R2 요약에서 재생성 가능). 모든 기기가 하루 한 번 적재하고, 드리밍 기기에서는 드리밍이 먼저 적재한다.
-- 예약 실행(LaunchAgent, CLI 를 부르는 순수 plist): 동기화 10분, 적재 하루, 드리밍 하루(조정 가능).
+- 예약 실행(LaunchAgent, CLI 를 부르는 순수 plist): 체크포인트 하루, 감사 주 1회, 동기화 10분, 적재 하루, 드리밍 하루(조정 가능). 표는 docs/operations.md "정기 작업과 동기화".
 - 드리밍과 중재는 지원 CLI 목록의 AI 실행 도구를 공용 실행기로 무인 호출한다.

@@ -110,7 +110,7 @@ public enum LawContents {
         let draft = LawDraft(
             actor: actor, title: titlePrefix + target.worldName, type: LawRecordType.contents.rawValue,
             origin: LawOrigin.dream.rawValue, amends: previous?.id, body: text)
-        return try LawEnactService.enact(draft, target: target, now: now)
+        return try LawEnactService.enact(draft, target: target, path: .contents, now: now)
     }
 }
 

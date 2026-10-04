@@ -102,18 +102,20 @@ public enum LawEnactService {
         }
     }
 
-    /// 공포. 쓰기 게이트를 먼저 보고, 범위 해석기로 `LawStore.enact` 를 부른 뒤 후처리 자리를 부른다.
+    /// 공포. 쓰기 게이트를 먼저 보고, 경로별 유형 허용(`LawEnactPath.admit`)을 본 뒤, 범위 해석기로 `LawStore.enact` 를
+    /// 부르고 후처리 자리를 부른다. `path` 를 주지 않으면 일반 공포(처리 유형 거부)다.
     @discardableResult
     public static func enact(
         _ draft: LawDraft, target: LawLedgerTarget, index: LawScopeIndex? = nil,
-        testimony: (any LawTestimonyVerifying)? = nil, now: Date = Date()
+        testimony: (any LawTestimonyVerifying)? = nil, path: LawEnactPath = .general, now: Date = Date()
     ) throws -> LawStoredRecord {
         guard target.isLedgerThree else { throw LawEnactServiceError.notLedgerThree(target.worldName) }
         if let denial = target.writeDenial() { throw LawEnactServiceError.writeDenied(denial) }
         let scope = index ?? scope(of: target)
         do {
+            let admitted = try path.admit(draft)
             let stored = try target.store.enact(
-                draft, now: now, context: context(index: scope, testimony: testimony ?? target.defaultTestimony))
+                admitted, now: now, context: context(index: scope, testimony: testimony ?? target.defaultTestimony))
             LawEnactAftermath.run(target: target, enacted: [stored])
             return stored
         } catch let error as LawEnactError {

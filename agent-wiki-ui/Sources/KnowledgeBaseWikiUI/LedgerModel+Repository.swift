@@ -130,7 +130,8 @@ extension LedgerModel {
                 sourceWorldName: promotionSourceWorldName,
                 targetWorld: target,
                 promotedBy: "human",
-                confirmationToken: preview.confirmationToken)
+                confirmationToken: preview.confirmationToken,
+                targetGate: PromotionTargetGate.standard())
             promotionMessage = promotionResult?.deduplicated == true
                 ? "이미 승격된 지식입니다. 기존 영수증을 확인했습니다."
                 : "gujo wiki 승격과 양방향 영수증 발행을 완료했습니다."

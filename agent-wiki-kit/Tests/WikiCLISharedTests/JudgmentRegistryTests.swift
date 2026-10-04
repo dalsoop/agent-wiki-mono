@@ -46,7 +46,7 @@ import WikiLedgerKit
     ) throws -> LawStoredRecord {
         try JudgmentRegistry.checkRegistrationTarget(worldName: "agent-law", catalog: fx.catalog)
         let draft = try JudgmentRegistry.draft(actor: agent, repo: repo, title: title, status: status, path: path)
-        return try LawEnactService.enact(draft, target: fx.target("agent-law"))
+        return try LawEnactService.enact(draft, target: fx.target("agent-law"), path: .judgment)
     }
 
     @Test func registerGivesIDAndNumberIsFirstEightCharacters() throws {
@@ -104,11 +104,12 @@ import WikiLedgerKit
         defer { fx.cleanup() }
         let law = fx.target("agent-law")
         let first = try Self.register(fx, repo: "laravel-mono", title: "판결 X")
-        // 상태 변경은 개정(amend) — 본문 머리 칸만 바꾼다.
-        let amended = try LawEnactService.enact(
-            LawDraft(actor: Self.agent, title: "판결 X", type: LawRecordType.registration.rawValue,
-                     amends: first.id, body: try JudgmentRegistry.body(repo: "laravel-mono", status: "confirmed", path: nil)),
-            target: law)
+        // 상태 변경은 개정(`judgment amend`) — 본문 머리 칸만 바꾼다. 일반 공포(amend)는 판결 등록 유형을 받지 않는다.
+        let entry = try JudgmentRegistry.find(String(first.id.prefix(8)), records: law.store.scan())
+        let draft = try JudgmentRegistry.amendDraft(actor: Self.agent, entry: entry, title: nil, status: "confirmed", path: nil)
+        #expect(draft.title == "판결 X")
+        #expect(throws: LawEnactServiceError.self) { try LawEnactService.enact(draft, target: law) }
+        let amended = try LawEnactService.enact(draft, target: law, path: .judgment)
         let records = law.store.scan()
         let number = String(first.id.prefix(8))
         for token in [number, String(amended.id.prefix(8))] {
@@ -152,7 +153,7 @@ import WikiLedgerKit
             try LawEnactService.enact(
                 LawDraft(actor: Self.agent, title: "t", type: LawRecordType.registration.rawValue,
                          amends: first.id, body: "repo: r\nstatus: final\n"),
-                target: fx.target("agent-law"))
+                target: fx.target("agent-law"), path: .judgment)
         }
         #expect(fx.target("agent-law").store.scan().count == 1)
     }

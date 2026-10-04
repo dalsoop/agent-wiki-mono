@@ -55,7 +55,8 @@ func standardDreamService(context: LawCommandContext) -> (LawDreamService, Strin
     return (service, storeError)
 }
 
-/// 드리밍 끝 동기화 — git(`LawGitSync`)과 원장마다 증거물(`LawExhibitSync`). 결과 문구만 돌려준다.
+/// 드리밍 끝 동기화 — git(`LawGitSync`), 원장마다 가림 기록에 따른 로컬 삭제(`LawRedactionSweep`)와 증거물(`LawExhibitSync`).
+/// `sync` 와 같은 순서다. 결과 문구만 돌려준다.
 func dreamFinishSync(file: BoundLedgerFile, catalog: WorldBindingCatalog, objectStore: (any LawObjectStore)?) -> [String] {
     var messages: [String] = []
     let roots = catalog.worlds.filter { catalog.isLedgerThree($0.name) && $0.key != nil && !catalog.isArchived($0.name) }
@@ -68,25 +69,36 @@ func dreamFinishSync(file: BoundLedgerFile, catalog: WorldBindingCatalog, object
     case .failure(let error):
         messages.append("git 동기화 실패: \(error.description)")
     }
-    guard let objectStore else { return messages + ["증거물 동기화 건너뜀: R2 없음"] }
     for world in roots where FileManager.default.fileExists(atPath: world.rootPath) {
         guard let key = world.key else { continue }
-        let outcome = LawExhibitSync.sync(
-            store: LawStore(root: URL(fileURLWithPath: world.rootPath)), ledgerKey: key, objectStore: objectStore)
+        let store = LawStore(root: URL(fileURLWithPath: world.rootPath))
+        let deleted = LawRedactionSweep.applyLocalDeletions(store: store, ledgerKey: key)
+        if !deleted.isEmpty { messages.append("가림 기록에 따른 로컬 삭제 \(world.name): \(deleted.count)") }
+        guard let objectStore else { continue }
+        let outcome = LawExhibitSync.sync(store: store, ledgerKey: key, objectStore: objectStore)
         messages.append("증거물 \(world.name): 올림 \(outcome.uploaded.count) 받음 \(outcome.downloaded.count) 실패 \(outcome.failed.count)")
     }
+    if objectStore == nil { messages.append("증거물 동기화 건너뜀: R2 없음") }
     return messages
 }
 
 private func dreamRun(context: LawCommandContext, asJSON: Bool, scheduled: Bool = false) {
     let (service, storeError) = standardDreamService(context: context)
+    let trigger = LawDreamTrigger.detect(environment: context.environment, scheduledFlag: scheduled)
     do {
         try service.checkDevice()
     } catch {
+        // 예약 틱은 모든 기기에 등록되므로, 드리밍 기기가 아닌 곳에서는 조용히 성공으로 끝낸다(수동 실행은 거부 1).
+        if trigger == .scheduled {
+            if asJSON {
+                struct Envelope: Encodable { let ok: Bool; let result: LawDreamOutcome }
+                printJSON(Envelope(ok: true, result: LawDreamOutcome(trigger: .scheduled, skipped: "\(error)")))
+            }
+            exit(0)
+        }
         fail("\(error)")
     }
     if let storeError, service.objectStore == nil { fail("드리밍에 R2 가 필요함: \(storeError)") }
-    let trigger = LawDreamTrigger.detect(environment: context.environment, scheduledFlag: scheduled)
     let outcome: LawDreamOutcome
     do {
         outcome = try service.run(trigger: trigger)
