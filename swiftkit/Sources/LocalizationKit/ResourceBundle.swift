@@ -133,7 +133,17 @@ public enum ResourceBundle {
     static func resolveLocalization(
         preferredName: String?,
         roots: [URL],
-        appName: String? = mainAppName(),
+        appName: String?,
+        fileManager fm: FileManager = .default
+    ) -> Bundle? {
+        resolveLocalization(preferredName: preferredName, roots: roots,
+                            appNames: appName.map { [$0] } ?? [], fileManager: fm)
+    }
+
+    static func resolveLocalization(
+        preferredName: String?,
+        roots: [URL],
+        appNames: [String] = mainAppNames(),
         fileManager fm: FileManager = .default
     ) -> Bundle? {
         if let name = preferredName, let hit = resolveNamed(name, roots: roots, fileManager: fm) { return hit }
@@ -149,7 +159,7 @@ public enum ResourceBundle {
             // `home.subtitle` 처럼 **키 그대로** 노출된다.
             //
             // "의존성 목록"을 관리하는 대신(끝이 없다) **앱 이름과 맞는 번들을 찾는다**.
-            for item in bundles.sorted(by: { rank($0, appName: appName) < rank($1, appName: appName) }) {
+            for item in bundles.sorted(by: { rank($0, appNames: appNames) < rank($1, appNames: appNames) }) {
                 if containsLproj(item, fileManager: fm), let bundle = Bundle(url: item) {
                     return bundle
                 }
@@ -165,23 +175,64 @@ public enum ResourceBundle {
             ?? main.bundleURL.deletingPathExtension().lastPathComponent
     }
 
+    /// 앱을 가리키는 이름들, **앞일수록 강한 신호**.
+    ///
+    /// 1. 번들 식별자의 마지막 칸(`net.ranode.agent-wiki-synchronizer` → `agent-wiki-synchronizer`).
+    ///    함대 앱은 이 칸이 앱 폴더·SwiftPM 타깃 이름과 같다.
+    /// 2. 실행 파일 이름(`AgentWikiStudio`). 실행 제품 이름이 타깃 이름과 다를 수 있어
+    ///    (`AgentWikiGlobal` 제품 = `AgentWikiSynchronizer` 타깃) 1 보다 약하다.
+    ///
+    /// 함정(2026-10-04 실측, /Applications/AgentWikiGlobal.app): 설치본 Resources 에 옛 타깃
+    /// 이름의 묶음 `GujoAgentWikiSynchronizer_AgentWikiGlobal.bundle`(키 94개, 옛 빌드 잔재)과
+    /// 지금 묶음 `GujoAgentWikiSynchronizer_AgentWikiSynchronizer.bundle`(키 99개)이 함께 있다.
+    /// 실행 파일 이름만 보면 옛 묶음이 이긴다 — 번들 식별자를 앞세운다.
+    static func mainAppNames(main: Bundle = .main) -> [String] {
+        var names: [String] = []
+        if let id = main.bundleIdentifier, let tail = id.split(separator: ".").last {
+            names.append(String(tail))
+        }
+        if let app = mainAppName(main: main) { names.append(app) }
+        var seen = Set<String>()
+        return names.filter { !$0.isEmpty && seen.insert(foldName($0)).inserted }
+    }
+
+    /// 이름 비교용 접기 — 대소문자·공백·하이픈을 지운다.
+    /// CLI 실행 파일은 kebab(`tmp-l10n-probe`), SwiftPM 번들은 PascalCase
+    /// (`TmpL10nProbe_TmpL10nProbe.bundle`)라 접어서 비교한다.
+    static func foldName(_ s: String) -> String {
+        s.replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .lowercased()
+    }
+
+    /// 묶음 이름 `<Package>_<Target>` 이 앱 이름과 맞는가.
+    ///
+    /// - 앞 칸(`<앱>_…`): `Mounter_Mounter`, `ScreenshotSwift_ScreenshotL10n` 처럼 패키지명이 앱 이름일 때.
+    /// - 뒤 칸(`…_<앱>`): `GujoAgentWikiEditor_AgentWikiStudio` 처럼 패키지명이 앱 이름과 다르고
+    ///   타깃 이름이 앱 이름일 때. 앞 칸만 보면 화면 모듈 묶음(`AgentWikiUI_KnowledgeBaseWikiUI`)이
+    ///   앱 묶음보다 먼저 집혀 메뉴가 키 그대로 샜다(2026-10-04 실측, AgentWikiStudio).
+    static func bundleNameMatchesApp(_ bundleName: String, app: String) -> Bool {
+        let name = foldName(bundleName)
+        let key = foldName(app)
+        guard !key.isEmpty else { return false }
+        return name.hasPrefix(key + "_") || name.hasSuffix("_" + key)
+    }
+
     /// 낮을수록 먼저. 0 = 앱 이름과 맞음, 1 = 그 외, 2 = 알려진 의존성 kit.
     static func rank(_ url: URL, appName: String?) -> Int {
+        // 빈 이름은 어떤 묶음과도 맞지 않으므로 눈금은 언제나 0/1/2 다.
+        rank(url, appNames: [appName ?? ""])
+    }
+
+    /// 낮을수록 먼저. `i`(0…n-1) = `appNames[i]` 와 맞음(앞 이름이 강함),
+    /// n = 그 외, n+1 = 알려진 의존성 kit.
+    ///
+    /// 정확히 이 순위가 없어서 lproj 를 든 Sparkle 의존성 번들(Help 도움말 현지화)이
+    /// 앱 번들보다 먼저 집혀 CLI 출력이 raw 키로 샜다(2026-08-22 실측).
+    static func rank(_ url: URL, appNames: [String]) -> Int {
         let name = url.deletingPathExtension().lastPathComponent
-        if let app = appName, !app.isEmpty {
-            // `Mounter_Mounter`, `ScreenshotSwift_ScreenshotL10n` 처럼 패키지명이 앞에 온다.
-            // CLI 실행 파일은 kebab(`tmp-l10n-probe`), SwiftPM 번들은 PascalCase
-            // (`TmpL10nProbe_TmpL10nProbe.bundle`)라 대소문자·구분자를 접어서 비교한다.
-            // 정확히 이 간극 때문에 lproj 를 든 Sparkle 의존성 번들(Help 도움말 현지화)이
-            // 앱 번들보다 먼저 집혀 CLI 출력이 raw 키로 샜다(2026-08-22 실측).
-            let fold: (String) -> String = {
-                $0.replacingOccurrences(of: " ", with: "")
-                    .replacingOccurrences(of: "-", with: "")
-                    .lowercased()
-            }
-            if fold(name).hasPrefix(fold(app) + "_") { return 0 }
-        }
-        return isDependencyKitBundle(url) ? 2 : 1
+        if let i = appNames.firstIndex(where: { bundleNameMatchesApp(name, app: $0) }) { return i }
+        return appNames.count + (isDependencyKitBundle(url) ? 1 : 0)
     }
 
     /// 앱이 아니라 의존성이 심은 리소스 번들로 보이는가. rank 0 이 없을 때의 마지막 기준.
@@ -221,7 +272,17 @@ public enum ResourceBundle {
     static func resolveLocalizationRoot(
         preferredName: String?,
         roots: [URL],
-        appName: String? = mainAppName(),
+        appName: String?,
+        fileManager fm: FileManager = .default
+    ) -> URL? {
+        resolveLocalizationRoot(preferredName: preferredName, roots: roots,
+                                appNames: appName.map { [$0] } ?? [], fileManager: fm)
+    }
+
+    static func resolveLocalizationRoot(
+        preferredName: String?,
+        roots: [URL],
+        appNames: [String] = mainAppNames(),
         fileManager fm: FileManager = .default
     ) -> URL? {
         if let name = preferredName,
@@ -230,7 +291,7 @@ public enum ResourceBundle {
         for root in roots {
             guard let items = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { continue }
             let bundles = items.filter { bundleExtensions.contains($0.pathExtension) }
-            for item in bundles.sorted(by: { rank($0, appName: appName) < rank($1, appName: appName) }) {
+            for item in bundles.sorted(by: { rank($0, appNames: appNames) < rank($1, appNames: appNames) }) {
                 if let dir = lprojDirectory(item, fileManager: fm) { return dir }
             }
         }
