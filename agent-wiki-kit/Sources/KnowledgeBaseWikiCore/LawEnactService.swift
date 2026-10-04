@@ -84,7 +84,9 @@ public enum LawEnactService {
     ) -> LawEnactContext {
         let verifier = testimony ?? LawSessionTestimony(
             scope: LawSummonScope(world: index.current, catalog: index.catalog)) { .standard(file: nil) }
-        return LawEnactContext(testimony: verifier, resolver: LawScopeReferenceResolver(index: index))
+        return LawEnactContext(
+            testimony: verifier, resolver: LawScopeReferenceResolver(index: index),
+            promotions: LawPromotionWitness(index: index))
     }
 
     public static func scope(of target: LawLedgerTarget) -> LawScopeIndex {

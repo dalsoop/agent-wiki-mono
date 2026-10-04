@@ -164,14 +164,23 @@ struct LawEnactValidator {
             }
         }()
         // 사람이 직접 공포한 기록은 speaker: user 다. 그 밖의 speaker: user 는 증언이 있어야 한다.
+        // 승격본이라고 주장하는 증거는 승격 영수증이 확인될 때만 증언이 된다(`LawPromotionWitness`).
         if speaker == LawSpeaker.user.rawValue, actor.kind != .human {
             let testified = resolved.contains { cite, target in
                 cite.rel == LawRelation.testifies.rawValue
                     && target.type == LawRecordType.evidence.rawValue
                     && target.speaker == LawSpeaker.user.rawValue
+                    && promotionAccepted(target.id)
             }
             guard testified else { throw LawEnactError.speakerUserRequiresTestimony }
         }
         return speaker
+    }
+
+    func promotionAccepted(_ id: String) -> Bool {
+        switch context.promotions?.status(of: id) ?? .notClaimed {
+        case .notClaimed, .genuine: return true
+        case .unproven: return false
+        }
     }
 }

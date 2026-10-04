@@ -170,10 +170,16 @@ public struct LawEnactContext: Sendable {
     public var testimony: (any LawTestimonyVerifying)?
     /// 같은 원장 밖 참조의 해석기(같은 원장은 항상 먼저 본다). 없으면 같은 원장 안만 본다.
     public var resolver: (any LawReferenceResolving)?
+    /// 승격본 확인자(`LawPromotionWitness`). 없으면 같은 원장 기록만으로 만든 확인자 — 승격본 주장을 확인하지 못한다.
+    public var promotions: (any LawPromotedEvidenceVerifying)?
 
-    public init(testimony: (any LawTestimonyVerifying)? = nil, resolver: (any LawReferenceResolving)? = nil) {
+    public init(
+        testimony: (any LawTestimonyVerifying)? = nil, resolver: (any LawReferenceResolving)? = nil,
+        promotions: (any LawPromotedEvidenceVerifying)? = nil
+    ) {
         self.testimony = testimony
         self.resolver = resolver
+        self.promotions = promotions
     }
 }
 

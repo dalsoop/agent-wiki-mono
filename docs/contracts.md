@@ -123,6 +123,7 @@
 - `show`·`list`·`search`·`context`·`path`·`cited-by`, 파생 색인 `index rebuild|sync|status` 는 이름과 뜻을 유지한다. ledger 3 의 `show` 는 현행 여부·4종류 보기·현행 사실인정을 텍스트 모드에서는 표준 에러에, `--json` 에서는 필드로 낸다. 검색 결과의 전신 객체는 `[전신 <원장>]`(JSON `predecessor: true`)로 표시한다.
 - ledger 2 원장(`novel-world`, repo world)에 쓰는 일도 `enact`·`amend`·`repeal`·`restore`·`audit`·`checkpoint` 로 하며, ledger 2 의 `enact` 는 옛 분류 옵션(`--domain`·`--kind`·`--knowledge`·`--classification-reason`·`--allow-unclassified`·`--origin`·`--alias`·`--observes`)을 계속 받는다.
 - ledger 3 승격의 대상 기록은 원본을 인용하지 않는다(상위 원장은 하위를 인용할 수 없다). 원본 id 는 영수증 본문에 적힌다.
+- 증거(`evidence`) 기록의 ledger 3 승격은 원본 원장 범위에서 증언을 다시 확인하고, 실패하면 아무것도 쓰지 않고 종료 코드 1 로 거부한다. 증거물은 대상 원장 `exhibits/` 에 복사한다(대상 원장 키의 R2 사본은 다음 `sync`). 승격본은 화자를 그대로 가지며, 그 표지는 대상 원장의 승격 영수증(승격본을 `receipts` 로 인용)과 `promoted` 태그다. `testifies` 인용과 `audit` 은 표지만 믿지 않고 영수증 본문의 원본 원장(대상의 하위 원장)을 읽어 같은 영수증과 원본 증거 기록(화자·증거물·본문)을 찾을 때만 승격본으로 인정한다. 확인되지 않은 승격본 주장은 `speaker: user` 증언이 되지 못하고 감사 위반이다.
 - 폐지된 이름(`publish`, `verify`, `rollback`, `classify`, `capture`, `blob` 의 쓰기 하위 명령, `hook authoring`)은 종료 코드 64 와 새 이름 안내만 내고 아무것도 하지 않는다.
 - 그 밖의 옛 쓰기 명령(`discuss`, `learn`, `review`, `event`, `task`, `agent` 등)은 ledger 2 원장에서만 동작하고, ledger 3 원장에서는 64 와 새 명령 안내를 낸다. `checkpoint` 는 두 형식 모두에서 동작한다.
 - 종료 코드: 0 성공, 1 거부(모델 미상, 증언 불일치, 전신 쓰기, 소환 범위 밖, 기기 키 미등록, 드리밍 기기 아님, 허용되지 않은 관계, 안전장치 위반, 구현 전 명령), 2 감사 위반, 64 사용법 오류·폐지된 명령.
