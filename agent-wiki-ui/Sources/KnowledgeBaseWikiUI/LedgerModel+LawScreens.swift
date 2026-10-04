@@ -55,8 +55,61 @@ extension LedgerModel {
 
     /// 기록 상세를 닫고 기록 목록으로.
     func closeLawRecord() {
+        if law.isEditingRecord { finishLawRecordEdit() }
         law.selectedRecordID = nil
         law.recordDetail = nil
+    }
+
+    // MARK: - 편집(기존 화면 편집을 기록 상세에서 연다 — 사용자 결정 "편집은 남김")
+
+    /// 지금 연 기록을 기존 편집기로 연다. 저장은 지금처럼 `performEdit(.amend)`(사람 작성자, 쓰기 게이트, git 커밋).
+    func editLawRecord() {
+        guard !isReadOnlyWorld, let id = law.recordDetail?.record.id,
+              let document = documentsRaw.first(where: { $0.versions.contains { $0.id == id } }) else { return }
+        select(document)
+        law.isEditingRecord = true
+    }
+
+    /// 편집을 마친다 — 남은 저장을 공포하고 개정판(새 head)의 상세로 돌아간다.
+    func finishLawRecordEdit() {
+        flushPendingSave()
+        law.isEditingRecord = false
+        if let head = selectedDocument?.head.id, head != law.selectedRecordID {
+            law.selectedRecordID = head
+            law.recordDetail = nil
+        }
+        reloadLawScreens()
+    }
+
+    /// 새 기록 — 기존 `newDocument` 와 같은 공포(자리 표시 본문)를 하고 바로 편집기로 연다.
+    func newLawRecord() {
+        guard !isReadOnlyWorld else { return }
+        flushPendingSave()
+        do {
+            let objectID = try performEdit(.create(title: nil, body: "(새 기록)\n", cites: []))
+            refresh { [weak self] in
+                guard let self else { return }
+                self.select(self.documentsRaw.first { $0.id == objectID })
+                self.destination = .lawRecords
+                self.law.selectedRecordID = objectID
+                self.law.recordDetail = nil
+                self.law.isEditingRecord = true
+                self.reloadLawScreens()
+            }
+        } catch {
+            errorMessage = "생성 실패: \(error)"
+        }
+    }
+
+    /// 지금 연 기록 삭제 — 기존 `delete` 와 같은 폐지 공포(기록은 남고 복구 가능).
+    func repealLawRecord() {
+        guard !isReadOnlyWorld, let id = law.recordDetail?.record.id,
+              let document = documentsRaw.first(where: { $0.versions.contains { $0.id == id } }) else { return }
+        delete(document)
+        law.isEditingRecord = false
+        law.selectedRecordID = nil
+        law.recordDetail = nil
+        reloadLawScreens()
     }
 
     func setLawRecordFilter(_ filter: LawRecordListFilter) {

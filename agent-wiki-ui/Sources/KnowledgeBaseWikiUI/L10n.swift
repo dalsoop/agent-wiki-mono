@@ -283,6 +283,10 @@ enum LawRecordScreenKey: String, CaseIterable {
     case lawRecordCitedByTitle = "law.record.cited_by_title"
     case lawRecordCitationNotFound = "law.record.citation_not_found"
     case lawRecordCitationPredecessor = "law.record.citation_predecessor"
+    case lawRecordEdit = "law.record.edit"
+    case lawRecordEditDone = "law.record.edit_done"
+    case lawRecordNew = "law.record.new"
+    case lawRecordRepeal = "law.record.repeal"
 }
 
 @MainActor

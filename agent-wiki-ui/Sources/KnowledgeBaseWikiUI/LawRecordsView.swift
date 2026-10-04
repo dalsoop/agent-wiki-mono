@@ -10,7 +10,17 @@ struct LawRecordsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(L(.LawNavRecords)).font(.title2.weight(.semibold))
+            HStack {
+                Text(L(.LawNavRecords)).font(.title2.weight(.semibold))
+                Spacer()
+                if !model.isReadOnlyWorld {
+                    Button {
+                        model.newLawRecord()
+                    } label: {
+                        Label(L(.lawRecordNew), systemImage: "square.and.pencil")
+                    }
+                }
+            }
             LawRecordFilterBar(model: model, query: $query)
             Divider()
             if model.law.records.isEmpty {

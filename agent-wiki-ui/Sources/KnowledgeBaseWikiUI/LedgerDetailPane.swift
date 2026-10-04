@@ -26,7 +26,22 @@ struct LedgerDetailPane: View {
         case .knowledge, .contributors: legacyDetailColumn
         case .lawContents: LawContentsView(model: model)
         case .lawRecords:
-            if model.law.selectedRecordID != nil {
+            if model.law.isEditingRecord {
+                // 기록 상세의 "편집" — 기존 편집기를 그대로(저장 = 개정 공포).
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Button {
+                            model.finishLawRecordEdit()
+                        } label: {
+                            Label(L(.lawRecordEditDone), systemImage: "checkmark")
+                        }
+                        .buttonStyle(.borderless)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24).padding(.top, 16)
+                    editor
+                }
+            } else if model.law.selectedRecordID != nil {
                 LawRecordDetailView(model: model)
             } else {
                 LawRecordsView(model: model)

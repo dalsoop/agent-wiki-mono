@@ -63,6 +63,8 @@ struct LedgerLawUIState {
     /// 기록 상세로 연 기록 id(`showLawRecord(id:)`).
     var selectedRecordID: String?
     var recordDetail: LawRecordDetail?
+    /// 기록 상세에서 편집을 연 상태 — 기존 편집기(`select`·`editorChanged`, 저장 = 개정 공포)를 그대로 쓴다.
+    var isEditingRecord = false
     /// 드리밍 묶음 하나를 눌렀을 때 그 묶음이 바꾼 기록.
     var selectedBatch: String?
     var batchChanges: [LawBatchChange] = []

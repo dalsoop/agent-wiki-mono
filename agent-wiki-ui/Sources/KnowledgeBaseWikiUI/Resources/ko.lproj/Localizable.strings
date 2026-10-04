@@ -265,3 +265,7 @@
 "law.credibility.tag_amended" = "개정됨";
 "law.credibility.tag_repealed" = "폐지됨";
 "law.credibility.tag_overturned" = "뒤집힘";
+"law.record.edit" = "편집";
+"law.record.edit_done" = "편집 마침";
+"law.record.new" = "새 기록";
+"law.record.repeal" = "삭제";

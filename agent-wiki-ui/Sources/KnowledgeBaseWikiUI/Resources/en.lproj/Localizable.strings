@@ -265,3 +265,7 @@
 "law.credibility.tag_amended" = "Amended";
 "law.credibility.tag_repealed" = "Repealed";
 "law.credibility.tag_overturned" = "Overturned";
+"law.record.edit" = "Edit";
+"law.record.edit_done" = "Done";
+"law.record.new" = "New Record";
+"law.record.repeal" = "Delete";

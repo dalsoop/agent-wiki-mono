@@ -17,6 +17,18 @@ struct LawRecordDetailView: View {
                 }
                 .buttonStyle(.borderless)
                 Spacer()
+                if model.law.recordDetail != nil, !model.isReadOnlyWorld {
+                    Button {
+                        model.editLawRecord()
+                    } label: {
+                        Label(L(.lawRecordEdit), systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        model.repealLawRecord()
+                    } label: {
+                        Label(L(.lawRecordRepeal), systemImage: "trash")
+                    }
+                }
             }
             .padding(.horizontal, 24)
             .padding(.top, 16)
