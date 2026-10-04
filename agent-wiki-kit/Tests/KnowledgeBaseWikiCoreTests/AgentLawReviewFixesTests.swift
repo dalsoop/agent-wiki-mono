@@ -95,10 +95,14 @@ import WikiLedgerKit
             try LawEnactService.enact(LawDraft(actor: Enact.agent, title: "x", tags: ["path:redact"], body: "y"), target: law)
             Issue.record("예약 태그가 일반 공포로 통과함")
         } catch LawEnactServiceError.enact(.reservedTag("path:redact")) {}
-        // 폐지만 하는 기록은 대상 유형을 그대로 적어도 받는다.
-        let repeal = try LawEnactService.enact(
-            LawDraft(actor: Enact.agent, title: "폐지", type: "finding", repeals: finding.id, body: bodies["finding"]!),
-            target: law)
+        // 사실인정의 폐지는 일반 경로가 못 하고(대상 판정), finding 경로는 한다.
+        let repealDraft = LawDraft(
+            actor: Enact.agent, title: "폐지", type: "finding", repeals: finding.id, body: bodies["finding"]!)
+        do {
+            try LawEnactService.enact(repealDraft, target: law)
+            Issue.record("일반 경로가 사실인정을 폐지함")
+        } catch LawEnactServiceError.enact(.targetRequiresDedicatedCommand(finding.id, "finding", "dream·finding")) {}
+        let repeal = try LawEnactService.enact(repealDraft, target: law, path: .finding)
         #expect(repeal.record.repeals == finding.id)
     }
 

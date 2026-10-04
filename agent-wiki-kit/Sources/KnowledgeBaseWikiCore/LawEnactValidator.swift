@@ -26,6 +26,9 @@ struct LawEnactValidator {
         let head: LawHeadFieldBlock
         do {
             head = try LawHeadFields.parse(body: draft.body, type: type.rawValue)
+        } catch LawHeadFieldError.missingKey where Self.repealOnly(draft) {
+            // 폐지만 하는 기록은 대상 유형을 그대로 적지만 본문은 폐지 이유다 — 필수 머리 칸을 요구하지 않는다(빈 머리 칸).
+            head = .empty
         } catch let error as LawHeadFieldError {
             throw LawEnactError.headField(error)
         }
@@ -125,6 +128,11 @@ struct LawEnactValidator {
         draft.amends != nil || !draft.amendsAlso.isEmpty || draft.repeals != nil
     }
 
+    /// 폐지만 하는 초안(`repeals` 만, 개정 없음).
+    static func repealOnly(_ draft: LawDraft) -> Bool {
+        draft.repeals != nil && draft.amends == nil && draft.amendsAlso.isEmpty
+    }
+
     func checkOrigin(_ draft: LawDraft) throws {
         if draft.origin == LawOrigin.migration.rawValue,
            !draft.cites.contains(where: { $0.rel == LawRelation.migratedFrom.rawValue }) {
@@ -135,14 +143,13 @@ struct LawEnactValidator {
     // MARK: - 처리 기록
 
     /// 사실인정은 `finds` 대상이 정확히 하나, 대법원 결정은 `speaker: user` 증거의 `testifies` 인용이 있어야 한다.
-    /// 폐지만 하는 기록(대상 유형을 그대로 적는다)은 보지 않는다.
+    /// 사실인정을 폐지만 하는 기록(대상 유형을 그대로 적는다)은 `finds` 를 갖지 않으므로 대상 수를 보지 않는다.
+    /// 무엇을 개정·폐지할 수 있는지는 여기서 보지 않는다 — 판정은 `LawEnactPath.admit` 한 곳이다.
     func checkProcessRecord(
         _ draft: LawDraft, type: LawRecordType, head: LawHeadFieldBlock, resolved: [(LawCite, LawResolvedReference)]
     ) throws {
-        let repealOnly = draft.repeals != nil && draft.amends == nil && draft.amendsAlso.isEmpty
-        guard !repealOnly else { return }
         switch type {
-        case .finding:
+        case .finding where !Self.repealOnly(draft):
             let count = draft.cites.filter { $0.rel == LawRelation.finds.rawValue }.count
             guard count == 1 else { throw LawEnactError.findingTargetCount(count) }
         case .ruling where head["level"] == LawRulingLevel.supreme.rawValue:

@@ -211,6 +211,9 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
     case findingTargetCount(Int)
     case supremeRulingRequiresTestimony
     case humanSpeakerFixed(String)
+    case targetRequiresDedicatedCommand(target: String, type: String, command: String)
+    case targetIrreversible(target: String, type: String)
+    case restoreRefused([String])
 
     public var description: String {
         switch self {
@@ -242,6 +245,14 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
         case .supremeRulingRequiresTestimony:
             return "대법원 결정(level: supreme)은 speaker: user 증거 기록을 testifies 로 인용해야 함"
         case .humanSpeakerFixed(let s): return "사람 공포의 화자는 user 로 고정 — 받은 값 \(s)"
+        case .targetRequiresDedicatedCommand(let id, let t, let command):
+            return "대상 \(id) (유형 \(t)) 의 개정·폐지는 전용 경로 `\(command)` 만 한다"
+        case .targetIrreversible(let id, let t):
+            return t == LawRecordType.redaction.rawValue
+                ? "가림 기록 \(id) 는 되돌릴 수 없음 — 지운 증거물은 돌아오지 않는다"
+                : "대상 \(id) (유형 \(t)) 는 개정·폐지할 수 없음 — 대법원 결정은 최종"
+        case .restoreRefused(let reasons):
+            return "원상회복 거부(아무것도 쓰지 않음) — 되돌릴 수 없는 기록:\n" + reasons.map { "- \($0)" }.joined(separator: "\n")
         }
     }
 }

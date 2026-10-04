@@ -113,7 +113,7 @@ public enum LawEnactService {
         if let denial = target.writeDenial() { throw LawEnactServiceError.writeDenied(denial) }
         let scope = index ?? scope(of: target)
         do {
-            let admitted = try path.admit(draft)
+            let admitted = try path.admit(draft, target: { scope.object(id: $0)?.law })
             let stored = try target.store.enact(
                 admitted, now: now, context: context(index: scope, testimony: testimony ?? target.defaultTestimony))
             LawEnactAftermath.run(target: target, enacted: [stored])
@@ -123,19 +123,22 @@ public enum LawEnactService {
         }
     }
 
-    /// 원상회복 — 묶음의 기록마다 새 기록을 공포한다(같은 게이트·해석기·후처리).
+    /// 원상회복 — 묶음의 기록마다 새 기록을 공포한다(같은 게이트·해석기·후처리). 만들 기록마다 `path.admit` 을 거치고,
+    /// 되돌릴 수 없는 기록(대법원 결정·가림·이 경로가 못 다루는 처리 기록)이 하나라도 있으면 아무것도 쓰지 않고 거부한다.
+    /// `path` 는 부른 경로 — CLI·화면은 `general`, 결정의 조치(`LawCourtService`)는 `court`.
     @discardableResult
     public static func restore(
         batch: String, actor: LawActor, target: LawLedgerTarget,
-        testimony: (any LawTestimonyVerifying)? = nil, perRuling: String? = nil, now: Date = Date()
+        testimony: (any LawTestimonyVerifying)? = nil, perRuling: String? = nil, path: LawEnactPath = .general, now: Date = Date()
     ) throws -> [LawStoredRecord] {
         guard target.isLedgerThree else { throw LawEnactServiceError.notLedgerThree(target.worldName) }
         if let denial = target.writeDenial() { throw LawEnactServiceError.writeDenied(denial) }
+        let scope = scope(of: target)
         do {
             let enacted = try target.store.restore(
                 batch: batch, actor: actor, now: now,
-                context: context(index: scope(of: target), testimony: testimony ?? target.defaultTestimony),
-                perRuling: perRuling)
+                context: context(index: scope, testimony: testimony ?? target.defaultTestimony),
+                perRuling: perRuling, path: path, lookup: { scope.object(id: $0)?.law })
             LawEnactAftermath.run(target: target, enacted: enacted)
             return enacted
         } catch let error as LawEnactError {

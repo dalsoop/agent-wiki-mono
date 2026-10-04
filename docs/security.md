@@ -76,11 +76,13 @@
 | 에이전트 세션 안의 CLI(실행 도구 세션 id 환경 변수·`AI_AGENT`·`CLAUDECODE`·`human` 이 아닌 `AGENT_WIKI_RUNTIME`) | 사람 작성자(`--as user:…`·`MEMO_LEDGER_AUTHOR=user:…`)로 공포·`dream resume` | 거부(종료 코드 1, "에이전트 세션에서 사람 작성자 불가") |
 | 일반 공포(`enact`·`amend`·화면 편집) | 처리 유형(`ruling`·`appeal`·`proposal`·`redaction`·`registration`·`contents`·`report`·`promotion-receipt`·`finding`) 공포 | 거부(종료 코드 1). 전용 명령(`court`·`redact`·`judgment`·`dream`/`contents`·`promote`·`finding`)만 공포 |
 | 어느 작성자 | 대법원 결정 | 승인·기각을 말한 사용자 발화 증언(`testifies`)이 없으면 거부 |
+| 어느 경로(`repeal`·`amend`·화면 편집·`restore`·전용 명령) | 대법원 결정·가림 기록의 개정·폐지 | 거부(종료 코드 1). 대법원 결정은 최종, 가림은 되돌릴 수 없음 |
+| 일반 경로(`repeal`·`amend`·화면 편집·CLI `restore`) | 항소심 결정·이의·개정안·판결 등록·목차·보고·사실인정의 개정·폐지 | 거부(종료 코드 1). 대상의 실제 유형으로 판정(초안 유형을 바꿔 적어도 같음). `restore` 는 묶음 전체를 쓰지 않음 |
 
 ### 작성자·화자 신뢰
 
 - 작성자 검증: 작성자 종류는 작성자 접두어(`agent:`·`user:`·`app:`)로 정하고, 모델 기록은 실행 환경에서 모은다. 에이전트 공포의 모델 기록 누락은 거부한다. CLI 에서 작성자가 사람(`user:`)으로 정해지면 환경에 에이전트 표지(지원 CLI 목록의 세션 id 환경 변수, `AI_AGENT`, `CLAUDECODE`, `human` 이 아닌 `AGENT_WIKI_RUNTIME`)가 없어야 하고, 있으면 거부한다. 사람이 에이전트 표지 없는 자기 터미널에서 CLI 를 쓰는 것과 화면 편집(`LedgerHumanEdit`)은 사람 공포로 받는다. 사람 공포의 화자는 `user` 로 고정이다(다른 `--speaker` 는 거부).
-- `speaker: user` 는 스스로 적어서 얻을 수 없다. 실제 세션 발화와의 글자 대조(증언 확인)를 통과한 증거 기록을 거쳐야 한다. 이것이 드리밍이 폐지하지 못하는 보호 기록과 대법원 결정의 근거다.
+- `speaker: user` 는 실제 세션 발화와의 글자 대조(증언 확인)를 통과한 증거 기록을 `testifies` 로 인용하거나, 사람 작성자 경로(에이전트 표지 없는 CLI·화면 편집)를 거쳐야 한다. 사람 작성자 판정은 실행 환경의 에이전트 표지에 기댄다 — 표지를 지운 환경에서는 가려내지 못한다(한계는 `docs/tracking/findings.md` "사람 작성자 판정이 환경 변수에 기댄다"). 이것이 드리밍이 폐지하지 못하는 보호 기록과 대법원 결정의 근거다.
 
 ### R2 와 세션
 
