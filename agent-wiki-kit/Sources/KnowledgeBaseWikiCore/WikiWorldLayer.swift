@@ -111,9 +111,6 @@ public enum WikiWorldPresentation: Sendable {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let path = URL(fileURLWithPath: (rootPath as NSString).expandingTildeInPath)
             .standardizedFileURL.path
-        if trimmed.lowercased() == "gujo-wiki" || path.hasSuffix("/gujo-wiki") {
-            return .remoteShared
-        }
         if trimmed.lowercased().hasPrefix("person-") {
             return .localPerson
         }

@@ -53,7 +53,7 @@
 
 ## world 계층
 
-- world 층은 `localPerson`, `tenant`, `remoteShared`, `repository`, `other` 다섯 가지다. `gujo-wiki`는 git 저장소여도 `remoteShared`다.
+- world 층은 `localPerson`, `tenant`, `remoteShared`, `repository`, `other` 다섯 가지다. 층은 설정에 기록된 값이 정본이다(`world add --layer`·`world set-layer`). `gujo-wiki` 와 `agent-law` 는 `remoteShared` 로 기록한다.
 - `tenant` world는 반드시 parent를 가지고, parent는 `remoteShared` 층이어야 한다. parent를 주면서 층을 `tenant`가 아닌 값으로 두는 등록은 거부한다.
 - 검색·컨텍스트 범위는 현재 world와 그 조상 world다. 형제·하위 world는 포함하지 않는다.
 - 전역 CLI는 `--world`가 없으면 `gujo-wiki`를 연다. repo CLI(`agent-wiki-local`)는 `--world`가 없으면 cwd에서 위로 올라가며 첫 `.wiki/` 디렉터리를 연다.

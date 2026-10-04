@@ -294,8 +294,10 @@ public struct GujoBlobConfig: Codable, Sendable, Equatable {
     public var accessKey: String
     public var secretKey: String
 
-    public init(endpoint: String = "https://3512fb9ec3513c795ed6293dc7210a8c.r2.cloudflarestorage.com",
-                bucket: String = "gujo-wiki-blobs",
+    /// 엔드포인트·버킷은 설정(`gujo blob config` 가 쓰는 `.git/gujo-s3.json`)이나 env 에서만 받는다.
+    /// 소스에 호스트·버킷 이름을 두지 않는다(docs/standards.md 설정 절).
+    public init(endpoint: String,
+                bucket: String,
                 region: String = "auto",
                 accessKey: String, secretKey: String) {
         self.endpoint = endpoint
@@ -312,10 +314,11 @@ public struct GujoBlobConfig: Codable, Sendable, Equatable {
     public static func load(root: URL) -> GujoBlobConfig? {
         let env = ProcessInfo.processInfo.environment
         if let accessKey = env["GUJO_S3_ACCESS_KEY"], let secretKey = env["GUJO_S3_SECRET_KEY"],
-           !accessKey.isEmpty, !secretKey.isEmpty {
+           let endpoint = env["GUJO_S3_ENDPOINT"], let bucket = env["GUJO_S3_BUCKET"],
+           !accessKey.isEmpty, !secretKey.isEmpty, !endpoint.isEmpty, !bucket.isEmpty {
             return GujoBlobConfig(
-                endpoint: env["GUJO_S3_ENDPOINT"] ?? "https://3512fb9ec3513c795ed6293dc7210a8c.r2.cloudflarestorage.com",
-                bucket: env["GUJO_S3_BUCKET"] ?? "gujo-wiki-blobs",
+                endpoint: endpoint,
+                bucket: bucket,
                 region: env["GUJO_S3_REGION"] ?? "auto",
                 accessKey: accessKey, secretKey: secretKey)
         }
