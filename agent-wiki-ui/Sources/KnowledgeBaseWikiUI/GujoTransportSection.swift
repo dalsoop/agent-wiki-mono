@@ -103,7 +103,8 @@ struct GujoTransportSection: View {
     }
 
     private func blobsText(_ status: GujoSync.Status) -> String {
-        var text = "\(status.blobsLocal)개 · 시드 garage `gujo-wiki-blobs`"
+        let bucket = GujoBlobConfig.load(root: sync.root)?.bucket ?? "미설정"
+        var text = "\(status.blobsLocal)개 · 버킷 `\(bucket)`"
         if let missing = status.blobsMissing {
             text += missing > 0 ? " · 안 받은 것 \(missing)개" : " · 원격과 일치"
         }

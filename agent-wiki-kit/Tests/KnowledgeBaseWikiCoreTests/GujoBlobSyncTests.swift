@@ -62,11 +62,11 @@ import EndpointRouterKit
 
     // MARK: - 자격 저장/로드
 
-    /// 기본 저장소는 R2 다(2026-08 garage→R2 전환). 기본값이 우연히 되돌아가면
-    /// 자격 없는 신규 온보딩이 죽은 내부 ingress 를 보게 된다 — 여기서 못박는다.
-    @Test func configDefaultsPointAtR2() {
-        let config = GujoBlobConfig(accessKey: "k", secretKey: "s")
-        #expect(config.endpoint == "https://3512fb9ec3513c795ed6293dc7210a8c.r2.cloudflarestorage.com")
+    /// 엔드포인트·버킷은 소스 기본값 없이 설정에서만 온다. 지역만 기본 `auto`.
+    @Test func configTakesEndpointAndBucketExplicitly() {
+        let config = GujoBlobConfig(endpoint: "https://r2.example.test", bucket: "gujo-wiki-blobs",
+                                    accessKey: "k", secretKey: "s")
+        #expect(config.endpoint == "https://r2.example.test")
         #expect(config.region == "auto")
         #expect(config.bucket == "gujo-wiki-blobs")
     }
@@ -78,7 +78,7 @@ import EndpointRouterKit
             at: root.appendingPathComponent(".git"), withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let config = GujoBlobConfig(accessKey: "GKx", secretKey: "sk")
+        let config = GujoBlobConfig(endpoint: "https://r2.example.test", bucket: "gujo-wiki-blobs", accessKey: "GKx", secretKey: "sk")
         try config.save(root: root)
         // env 가 없을 때 파일 폴백으로 동일하게 복원돼야 한다.
         #expect(GujoBlobConfig.load(root: root) == config)
@@ -99,7 +99,7 @@ import EndpointRouterKit
         defer { try? FileManager.default.removeItem(at: root) }
 
         #expect(GujoBlobSync.lastKnownMissing(root: root) == nil)
-        let blob = GujoBlobSync(root: root, config: GujoBlobConfig(accessKey: "a", secretKey: "b"))
+        let blob = GujoBlobSync(root: root, config: GujoBlobConfig(endpoint: "https://r2.example.test", bucket: "gujo-wiki-blobs", accessKey: "a", secretKey: "b"))
         blob.stampMissing(7)
         #expect(GujoBlobSync.lastKnownMissing(root: root) == 7)
     }

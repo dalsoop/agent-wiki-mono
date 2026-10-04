@@ -18,12 +18,13 @@ import Testing
         )
     }
 
-    @Test func classifiesGujoAsRemoteEvenWhenPathIsAGitCheckout() {
+    /// 원장 이름·경로로 층을 정하지 않는다 — 공유 원장은 설정의 층(`remoteShared`)이 정한다.
+    @Test func sharedLayerComesFromConfigNotTheName() {
         #expect(
             WikiWorldPresentation.classify(
                 name: "gujo-wiki",
                 rootPath: "/Users/x/gujo-wiki"
-            ) == .remoteShared
+            ) == .other
         )
     }
 
@@ -52,7 +53,8 @@ import Testing
         #expect(
             WikiWorldPresentation.title(
                 name: "gujo-wiki",
-                rootPath: "/Users/x/gujo-wiki"
+                rootPath: "/Users/x/gujo-wiki",
+                layer: .remoteShared
             ) == "공유 위키 · 원격"
         )
         let personSub = WikiWorldPresentation.subtitle(
@@ -62,7 +64,8 @@ import Testing
         #expect(personSub.contains("공유 위키로 안 올라감"))
         let remoteSub = WikiWorldPresentation.subtitle(
             name: "gujo-wiki",
-            rootPath: "/Users/x/gujo-wiki"
+            rootPath: "/Users/x/gujo-wiki",
+            layer: .remoteShared
         )
         // 원격 웹 주소는 없다 — 옛 내부 GitLab(프로젝트 441)은 2026-09-24 퇴역했다.
         #expect(remoteSub.hasPrefix("공유 위키 · "))
@@ -72,7 +75,7 @@ import Testing
     @Test func listItemsGroupLocalThenRemote() {
         let items = WikiWorldPresentation.listItems(
             worlds: [
-                LedgerWorld(name: "gujo-wiki", rootPath: "/Users/x/gujo-wiki"),
+                LedgerWorld(name: "gujo-wiki", rootPath: "/Users/x/gujo-wiki", layer: "remoteShared"),
                 LedgerWorld(name: "person-family", rootPath: "/Users/x/.tenants/family/wiki"),
                 LedgerWorld(name: "mono", rootPath: "/src/mono/.wiki"),
             ],

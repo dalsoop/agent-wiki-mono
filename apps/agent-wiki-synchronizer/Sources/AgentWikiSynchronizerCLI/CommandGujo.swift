@@ -136,7 +136,7 @@ private func printGujoUsage() {
       status [--probe] [--json]     ahead/behind·미커밋·피어·blobs (--probe 는 시드 도달성까지)
       sync [--peer <이름>] [--json] 시드에서 fetch·merge 만(전신은 읽기 pull 만, 결정 0007)
       peer list|add|remove          피어 관리 — 추가 시 push 는 자동 비활성
-      blob status|pull [sha…]       blob 스토리지(S3) 받기 — 기본 시드 R2 `gujo-wiki-blobs`(전신은 pull 만)
+      blob status|pull [sha…]       blob 스토리지(S3) 받기 — 설정의 버킷(전신은 pull 만)
       blob config [--endpoint … --bucket … --region …]  설정 보기·저장(.git/gujo-s3.json, 0600)
 
     전역: --root <경로>  (기본: world `gujo-wiki`, 없으면 ~/gujo-wiki)
@@ -229,7 +229,7 @@ private func emitGujoBlobTransfer(
 
 private func runGujoBlobConfig(root: URL, arguments: [String]) {
     var config = GujoBlobConfig.load(root: root)
-        ?? GujoBlobConfig(accessKey: "", secretKey: "")
+        ?? GujoBlobConfig(endpoint: "", bucket: "", accessKey: "", secretKey: "")
     func opt(_ flag: String) -> String? {
         guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count
         else { return nil }
@@ -242,6 +242,9 @@ private func runGujoBlobConfig(root: URL, arguments: [String]) {
     if let v = opt("--access-key") { config.accessKey = v; changed = true }
     if let v = opt("--secret-key") { config.secretKey = v; changed = true }
     if changed {
+        guard !config.endpoint.isEmpty, !config.bucket.isEmpty else {
+            fail("blob 설정에 --endpoint 와 --bucket 이 필요하다(소스에 기본값을 두지 않는다)")
+        }
         guard !config.accessKey.isEmpty, !config.secretKey.isEmpty else {
             fail(CLILocalization.string("wg.l10n-11"))
         }
