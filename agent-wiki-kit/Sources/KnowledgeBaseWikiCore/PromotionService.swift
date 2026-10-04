@@ -213,6 +213,8 @@ public enum PromotionError: Error, CustomStringConvertible, Equatable {
     case confirmationMismatch
     case malformedReceipt
     case sourceReceiptWriteFailed(String)
+    /// 대상 원장 쓰기 거부(보관된 전신·미등록 기기) 또는 ledger 3 대상(ledger 3 는 `promote`).
+    case targetDenied(String)
 
     public var description: String {
         switch self {
@@ -226,7 +228,46 @@ public enum PromotionError: Error, CustomStringConvertible, Equatable {
         case .confirmationMismatch: return "preview 확인 토큰 불일치 — preview를 다시 실행하세요"
         case .malformedReceipt: return "프로모션 영수증 JSON 생성 실패"
         case .sourceReceiptWriteFailed(let reason): return "프로모션 원본 영수증 쓰기 실패: \(reason)"
+        case .targetDenied(let reason): return reason
         }
+    }
+}
+
+/// 옛 승격(`promotion publish`)의 대상 원장 판정. 쓰기 거부는 `WorldWriteGate` 한 곳이고, ledger 3 대상은 옛 승격을
+/// 받지 않는다(ledger 3 승격은 `promote`). 근거: docs/business-rules.md "전신", 결정 0007.
+public struct PromotionTargetGate: Sendable {
+    public var catalog: WorldBindingCatalog
+    public var registeredDevices: [String]
+    public var currentDevice: String?
+
+    public init(catalog: WorldBindingCatalog, registeredDevices: [String], currentDevice: String?) {
+        self.catalog = catalog
+        self.registeredDevices = registeredDevices
+        self.currentDevice = currentDevice
+    }
+
+    public init(file: BoundLedgerFile, catalog: WorldBindingCatalog) {
+        self.init(catalog: catalog, registeredDevices: file.devices ?? [], currentDevice: file.currentDevice)
+    }
+
+    /// 호스트 설정(읽기만)으로 만든 판정.
+    public static func standard() -> PromotionTargetGate {
+        let config = LedgerConfig.load()
+        let file = WorldBoundBootstrap.load(from: LedgerConfig.configURL, overlay: config)
+        return PromotionTargetGate(file: file, catalog: WorldCatalogLoader.merging(file: file, config: config))
+    }
+
+    /// 거부 사유. 허용이면 nil.
+    public func denial(targetWorld: String) -> String? {
+        if let denial = WorldWriteGate.denial(
+            targetWorld: targetWorld, catalog: catalog,
+            registeredDevices: registeredDevices, currentDevice: currentDevice) {
+            return denial.message
+        }
+        if catalog.isLedgerThree(targetWorld) {
+            return "ledger 3 원장 '\(targetWorld)' 에는 옛 승격(promotion)을 쓰지 않는다 — promote <id> --to \(targetWorld)"
+        }
+        return nil
     }
 }
 
@@ -241,6 +282,8 @@ public struct PromotionPublishRequest: Sendable {
     public var confirmationToken: String
     public var now: Date = Date()
     public var simulateSourceReceiptFailure: Bool = false
+    /// 대상 원장 판정. 주면 쓰기 전에 본다(CLI·화면은 항상 준다).
+    public var targetGate: PromotionTargetGate? = nil
 
     public init(
         sourceStore: LedgerStore,
@@ -252,7 +295,8 @@ public struct PromotionPublishRequest: Sendable {
         promotedBy: String,
         confirmationToken: String,
         now: Date = Date(),
-        simulateSourceReceiptFailure: Bool = false
+        simulateSourceReceiptFailure: Bool = false,
+        targetGate: PromotionTargetGate? = nil
     ) {
         self.sourceStore = sourceStore
         self.targetStore = targetStore
@@ -264,6 +308,7 @@ public struct PromotionPublishRequest: Sendable {
         self.confirmationToken = confirmationToken
         self.now = now
         self.simulateSourceReceiptFailure = simulateSourceReceiptFailure
+        self.targetGate = targetGate
     }
 }
 
@@ -326,7 +371,8 @@ public enum PromotionService {
         targetWorld: LedgerWorld,
         promotedBy: String,
         confirmationToken: String,
-        now: Date = Date()
+        now: Date = Date(),
+        targetGate: PromotionTargetGate? = nil
     ) throws -> PromotionResult {
         try publish(PromotionPublishRequest(
             sourceStore: sourceStore,
@@ -337,7 +383,8 @@ public enum PromotionService {
             targetWorld: targetWorld,
             promotedBy: promotedBy,
             confirmationToken: confirmationToken,
-            now: now))
+            now: now,
+            targetGate: targetGate))
     }
 
     public static func publish(_ request: PromotionPublishRequest) throws -> PromotionResult {
@@ -352,6 +399,9 @@ public enum PromotionService {
         let now = request.now
         guard sourceStore.root.standardizedFileURL != targetStore.root.standardizedFileURL else {
             throw PromotionError.sameWorld
+        }
+        if let denial = request.targetGate?.denial(targetWorld: targetWorld.name) {
+            throw PromotionError.targetDenied(denial)
         }
         let endpoint = try resolveEndpoint(repository: repository, sourceWorldName: sourceWorldName)
         let preview = try preview(

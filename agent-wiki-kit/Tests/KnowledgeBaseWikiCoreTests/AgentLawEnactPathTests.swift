@@ -129,7 +129,11 @@ import WikiLedgerKit
             author: "agent:c@mac", explicit: LawModelRecord(model: "claude-opus-5-5"), environment: environment, device: "mac")
         #expect(explicit.model == "claude-opus-5-5")
         #expect(explicit.runtime == "codex")
-        let human = try LawActorResolution.actor(author: "user:yun", environment: environment, device: "mac")
+        // 사람 작성자는 에이전트 표지(사람이 아닌 AGENT_WIKI_RUNTIME 등)가 있으면 거부하고, 없으면 사람 공포다.
+        #expect(throws: LawActorError.humanInAgentSession(LawModelRecordSource.runtimeKey)) {
+            try LawActorResolution.actor(author: "user:yun", environment: environment, device: "mac")
+        }
+        let human = try LawActorResolution.actor(author: "user:yun", environment: [:], device: "mac")
         #expect(human.kind == .human)
         #expect(human.model == nil)
         #expect(human.runtime == LawRuntime.human.rawValue)

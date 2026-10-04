@@ -73,7 +73,7 @@ public enum CommandSurfaceRouting {
         case "enact", "amend", "repeal", "restore", "finding", "checkpoint", "promote", "migrate", "tick", "review":
             return true
         case "exhibit": return sub == "put"
-        case "judgment": return sub == "register"
+        case "judgment": return sub == "register" || sub == "amend"
         case "redact", "archive": return true
         case "summon": return arguments.contains("--record")
         case "court": return ["appeal", "propose", "hear", "decide"].contains(sub)
@@ -137,7 +137,7 @@ public func runCommandSurface(_ arguments: [String], context: LawCommandContext)
         guard ledgerThree else { return false }
         runLawSearchOrContext(context: context, arguments: arguments)
     case "index" where ledgerThree: runLawIndex(context: context, arguments: arguments)
-    // 자리만 둔 명령(뒤 작업이 채운다)
+    // agent-law 전용 명령
     case "sync": runSync(context: context, arguments: arguments)
     case "archive": runArchive(context: context, arguments: arguments)
     case "redact": runRedact(context: context, arguments: arguments)
@@ -150,11 +150,6 @@ public func runCommandSurface(_ arguments: [String], context: LawCommandContext)
     default: return false
     }
     return true
-}
-
-/// 자리만 둔 명령 — "구현 전" 안내와 종료 코드 1.
-public func lawNotImplemented(_ name: String, task: String) -> Never {
-    fail("'\(name)' 는 구현 전 — 작업 \(task) 에서 연결된다 (결정 0007)")
 }
 
 extension CommandSurfaceRouting {

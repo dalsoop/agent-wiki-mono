@@ -136,8 +136,8 @@ private func printGujoUsage() {
       status [--probe] [--json]     ahead/behind·미커밋·피어·blobs (--probe 는 시드 도달성까지)
       sync [--peer <이름>] [--json] 시드에서 fetch·merge 만(전신은 읽기 pull 만, 결정 0007)
       peer list|add|remove          피어 관리 — 추가 시 push 는 자동 비활성
-      blob status|pull|push [sha…]  blob 스토리지(S3) 왕복 — 기본 시드 R2 `gujo-wiki-blobs`
-      blob config [--access-key … --secret-key …]  자격 저장(.git/gujo-s3.json, 0600)
+      blob status|pull [sha…]       blob 스토리지(S3) 받기 — 기본 시드 R2 `gujo-wiki-blobs`(전신은 pull 만)
+      blob config [--endpoint … --bucket … --region …]  설정 보기·저장(.git/gujo-s3.json, 0600)
 
     전역: --root <경로>  (기본: world `gujo-wiki`, 없으면 ~/gujo-wiki)
     blob 자격은 env(GUJO_S3_ACCESS_KEY/SECRET_KEY[/ENDPOINT/BUCKET]) 가 파일보다 우선.
@@ -149,6 +149,13 @@ private func printGujoUsage() {
 private func runGujoBlob(sync: GujoSync, arguments: [String], json: Bool) {
     let action = arguments.count >= 3 ? arguments[2] : "status"
     let root = sync.root
+    // 전신(보관된 원장)의 blob 은 받기만 한다 — 올리기와 쓰기 자격 저장은 사용법 오류(결정 0007).
+    if action == "push" {
+        usageFail("'gujo blob push' 는 쓰지 않음 — 전신 blob 은 pull 만(결정 0007). 증거물은 agent-law sync 가 R2 에 올린다")
+    }
+    if action == "config", arguments.contains("--access-key") || arguments.contains("--secret-key") {
+        usageFail("'gujo blob config --access-key/--secret-key' 는 쓰지 않음 — 전신 blob 은 pull 만(결정 0007). 받기 자격은 env GUJO_S3_ACCESS_KEY/GUJO_S3_SECRET_KEY")
+    }
     if action == "config" {
         runGujoBlobConfig(root: root, arguments: arguments)
         return
@@ -165,8 +172,7 @@ private func runGujoBlob(sync: GujoSync, arguments: [String], json: Bool) {
 private func makeGujoBlobSync(root: URL) -> GujoBlobSync {
     guard let config = GujoBlobConfig.load(root: root) else {
         fail("""
-        blob 자격이 없다 — 다음 중 하나로 설정:
-          agent-wiki gujo blob config --access-key <GK…> --secret-key <…>
+        blob 자격이 없다 — 다음으로 설정:
           env GUJO_S3_ACCESS_KEY / GUJO_S3_SECRET_KEY
         (자격 발급: Cloudflare 대시보드 R2 API 토큰 — s3-storage-manager 「테넌트 관리」로 등록·회전 관리)
         """)
@@ -193,10 +199,8 @@ private func runGujoBlobAction(
         }
     case "pull":
         emitGujoBlobTransfer(blob.pull(shas: requested), label: "pull", verb: CLILocalization.string("wg.l10n-8"), includeSkipped: true, json: json)
-    case "push":
-        emitGujoBlobTransfer(blob.push(shas: requested), label: "push", verb: CLILocalization.string("wg.l10n-9"), includeSkipped: false, json: json)
     default:
-        fail("gujo blob <status|pull|push|config>")
+        fail("gujo blob <status|pull|config>")
     }
 }
 

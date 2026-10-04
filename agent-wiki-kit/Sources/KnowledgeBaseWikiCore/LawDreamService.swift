@@ -108,6 +108,11 @@ public struct LawDreamOutcome: Codable, Sendable, Equatable {
     public var summaries: [String] = []
     public var failures: [String] = []
 
+    public init(trigger: LawDreamTrigger, skipped: String? = nil) {
+        self.trigger = trigger
+        self.skipped = skipped
+    }
+
     /// AI 응답 오류·재료 읽기 실패·R2 기록 실패가 없었나.
     public var ok: Bool {
         failures.isEmpty && ledgers.allSatisfy { $0.aiError == nil && $0.materialError == nil }
@@ -240,7 +245,7 @@ public struct LawDreamService: Sendable {
         let body = pause.unacknowledgedRestores.map { LawDreamRecordFormat.restorePrefix + $0 }.joined(separator: "\n") + "\n"
         let draft = LawDraft(
             actor: actor, title: LawDreamRecordFormat.resumeTitle, type: LawRecordType.report.rawValue, body: body)
-        return try LawEnactService.enact(draft, target: target, now: clock.now())
+        return try LawEnactService.enact(draft, target: target, path: .dream, now: clock.now())
     }
 
     // MARK: - run
@@ -305,6 +310,8 @@ public struct LawDreamService: Sendable {
         var nextDeferred: [LawDreamDeferred] = []
         var consumed: [String] = []
         let targetsByWorld = Dictionary(targets.map { ($0.worldName, $0) }, uniquingKeysWith: { first, _ in first })
+        // 3-1. 원장마다 재료·AI 제안·안전 검사로 계획을 세운다(아직 공포하지 않음).
+        var prepared: [PreparedLedger] = []
         for target in targets {
             guard let key = ledgerKey(target) else { continue }
             let carried = state.deferred.filter { $0.world == target.worldName }.map(\.proposal)
@@ -313,12 +320,20 @@ public struct LawDreamService: Sendable {
                 target: target, ledgerKey: key, run: run, batch: batch, trigger: trigger, actor: actor,
                 manifests: manifests, carried: carried, since: state.lastRunDate, targetsByWorld: targetsByWorld,
                 recordsByWorld: recordsByWorld, archive: outcome.archive, archiveError: outcome.archiveError)
-            let result = processLedger(context, store: objectStore)
+            prepared.append(prepareLedger(context, store: objectStore))
+        }
+        // 3-2. 안전장치는 실행 전체 기준 — 변경 상한을 넘는 것은 다음 실행으로, 폐지 상한을 넘으면 묶음 전체 미적용 + 경보.
+        var plans = prepared.map { $0.plan ?? LawDreamPlan() }
+        Self.applyRunLimits(&plans, maxChanges: settings.resolvedMaxChanges, maxRepeals: settings.resolvedMaxRepeals)
+        for index in prepared.indices where prepared[index].plan != nil { prepared[index].plan = plans[index] }
+        // 4. 묶음 하나로 공포.
+        for var item in prepared {
+            applyLedger(&item, store: objectStore)
+            let result = item.result
             outcome.ledgers.append(result.outcome)
             outcome.failures += result.failures
-            if result.consume { consumed += manifests.map(Self.manifestKey) }
-            nextDeferred += result.deferred.map { LawDreamDeferred(world: target.worldName, proposal: $0) }
-            for world in Set(result.touched) { recordsByWorld[world] = targetsByWorld[world]?.store.scan() ?? [] }
+            if result.consume { consumed += item.run.manifests.map(Self.manifestKey) }
+            nextDeferred += result.deferred.map { LawDreamDeferred(world: item.run.target.worldName, proposal: $0) }
         }
 
         // 5. 목차 새 판(원장마다). 이번에 정리한 원장은 이번 경보, 아니면 마지막 보고의 경보.
@@ -354,7 +369,7 @@ public struct LawDreamService: Sendable {
                 body: Self.reportBody(ledger, run: run, batch: batch, trigger: trigger, archive: outcome.archive,
                                       archiveError: outcome.archiveError))
             do {
-                outcome.ledgers[index].report = try LawEnactService.enact(draft, target: target, now: clock.now()).id
+                outcome.ledgers[index].report = try LawEnactService.enact(draft, target: target, path: .dream, now: clock.now()).id
             } catch {
                 outcome.failures.append("\(ledger.world) 보고 공포 실패: \(error)")
             }
@@ -452,7 +467,15 @@ public struct LawDreamService: Sendable {
         var touched: [String] = []
     }
 
-    func processLedger(_ run: LedgerRun, store: any LawObjectStore) -> LedgerResult {
+    /// 원장 하나의 계획(공포 전). `plan` 이 nil 이면 정리하지 않았거나 재료·AI 오류로 끝났다(`result` 에 이미 적힘).
+    struct PreparedLedger {
+        let run: LedgerRun
+        var result: LedgerResult
+        var plan: LawDreamPlan?
+        var proposals: [LawDreamProposal] = []
+    }
+
+    func prepareLedger(_ run: LedgerRun, store: any LawObjectStore) -> PreparedLedger {
         let world = run.target.worldName
         var result = LedgerResult(outcome: LawDreamLedgerOutcome(
             world: world, ledgerKey: run.ledgerKey, active: false, materials: LawDreamMaterials()))
@@ -469,7 +492,7 @@ public struct LawDreamService: Sendable {
         } catch {
             result.outcome.materialError = "재료 읽기 실패: \(error)"
             result.deferred = run.carried
-            return result
+            return PreparedLedger(run: run, result: result)
         }
         var materials = gathered.summary
         materials.deferredIn = run.carried.count
@@ -479,7 +502,7 @@ public struct LawDreamService: Sendable {
         guard active else {
             result.deferred = run.carried
             result.consume = true
-            return result
+            return PreparedLedger(run: run, result: result)
         }
         result.outcome.active = true
         writeRunFile(store, run, name: "materials.json", value: materials, into: &result)
@@ -502,30 +525,62 @@ public struct LawDreamService: Sendable {
             result.outcome.aiError = "\(error)"
             result.deferred = run.carried
             writeRunFile(store, run, name: "decisions.json", value: ["aiError": "\(error)"], into: &result)
-            return result
+            return PreparedLedger(run: run, result: result)
         }
 
-        // 안전 검사.
+        // 안전 검사(원장 안). 상한은 실행 전체 기준으로 `applyRunLimits` 가 다시 본다.
         let planner = LawDreamPlanner(
             world: world, index: index, foundPredecessors: Set(gathered.predecessors.map(\.id)),
             dreamWorlds: Set(run.targetsByWorld.keys), recordsByWorld: run.recordsByWorld,
             maxChanges: settings.resolvedMaxChanges)
-        var plan = planner.plan(run.carried + proposals)
+        return PreparedLedger(
+            run: run, result: result, plan: planner.plan(run.carried + proposals), proposals: run.carried + proposals)
+    }
+
+    /// 실행 전체 안전장치. 원장 순서대로 변경을 세어 `maxChanges` 를 넘는 것은 그 원장의 미룬 제안(다음 실행) 앞에 두고,
+    /// 남은 폐지의 합이 `maxRepeals` 를 넘으면 모든 원장의 변경을 적용하지 않고 경보를 단다. 경보 문구를 돌려준다.
+    @discardableResult
+    public static func applyRunLimits(_ plans: inout [LawDreamPlan], maxChanges: Int, maxRepeals: Int) -> String? {
+        var total = 0
+        for index in plans.indices {
+            let room = max(0, maxChanges - total)
+            if plans[index].changes.count > room {
+                let overflow = plans[index].changes[room...].map(\.proposal)
+                plans[index].changes = Array(plans[index].changes.prefix(room))
+                plans[index].deferred = overflow + plans[index].deferred
+            }
+            total += plans[index].changes.count
+        }
+        let repeals = plans.reduce(0) { $0 + $1.repealCount }
+        guard repeals > maxRepeals else { return nil }
+        let alert = "드리밍 묶음의 폐지 \(repeals)건이 실행 전체 상한 \(maxRepeals)건을 넘어 묶음 전체를 적용하지 않음 — 사람이 확인"
+        for index in plans.indices where !plans[index].changes.isEmpty {
+            plans[index].alerts.append(alert)
+            plans[index].discarded += plans[index].changes.map {
+                LawDreamDiscard(proposal: $0.proposal.label, reason: "폐지 상한 초과로 묶음 미적용")
+            }
+            plans[index].changes = []
+        }
+        return alert
+    }
+
+    /// 계획을 공포한다(묶음 하나). 계획이 없으면 준비 결과 그대로.
+    func applyLedger(_ prepared: inout PreparedLedger, store: any LawObjectStore) {
+        guard let plan = prepared.plan else { return }
+        let run = prepared.run
+        var result = prepared.result
         result.outcome.alerts = plan.alerts
         result.outcome.deferred = plan.deferred.count
         result.deferred = plan.deferred
-        if plan.repealCount > settings.resolvedMaxRepeals {
-            result.outcome.alerts.append(
-                "드리밍 묶음의 폐지 \(plan.repealCount)건이 상한 \(settings.resolvedMaxRepeals)건을 넘어 묶음을 적용하지 않음 — 사람이 확인")
-            plan.discarded += plan.changes.map {
-                LawDreamDiscard(proposal: $0.proposal.label, reason: "폐지 상한 초과로 묶음 미적용")
-            }
-            plan.changes = []
-        }
         result.outcome.discarded = plan.discarded
 
-        // 묶음 하나로 공포.
         for item in plan.changes {
+            if case .migrate(let world, let predecessor, _, _, _, _) = item.change,
+               let destination = run.targetsByWorld[world], Self.alreadyMigrated(predecessor, in: destination) {
+                // 같은 실행의 다른 원장이 먼저 옮겼다.
+                result.outcome.discarded.append(LawDreamDiscard(proposal: item.proposal.label, reason: "이미 이관됨"))
+                continue
+            }
             do {
                 let (ids, touched) = try apply(item.change, run: run)
                 result.outcome.applied.append(LawDreamApplied(
@@ -538,9 +593,15 @@ public struct LawDreamService: Sendable {
         }
         result.consume = true
         writeRunFile(store, run, name: "decisions.json", value: DecisionsFile(
-            proposals: run.carried + proposals, applied: result.outcome.applied, discarded: result.outcome.discarded,
+            proposals: prepared.proposals, applied: result.outcome.applied, discarded: result.outcome.discarded,
             deferred: plan.deferred, alerts: result.outcome.alerts), into: &result)
-        return result
+        prepared.result = result
+    }
+
+    static func alreadyMigrated(_ predecessor: String, in target: LawLedgerTarget) -> Bool {
+        target.store.scan().contains { stored in
+            stored.record.cites.contains { $0.id == predecessor && $0.rel == LawRelation.migratedFrom.rawValue }
+        }
     }
 
     struct DecisionsFile: Encodable {
@@ -594,7 +655,7 @@ public struct LawDreamService: Sendable {
                 actor: actor, title: title ?? current.title, type: current.type ?? LawRecordType.record.rawValue,
                 origin: dream, batch: run.batch, tags: tags ?? current.tags, cites: merged, exhibits: current.exhibits,
                 amends: id, amendsAlso: also, source: current.source, body: body)
-            return ([try LawEnactService.enact(draft, target: ledger, now: now).id], world)
+            return ([try LawEnactService.enact(draft, target: ledger, path: .dream, now: now).id], world)
         case .repeal(let world, let id, let reason):
             let ledger = try target(world)
             let current = ledger.store.scan().first { $0.id == id }?.record
@@ -602,12 +663,12 @@ public struct LawDreamService: Sendable {
                 actor: actor, title: "폐지: \(current?.title ?? String(id.prefix(8)))",
                 type: current?.type ?? LawRecordType.record.rawValue, origin: dream, batch: run.batch, repeals: id,
                 body: reason)
-            return ([try LawEnactService.enact(draft, target: ledger, now: now).id], world)
+            return ([try LawEnactService.enact(draft, target: ledger, path: .dream, now: now).id], world)
         case .enact(let world, let title, let body, let tags, let cites):
             let draft = LawDraft(
                 actor: actor, title: title, type: LawRecordType.record.rawValue, origin: dream, batch: run.batch,
                 tags: tags, cites: cites, body: body)
-            return ([try LawEnactService.enact(draft, target: try target(world), now: now).id], world)
+            return ([try LawEnactService.enact(draft, target: try target(world), path: .dream, now: now).id], world)
         case .finding(let world, let id, let body):
             let ledger = try target(world)
             let records = ledger.store.scan()
@@ -616,17 +677,17 @@ public struct LawDreamService: Sendable {
                 actor: actor, title: "사실인정: \(label)", type: LawRecordType.finding.rawValue, origin: dream,
                 batch: run.batch, cites: [LawCite(id: id, rel: LawRelation.finds.rawValue)],
                 amends: LawLedgerView(records: records).currentFinding(for: id)?.id, body: body)
-            return ([try LawEnactService.enact(draft, target: ledger, now: now).id], world)
+            return ([try LawEnactService.enact(draft, target: ledger, path: .dream, now: now).id], world)
         case .migrate(let world, let predecessor, let title, let body, let tags, let head):
             let ledger = try target(world)
             let migrated = try LawEnactService.enact(LawDraft(
                 actor: actor, title: title, type: LawRecordType.record.rawValue, origin: LawOrigin.migration.rawValue,
                 batch: run.batch, tags: tags, cites: [LawCite(id: predecessor, rel: LawRelation.migratedFrom.rawValue)],
-                body: body), target: ledger, now: now)
+                body: body), target: ledger, path: .dream, now: now)
             let finding = try LawEnactService.enact(LawDraft(
                 actor: actor, title: "사실인정: \(title)", type: LawRecordType.finding.rawValue, origin: dream,
                 batch: run.batch, cites: [LawCite(id: migrated.id, rel: LawRelation.finds.rawValue)],
-                body: head.joined(separator: "\n") + "\n"), target: ledger, now: now)
+                body: head.joined(separator: "\n") + "\n"), target: ledger, path: .dream, now: now)
             return ([migrated.id, finding.id], world)
         case .propose(let world, let id, let scope, let content):
             let service = LawCourtService(target: try target(world), runner: runner, appVersion: appVersion)

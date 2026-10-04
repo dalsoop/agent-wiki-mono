@@ -42,6 +42,6 @@ public func runFinding(context: LawCommandContext, arguments: [String]) {
         batch: options.value("--batch") ?? context.environment["MEMO_LEDGER_BATCH"],
         cites: [LawCite(id: target, rel: LawRelation.finds.rawValue)],
         body: lines.joined(separator: "\n") + "\n")
-    let stored = enactLaw(draft, context: context, index: index)
+    let stored = enactLaw(draft, context: context, index: index, path: .finding)
     printEnacted([stored.id], asJSON: options.has("--json"))
 }

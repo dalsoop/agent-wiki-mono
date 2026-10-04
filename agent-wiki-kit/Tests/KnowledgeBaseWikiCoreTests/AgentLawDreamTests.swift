@@ -512,7 +512,7 @@ import WikiLedgerKit
                             effort: "high", app: "agent-wiki", appVersion: "1"),
             title: "항소심 결정", type: "ruling",
             cites: [LawCite(id: appeal.id, rel: "hears"), LawCite(id: a3.id)],
-            body: "level: appellate\noutcome: overturn\n\n뒤집음\n"), target: fx.law, now: fx.now)
+            body: "level: appellate\noutcome: overturn\n\n뒤집음\n"), target: fx.law, path: .court, now: fx.now)
 
         let rows = LawModelReport.rows(records: Self.records(fx.law))
         let opus = try #require(rows.first { $0.model == "claude-opus-5-5" })

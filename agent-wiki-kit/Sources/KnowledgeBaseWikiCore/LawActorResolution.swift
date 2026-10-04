@@ -1,4 +1,5 @@
 import Foundation
+import SessionKit
 import WikiLedgerKit
 
 // 공포하는 주체(작성자 종류·모델 기록·기기) 결정.
@@ -80,6 +81,8 @@ public enum LawActorError: Error, Equatable, CustomStringConvertible {
     case sessionUnknown
     /// 세션 id 는 있는데 그 세션의 등록 파일이 없고 모델 기록 값도 없다.
     case sessionNotRegistered(String)
+    /// 작성자가 사람(`user:`)인데 환경에 에이전트 표지(실행 도구 세션 id·`AI_AGENT`·사람이 아닌 `AGENT_WIKI_RUNTIME`)가 있다.
+    case humanInAgentSession(String)
 
     public var description: String {
         switch self {
@@ -89,6 +92,8 @@ public enum LawActorError: Error, Equatable, CustomStringConvertible {
             return "세션 미상 — 실행 도구의 세션 id 환경 변수도 --runtime·--model 같은 명시 값도 없음(다른 세션을 추정하지 않는다)"
         case .sessionNotRegistered(let id):
             return "세션 '\(id)' 의 등록이 없음 — 세션 시작 훅(`hook session`)이 남기거나 --runtime·--model 을 명시한다"
+        case .humanInAgentSession(let marker):
+            return "에이전트 세션에서 사람 작성자 불가 — 환경의 에이전트 표지 \(marker)(사람은 에이전트 표지 없는 자기 터미널이나 화면 편집으로 공포한다)"
         }
     }
 }
@@ -104,7 +109,26 @@ public enum LawActorResolution {
         return nil
     }
 
-    /// 공포 주체. 사람 공포는 모델 칸을 비우고(명시 인자를 주면 공포 검증이 거부한다) runtime 을 `human` 으로,
+    /// 에이전트 세션의 표지 — 지원 실행 도구의 세션 id 환경 변수, `AI_AGENT`, `CLAUDECODE`, 사람(`human`)이 아닌
+    /// `AGENT_WIKI_RUNTIME`. 있으면 그 변수 이름을 돌려준다(값은 적지 않는다). 없으면 nil.
+    public static func agentSessionMarker(_ environment: [String: String]) -> String? {
+        func present(_ key: String) -> Bool {
+            !(environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        }
+        for cli in SupportedAIAgentCLI.allCases {
+            if let key = cli.sessionIDEnvironmentKeys.first(where: present) { return key }
+        }
+        for key in [SupportedAIAgentCLI.aiAgentEnvironmentKey, "CLAUDECODE"] where present(key) { return key }
+        let runtimeKey = LawModelRecordSource.runtimeKey
+        if present(runtimeKey),
+           environment[runtimeKey]?.trimmingCharacters(in: .whitespacesAndNewlines) != LawRuntime.human.rawValue {
+            return runtimeKey
+        }
+        return nil
+    }
+
+    /// 공포 주체(CLI). 작성자 종류가 사람이면 에이전트 세션 표지가 없어야 한다(`agentSessionMarker`).
+    /// 사람 공포는 모델 칸을 비우고(명시 인자를 주면 공포 검증이 거부한다) runtime 을 `human` 으로,
     /// 판단 없는 앱 공포는 runtime 을 `app` 으로 적는다. `device` 는 설정의 이 기기 키.
     public static func actor(
         author: String,
@@ -117,6 +141,7 @@ public enum LawActorResolution {
         guard let kind = kind(of: trimmed) else { throw LawActorError.unknownAuthorKind(author) }
         switch kind {
         case .human:
+            if let marker = agentSessionMarker(environment) { throw LawActorError.humanInAgentSession(marker) }
             return LawActor(
                 author: trimmed, kind: .human, device: device,
                 runtime: explicit.runtime ?? LawRuntime.human.rawValue,

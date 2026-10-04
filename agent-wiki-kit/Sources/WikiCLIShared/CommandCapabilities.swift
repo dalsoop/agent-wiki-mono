@@ -27,16 +27,17 @@ private let wikiCommands: [Capabilities.Command] = [
             .init(name: "redact", summary: "증거물 가림 <R2 키 또는 sha> --reason <r>", json: true),
             .init(name: "summon", summary: "세션 발화 소환 [--session --since --until --device --runtime --role --query --record]", json: true),
             .init(name: "archive", summary: "세션 조각 R2 적재 [--dry-run]", json: true),
-            .init(name: "sync", summary: "agent-law git 동기화(pull·push, 커밋 대기 처리)", json: true),
+            .init(name: "sync", summary: "agent-law git 동기화(pull·push, 커밋 대기 처리) + 가림 로컬 삭제·증거물 R2 동기화", json: true),
             .init(name: "dream", summary: "드리밍 run|status|resume", json: true),
             .init(name: "court", summary: "심급 appeal|propose|hear|decide|list", json: true),
-            .init(name: "judgment", summary: "판결 등록 register|list|show", json: true),
-            .init(name: "contents", summary: "원장 목차", json: false),
+            .init(name: "judgment", summary: "판결 등록 register|amend|list|show", json: true),
+            .init(name: "contents", summary: "원장 목차", json: true),
             .init(name: "report models", summary: "모델·추론 강도·실행 도구별 공포 보고 [--since]", json: true),
             .init(name: "world add", summary: "원장 등록 <이름> --key <k> --root <경로> [--parent] [--predecessor]", json: false),
             .init(name: "world tenant-map", summary: "테넌트 → 원장 대응 <테넌트> <원장>", json: false),
             .init(name: "world device register", summary: "이 기기 키 등록 <키>", json: false),
             .init(name: "world dream-device", summary: "드리밍 기기 지정 <키>", json: false),
+            .init(name: "world storage", summary: "agent-law R2 자리 보기·설정 [--endpoint <url>] [--bucket <b>] [--region <r>]", json: false),
             .init(name: "hook session", summary: "세션 등록 훅", json: false),
             .init(name: "cited-by", summary: "역링크(이 객체를 인용한 것들)", json: false),
             .init(name: "repository", summary: "agent-wiki repository summary [--path <repo>] --json", json: true),
@@ -121,3 +122,8 @@ public func runCapabilities() {
 
 /// `capabilities` 의 명령 이름 목록(시험·계약 확인용).
 public var capabilityCommandNames: [String] { wikiCommands.map(\.name) }
+
+/// capabilities 명령 이름 → `--json` 지원(시험이 대조한다).
+var capabilityJSONSupport: [String: Bool] {
+    Dictionary(wikiCommands.map { ($0.name, $0.json) }, uniquingKeysWith: { first, _ in first })
+}

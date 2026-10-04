@@ -29,7 +29,7 @@ public enum LawObjectStoreError: Error, Equatable, Sendable, CustomStringConvert
         case .conflict(let key): return "같은 R2 주소에 다른 내용이 있음: \(key)"
         case .notFound(let key): return "R2 객체 없음: \(key)"
         case .unreachable(let detail): return "R2 도달 실패: \(detail)"
-        case .rejected(let status, let detail): return "R2 \(status): \(detail)"
+        case .rejected(let status, let detail): return detail.isEmpty ? "R2 \(status)" : "R2 \(status): \(detail)"
         case .configuration(let detail): return "R2 설정 오류: \(detail)"
         }
     }
@@ -371,9 +371,22 @@ public struct LawR2Client: LawObjectStore {
             makeRequest(method: method, key: key, query: query, body: body, extraHeaders: extraHeaders))
     }
 
+    /// 거부 응답 → 오류. 응답 본문(요청 주소·버킷 정보가 섞일 수 있다)은 남기지 않고 S3 오류 `Code` 만 남긴다.
     static func failure(_ response: LawHTTPResponse) -> LawObjectStoreError {
-        let detail = String(decoding: response.body.prefix(300), as: UTF8.self)
-        return .rejected(status: response.status, detail: detail)
+        .rejected(status: response.status, detail: errorCode(response.body) ?? "")
+    }
+
+    /// S3 오류 XML 의 `<Code>…</Code>`. 영문자·숫자·`.`·`-`·`_` 만으로 된 64자 이내 값만 받는다.
+    static func errorCode(_ body: Data) -> String? {
+        let text = String(decoding: body.prefix(4096), as: UTF8.self)
+        guard let open = text.range(of: "<Code>"),
+              let close = text.range(of: "</Code>", range: open.upperBound..<text.endIndex)
+        else { return nil }
+        let code = String(text[open.upperBound..<close.lowerBound]).trimmingCharacters(in: .whitespaces)
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".-_"))
+        guard !code.isEmpty, code.count <= 64, code.unicodeScalars.allSatisfy({ allowed.contains($0) && $0.isASCII })
+        else { return nil }
+        return code
     }
 
     static func xmlUnescape(_ raw: String) -> String {

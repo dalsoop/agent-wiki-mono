@@ -120,7 +120,7 @@ public enum LawRedactService {
                 actor: actor, title: "가림: \(resolved.key)", type: LawRecordType.redaction.rawValue,
                 exhibits: resolved.exhibitSHA256.map { [$0] } ?? [],
                 body: "target: \(resolved.key)\nreason: \(trimmedReason)\n")
-            recordID = try LawEnactService.enact(draft, target: target, now: now).id
+            recordID = try LawEnactService.enact(draft, target: target, path: .redact, now: now).id
         }
         if remotePresent {
             do {
@@ -152,9 +152,17 @@ public enum LawRedactionSweep {
         public let exhibits: Set<String>
     }
 
-    /// 원장의 가림 기록들.
+    /// `redact` 명령이 공포한 가림 기록인가 — 유형 `redaction` 이고 가림 경로의 예약 태그(`LawEnactPath.redactionMarkerTag`)가
+    /// 있으며 승격본(`promoted`)이 아니다. 로컬 삭제·증거물 동기화 제외·감사의 "가림" 판정은 이 기록만 믿는다.
+    public static func isTrusted(_ record: LawRecord) -> Bool {
+        record.type == LawRecordType.redaction.rawValue
+            && record.tags.contains(LawEnactPath.redactionMarkerTag)
+            && !record.tags.contains(LawPromotionWitness.promotedTag)
+    }
+
+    /// 원장의 믿을 수 있는 가림 기록들(`isTrusted`).
     public static func redactionRecords(_ store: LawStore) -> [Entry] {
-        store.scan().filter { $0.record.type == LawRecordType.redaction.rawValue }.map { stored in
+        store.scan().filter { isTrusted($0.record) }.map { stored in
             var targets: Set<String> = []
             let target = (try? LawHeadFields.parse(body: stored.record.body, type: stored.record.type))?["target"]
             if let target { targets.insert(target) }

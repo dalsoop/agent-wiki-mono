@@ -96,7 +96,7 @@ public enum LawPromotionService {
                 origin: record.origin == LawOrigin.dream.rawValue ? record.origin : nil,
                 tags: Array(Set(record.tags + [LawPromotionWitness.promotedTag])).sorted(), cites: keptCites,
                 exhibits: record.exhibits, body: record.body), target: target, index: targetIndex,
-                testimony: testimony, now: now)
+                testimony: testimony, path: .promote, now: now)
         }
         let receipt = PromotionReceipt(PromotionReceipt.Draft(
             sourceKind: "world", sourceWorldName: source.worldName, sourceObjectId: sourceID,
@@ -110,7 +110,7 @@ public enum LawPromotionService {
                 actor: actor, title: "프로모션 영수증: \(record.title ?? String(sourceID.prefix(12)))",
                 type: LawRecordType.promotionReceipt.rawValue,
                 cites: [LawCite(id: promoted.id, rel: LawRelation.receipts.rawValue)],
-                body: body), target: target, now: now)
+                body: body), target: target, path: .promote, now: now)
         }
         return LawPromotionResult(
             promotedObjectId: promoted.id, targetReceiptObjectId: targetReceipt.id,
@@ -146,7 +146,7 @@ public enum LawPromotionService {
                     LawCite(id: receipt.sourceObjectId, rel: LawRelation.receipts.rawValue),
                     LawCite(id: receipt.targetObjectId, rel: LawRelation.promotedAs.rawValue),
                 ],
-                body: body), target: source, now: now)
+                body: body), target: source, path: .promote, now: now)
         }.id
     }
 

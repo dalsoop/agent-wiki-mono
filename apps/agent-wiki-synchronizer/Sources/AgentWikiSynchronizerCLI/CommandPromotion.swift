@@ -237,6 +237,9 @@ private func runPromotionPublish(
     guard arguments.contains("--confirm") else {
         fail(CLILocalization.string("CommandPromotion.needConfirm"))
     }
+    // 대상 원장에도 쓰기 게이트(보관된 전신·미등록 기기)를 적용하고, ledger 3 대상은 거부한다(ledger 3 는 promote).
+    let gate = PromotionTargetGate(file: loadBoundFile(), catalog: loadWorldCatalog())
+    if let denial = gate.denial(targetWorld: targetWorld.name) { fail(denial) }
     let preview = try PromotionService.preview(
         sourceStore: store, source: source, repository: repository,
         sourceWorldName: sourceWorldName,
@@ -250,7 +253,8 @@ private func runPromotionPublish(
         sourceWorldName: sourceWorldName,
         targetWorld: targetWorld,
         promotedBy: author,
-        confirmationToken: token)
+        confirmationToken: token,
+        targetGate: gate)
     printPromotionResult(result, asJSON: arguments.contains("--json"))
 }
 

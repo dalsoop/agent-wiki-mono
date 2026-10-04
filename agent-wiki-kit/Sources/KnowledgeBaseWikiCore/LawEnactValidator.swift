@@ -32,6 +32,7 @@ struct LawEnactValidator {
 
         let resolved = try checkReferences(draft, type: type)
         try checkOrigin(draft)
+        try checkProcessRecord(draft, type: type, head: head, resolved: resolved)
         let speaker = try resolvedSpeaker(draft, type: type, actor: actor, head: head, resolved: resolved)
 
         let authorship = LawAuthorship(
@@ -131,6 +132,36 @@ struct LawEnactValidator {
         }
     }
 
+    // MARK: - 처리 기록
+
+    /// 사실인정은 `finds` 대상이 정확히 하나, 대법원 결정은 `speaker: user` 증거의 `testifies` 인용이 있어야 한다.
+    /// 폐지만 하는 기록(대상 유형을 그대로 적는다)은 보지 않는다.
+    func checkProcessRecord(
+        _ draft: LawDraft, type: LawRecordType, head: LawHeadFieldBlock, resolved: [(LawCite, LawResolvedReference)]
+    ) throws {
+        let repealOnly = draft.repeals != nil && draft.amends == nil && draft.amendsAlso.isEmpty
+        guard !repealOnly else { return }
+        switch type {
+        case .finding:
+            let count = draft.cites.filter { $0.rel == LawRelation.finds.rawValue }.count
+            guard count == 1 else { throw LawEnactError.findingTargetCount(count) }
+        case .ruling where head["level"] == LawRulingLevel.supreme.rawValue:
+            guard hasUserTestimony(resolved) else { throw LawEnactError.supremeRulingRequiresTestimony }
+        default:
+            break
+        }
+    }
+
+    /// `speaker: user` 증거 기록(승격본이면 확인된 것)을 `testifies` 로 인용했나.
+    func hasUserTestimony(_ resolved: [(LawCite, LawResolvedReference)]) -> Bool {
+        resolved.contains { cite, target in
+            cite.rel == LawRelation.testifies.rawValue
+                && target.type == LawRecordType.evidence.rawValue
+                && target.speaker == LawSpeaker.user.rawValue
+                && promotionAccepted(target.id)
+        }
+    }
+
     // MARK: - 화자
 
     func resolvedSpeaker(
@@ -156,6 +187,10 @@ struct LawEnactValidator {
             if let claimed = draft.speaker, claimed != witnessed.rawValue { throw LawEnactError.testimonyMismatch }
             return witnessed.rawValue
         }
+        // 사람 공포의 화자는 user 로 고정한다(다른 값을 적으면 거부).
+        if actor.kind == .human, let claimed = draft.speaker, claimed != LawSpeaker.user.rawValue {
+            throw LawEnactError.humanSpeakerFixed(claimed)
+        }
         let speaker = draft.speaker ?? {
             switch actor.kind {
             case .agent: return LawSpeaker.agent.rawValue
@@ -166,13 +201,7 @@ struct LawEnactValidator {
         // 사람이 직접 공포한 기록은 speaker: user 다. 그 밖의 speaker: user 는 증언이 있어야 한다.
         // 승격본이라고 주장하는 증거는 승격 영수증이 확인될 때만 증언이 된다(`LawPromotionWitness`).
         if speaker == LawSpeaker.user.rawValue, actor.kind != .human {
-            let testified = resolved.contains { cite, target in
-                cite.rel == LawRelation.testifies.rawValue
-                    && target.type == LawRecordType.evidence.rawValue
-                    && target.speaker == LawSpeaker.user.rawValue
-                    && promotionAccepted(target.id)
-            }
-            guard testified else { throw LawEnactError.speakerUserRequiresTestimony }
+            guard hasUserTestimony(resolved) else { throw LawEnactError.speakerUserRequiresTestimony }
         }
         return speaker
     }

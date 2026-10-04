@@ -96,8 +96,9 @@ extension LawStore {
         }
 
         // 증거물: 가림 기록(redaction)의 머리 칸 target(sha256 또는 그것으로 끝나는 주소)과 exhibit 칸이 대상을 정한다.
+        // `redact` 명령이 공포한 가림 기록(`LawRedactionSweep.isTrusted`)만 믿는다.
         var redactedTargets: Set<String> = []
-        for stored in records where stored.record.type == LawRecordType.redaction.rawValue {
+        for stored in records where LawRedactionSweep.isTrusted(stored.record) {
             redactedTargets.formUnion(stored.record.exhibits)
             if let target = (try? LawHeadFields.parse(body: stored.record.body, type: stored.record.type))?["target"] {
                 redactedTargets.insert(String(target.split(separator: "/").last ?? Substring(target)))

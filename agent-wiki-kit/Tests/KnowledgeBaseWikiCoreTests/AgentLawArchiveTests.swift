@@ -547,10 +547,10 @@ final class ManualClock: @unchecked Sendable {
         // 다른 기기가 공포한 가림 기록이 동기화로 들어온 상황.
         _ = try LawEnactService.enact(LawDraft(
             actor: Self.human, title: "가림", type: "redaction", exhibits: [sha],
-            body: "target: \(LawArchiveKeys.exhibit(ledgerKey: "law", sha256: sha))\nreason: r\n"), target: law)
+            body: "target: \(LawArchiveKeys.exhibit(ledgerKey: "law", sha256: sha))\nreason: r\n"), target: law, path: .redact)
         _ = try LawEnactService.enact(LawDraft(
             actor: Self.human, title: "가림", type: "redaction",
-            body: "target: law/sessions/mac/codex/s-1/v1.jsonl.gz\nreason: r\n"), target: law)
+            body: "target: law/sessions/mac/codex/s-1/v1.jsonl.gz\nreason: r\n"), target: law, path: .redact)
         let deleted = LawRedactionSweep.applyLocalDeletions(store: law.store, ledgerKey: "law")
         #expect(Set(deleted) == ["exhibits/\(sha.prefix(2))/\(sha)", "sessions/mac/codex/s-1/v1.jsonl.gz"])
         #expect(!FileManager.default.fileExists(atPath: law.store.exhibitURL(sha256: sha).path))

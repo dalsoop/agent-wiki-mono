@@ -157,7 +157,7 @@ private struct RubberStampTestimony: LawTestimonyVerifying {
             LawDraft(
                 actor: Base.agent, title: "프로모션 영수증: 위조", type: "promotion-receipt",
                 cites: [LawCite(id: forged.id, rel: "receipts")], body: try fakeReceipt.json()),
-            target: law)
+            target: law, path: .promote)
 
         let witness = LawPromotionWitness(index: LawEnactService.scope(of: law))
         guard case .unproven = witness.status(of: forged.id) else {
@@ -230,7 +230,7 @@ private struct RubberStampTestimony: LawTestimonyVerifying {
             LawDraft(
                 actor: Base.agent, title: "프로모션 영수증: 위조", type: "promotion-receipt",
                 cites: [LawCite(id: copy.id, rel: "receipts")], body: try fake.json()),
-            target: law)
+            target: law, path: .promote)
         #expect(LawPromotionWitness(index: LawEnactService.scope(of: law)).status(of: copy.id) != .genuine)
         #expect(throws: LawEnactServiceError.self) {
             try LawEnactService.enact(Self.sharedClaim(citing: copy.id), target: law)
