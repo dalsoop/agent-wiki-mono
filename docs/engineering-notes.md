@@ -76,6 +76,12 @@
 - 증상: 이 Mac의 에이전트 세션에서 `swift build`·`swift test`를 직접 실행하면 훅이 막는다. 셸 `for` 반복문 안의 `swift build`도 막힌다.
 - 대응: `build-queue-manager submit '<swift 명령>' --workdir <저장소 루트> --wait`로 하나씩 보낸다. 출력은 파일로 받아 종료 코드를 확인한다. 대기열이 "job vanished"를 내면 같은 명령을 다시 제출한다.
 
+## 앱 패키지의 `.build` 가 kit 의 새 파일을 보지 못한다
+
+- 증상: kit(`agent-wiki-kit`)에 새 파일을 더한 뒤 앱 패키지를 빌드하면 'cannot find type'·'missing inputs' 로 실패할 때가 있다.
+- 원인: 앱마다 kit 소스를 따로 컴파일하는 낡은 빌드 설명.
+- 대응: 소스 문제가 아님을 먼저 kit 빌드로 확인한 뒤, 그 앱의 `.build/arm64-apple-macosx/debug/KnowledgeBaseWikiCore.build` 와 `description.json` 을 지우고 다시 빌드한다.
+
 ## 변경 점검 절차
 
 1. 바꾼 패키지를 빌드하고, 그 패키지에 의존하는 패키지를 `citationledgerkit` → `agent-wiki-kit` → `apps/*` 순서로 빌드한다. 변경 전에 통과하던 명령이 실패하면 멈춘다.

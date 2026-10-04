@@ -75,7 +75,9 @@ swift build --package-path apps/agent-wiki-reader
 
 - ledger 3 기록 형식의 파서·직렬화는 공용 원장 읽기 킷(`swiftkit` WikiLedgerKit) 하나에만 둔다. 엔진과 다른 앱은 그것을 쓴다. swift-app-mono 사본은 이 코드를 그대로 옮긴다.
 - 처리 기록 유형 집합, 관계 집합, 본문 머리 칸 키 목록은 각각 한 곳의 상수다. 다른 곳에 다시 적으면 위반이다.
-- 전신 쓰기 거부는 쓰기 게이트 한 곳에서 판정한다. 명령마다 판정을 복사하지 않는다.
+- 전신 쓰기 거부는 쓰기 게이트 한 곳에서 판정한다. 명령마다 판정을 복사하지 않는다. 옛 승격(`promotion publish`)도 대상 원장에 같은 게이트를 적용한다(`PromotionTargetGate`).
+- 처리 유형별 허용 공포 경로(일반 공포의 처리 유형 거부, 가림 기록의 예약 태그)는 `LawEnactPath` 한 곳에서 판정한다. 전용 명령의 서비스는 `LawEnactService.enact(…, path:)` 로 자기 경로를 넘긴다.
+- 사람 작성자의 에이전트 세션 거부는 `LawActorResolution` 한 곳에서 판정한다.
 - 옛 `LedgerObject` 코어는 바꾸지 않는다. ledger 3 는 별도 타입이다.
 - ledger 3 원장 파일에 쓰는 코드는 `LawStore.enact`(와 그것을 부르는 원상회복 등)만 사용한다. 위 "원장 쓰기" 절의 `LedgerStore.publish` 규칙과 같은 뜻이다.
 - `LawRuntime` 의 값(`claude-code`·`codex` 등)은 실행 파일 이름이 아니라 기록 어휘이므로 그 상수에만 둔다. 실행 도구를 부를 때는 지원 CLI 목록을 쓴다.

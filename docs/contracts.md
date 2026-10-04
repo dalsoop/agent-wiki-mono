@@ -81,7 +81,7 @@
 - `promotion preview <id> --to <world> [--json]`: 쓰기 없이 결과를 미리 보여 준다.
 - `promotion publish <id> --to <world> --confirm [토큰] [--json]`: 대상 world에 객체를, 원본 world에 영수증을 발행한다. `--confirm`이 없으면 발행하지 않는다. 토큰을 생략하면 preview가 계산한 확인 토큰을 쓴다.
 - repo world에서는 `--path <repo 경로>`로 저장소 위치를 지정할 수 있다.
-- 오류: parent 사슬 밖 대상, 알 수 없는 대상 world, 원본이 영수증, 원본이 저장된 바이트와 다름, repo 출처의 commit에 객체가 없음.
+- 오류: parent 사슬 밖 대상, 알 수 없는 대상 world, 원본이 영수증, 원본이 저장된 바이트와 다름, repo 출처의 commit에 객체가 없음, 대상 world 쓰기 거부(보관된 전신·미등록 기기, 쓰기 게이트), 대상이 ledger 3 원장(ledger 3 승격은 `promote`). 대상 판정은 아무것도 쓰기 전에 한다.
 
 ## 읽기 전용 프록시 `agent-wiki-reader`
 
@@ -110,10 +110,10 @@
 | 가림 | `redact <R2 키 또는 sha> --reason <r>` |
 | 소환 | `summon [--session <id>] [--since <t>] [--until <t>] [--device <k>] [--runtime <r>] [--role user\|assistant\|tool] [--query <q>] [--record <발화 번호>]` |
 | 적재 | `archive [--dry-run]` |
-| 동기화 | `sync` |
+| 동기화 | `sync` (git 동기화 뒤 원장마다 가림 기록에 따른 로컬 삭제와 증거물 R2 동기화) |
 | 드리밍 | `dream run [--scheduled]` · `dream status` · `dream resume` |
 | 심급 | `court appeal <id> --reason <r>` · `court propose <id> --scope <s>` · `court hear` · `court decide <건 id> --approve\|--reject --testimony <증거 id>` · `court list [--level appellate\|supreme]` |
-| 판결 | `judgment register --repo <r> --title <t> [--status provisional\|confirmed] [--path <p>]` · `judgment list [--repo <r>]` · `judgment show <번호>` |
+| 판결 | `judgment register --repo <r> --title <t> [--status provisional\|confirmed] [--path <p>]` · `judgment amend <번호> [--status provisional\|confirmed] [--path <p>] [--title <t>]` · `judgment list [--repo <r>]` · `judgment show <번호>` |
 | 목차 | `contents` |
 | 보고 | `report models [--since <t>]` |
 | 승격 | `promote <id> --to <원장>` |
@@ -124,7 +124,10 @@
 - ledger 2 원장(`novel-world`, repo world)에 쓰는 일도 `enact`·`amend`·`repeal`·`restore`·`audit`·`checkpoint` 로 하며, ledger 2 의 `enact` 는 옛 분류 옵션(`--domain`·`--kind`·`--knowledge`·`--classification-reason`·`--allow-unclassified`·`--origin`·`--alias`·`--observes`)을 계속 받는다.
 - ledger 3 승격의 대상 기록은 원본을 인용하지 않는다(상위 원장은 하위를 인용할 수 없다). 원본 id 는 영수증 본문에 적힌다.
 - 증거(`evidence`) 기록의 ledger 3 승격은 원본 원장 범위에서 증언을 다시 확인하고, 실패하면 아무것도 쓰지 않고 종료 코드 1 로 거부한다. 증거물은 대상 원장 `exhibits/` 에 복사한다(대상 원장 키의 R2 사본은 다음 `sync`). 승격본은 화자를 그대로 가지며, 그 표지는 대상 원장의 승격 영수증(승격본을 `receipts` 로 인용)과 `promoted` 태그다. `testifies` 인용과 `audit` 은 표지만 믿지 않고 영수증 본문의 원본 원장(대상의 하위 원장)을 읽어 같은 영수증과 원본 증거 기록(화자·증거물·본문)을 찾을 때만 승격본으로 인정한다. 확인되지 않은 승격본 주장은 `speaker: user` 증언이 되지 못하고 감사 위반이다.
-- 폐지된 이름(`publish`, `verify`, `rollback`, `classify`, `capture`, `blob` 의 쓰기 하위 명령, `hook authoring`)은 종료 코드 64 와 새 이름 안내만 내고 아무것도 하지 않는다.
+- 폐지된 이름(`publish`, `verify`, `rollback`, `classify`, `capture`, `blob` 의 쓰기 하위 명령, `hook authoring`)은 종료 코드 64 와 새 이름 안내만 내고 아무것도 하지 않는다. 전신 blob 은 받기만 하므로 `gujo blob push` 와 `gujo blob config --access-key/--secret-key` 도 64 다.
+- `enact`·`amend`(와 화면 편집)는 처리 유형 `ruling`·`appeal`·`proposal`·`redaction`·`registration`·`contents`·`report`·`promotion-receipt`·`finding` 을 공포하지 않고 종료 코드 1 과 전용 명령 안내를 낸다. 에이전트 세션(실행 도구 세션 id 환경 변수·`AI_AGENT`·`CLAUDECODE`·`human` 이 아닌 `AGENT_WIKI_RUNTIME`)에서 작성자가 사람(`user:`)이면 공포·`dream resume` 은 종료 코드 1 이다. 사람 공포의 `--speaker` 는 `user` 만 받는다.
+- ledger 2 원장의 `enact`·`amend`·`repeal` 은 모델 기록 옵션(`--runtime`·`--model` 등)을 쓰지 않고, 받으면 무시함을 표준 에러에 알린다.
+- `dream run --scheduled` 는 드리밍 기기가 아닌 곳에서 아무것도 하지 않고 종료 코드 0 이다(`dream run` 은 거부 1).
 - 그 밖의 옛 쓰기 명령(`discuss`, `learn`, `review`, `event`, `task`, `agent` 등)은 ledger 2 원장에서만 동작하고, ledger 3 원장에서는 64 와 새 명령 안내를 낸다. `checkpoint` 는 두 형식 모두에서 동작한다.
-- 종료 코드: 0 성공, 1 거부(모델 미상, 증언 불일치, 전신 쓰기, 소환 범위 밖, 기기 키 미등록, 드리밍 기기 아님, 허용되지 않은 관계, 안전장치 위반, 구현 전 명령), 2 감사 위반, 64 사용법 오류·폐지된 명령.
+- 종료 코드: 0 성공, 1 거부(모델 미상, 증언 불일치, 전신 쓰기, 소환 범위 밖, 기기 키 미등록, 드리밍 기기 아님, 허용되지 않은 관계, 안전장치 위반, 처리 유형의 일반 공포, 에이전트 세션의 사람 작성자), 2 감사 위반, 64 사용법 오류·폐지된 명령.
 - 읽기 전용 프록시는 공포·개정·폐지·원상회복·사실인정·`exhibit put`·가림·적재·동기화·`dream run|resume`·심급의 쓰기·판결 등록·승격·원장 설정·훅을 거부한다.
