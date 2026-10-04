@@ -382,9 +382,12 @@ import WikiLedgerKit
         let target = try store.enact(draft(), now: at(0))
         // 공포 경로를 거치지 않은 기록(형식만 맞음)을 직접 넣어 감사의 독립 판정을 본다.
         let ghost = String(repeating: "c", count: 64)
-        var bad = LawRecord(promulgated: at(1), author: "agent:x@y", authorKind: "agent", device: "y",
-                            runtime: "codex", model: "m", effort: "unknown", speaker: "agent", type: "record",
-                            cites: [LawCite(id: target.id, rel: "finds"), LawCite(id: ghost)], body: "x")
+        var bad = LawRecord(promulgated: at(1), author: "agent:x@y",
+                            authorship: LawAuthorship(authorKind: "agent", device: "y", runtime: "codex",
+                                                      model: "m", effort: "unknown", speaker: "agent"),
+                            type: "record",
+                            relations: LawRelations(cites: [LawCite(id: target.id, rel: "finds"), LawCite(id: ghost)]),
+                            body: "x")
         bad = bad.nfcNormalized()
         let url = store.objectURL(id: bad.contentID(), promulgated: bad.promulgated)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

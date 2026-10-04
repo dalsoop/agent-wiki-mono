@@ -14,19 +14,21 @@ struct LawRecordFormatTests {
         LawRecord(
             promulgated: LawTime.parse("2026-10-04T01:02:03.456Z")!,
             author: "agent:claude@macbook",
-            authorKind: "agent",
-            device: "macbook",
-            runtime: "claude-code",
-            runtimeVersion: "2.1.0",
-            model: model,
-            effort: "high",
-            speaker: "agent",
+            authorship: LawAuthorship(
+                authorKind: "agent",
+                device: "macbook",
+                runtime: "claude-code",
+                runtimeVersion: "2.1.0",
+                model: model,
+                effort: "high",
+                speaker: "agent"),
             title: "제목",
             type: "record",
             batch: "b1",
             tags: ["a", "b"],
-            cites: [LawCite(id: citedID, rel: "cites")],
-            exhibits: [exhibitSHA],
+            relations: LawRelations(
+                cites: [LawCite(id: citedID, rel: "cites")],
+                exhibits: [exhibitSHA]),
             unknownFields: ["x-extra: 1"],
             body: "본문\n",
             cost: cost)
@@ -104,12 +106,15 @@ struct LawRecordFormatTests {
     func fullCoreOrder() {
         let record = LawRecord(
             promulgated: LawTime.parse("2026-01-01T00:00:00.000Z")!,
-            author: "app:dreamer", authorKind: "app", device: "d1",
-            runtime: "codex", runtimeVersion: "1", model: "m", effort: "low",
-            app: "agent-wiki", appVersion: "9", speaker: "agent",
+            author: "app:dreamer",
+            authorship: LawAuthorship(
+                authorKind: "app", device: "d1", runtime: "codex", runtimeVersion: "1", model: "m",
+                effort: "low", app: "agent-wiki", appVersion: "9", speaker: "agent"),
             title: "t", type: "record", origin: "migration", batch: "b",
-            tags: ["x"], cites: [LawCite(id: Self.citedID, rel: "migrated-from")],
-            exhibits: [Self.exhibitSHA], amends: "1", amendsAlso: ["2", "3"], repeals: "4",
+            tags: ["x"],
+            relations: LawRelations(
+                cites: [LawCite(id: Self.citedID, rel: "migrated-from")],
+                exhibits: [Self.exhibitSHA], amends: "1", amendsAlso: ["2", "3"], repeals: "4"),
             source: #"{"path":"p"}"#, unknownFields: ["zz: 1"], body: "b")
         let keys = record.coreLines().map { String($0.split(separator: ":", maxSplits: 1)[0]) }
         #expect(keys == ["ledger", "promulgated", "author", "author-kind", "device", "runtime",
@@ -149,9 +154,48 @@ struct LawRecordFormatTests {
     func omitEmpty() {
         let record = LawRecord(
             promulgated: Date(timeIntervalSince1970: 0), author: "user:yun",
-            authorKind: "human", body: "x")
+            authorship: LawAuthorship(authorKind: "human"), body: "x")
         #expect(record.coreLines() == ["ledger: 3", "promulgated: 1970-01-01T00:00:00.000Z",
                                        "author: user:yun", "author-kind: human"])
+    }
+
+    @Test("평평한 접근자는 묶음 필드와 같은 값을 읽고 쓴다")
+    func flatAccessorsForwardToGroups() {
+        var record = Self.sample()
+        #expect(record.authorKind == "agent")
+        #expect(record.cites == [LawCite(id: Self.citedID, rel: "cites")])
+        record.model = "m2"
+        record.amendsAlso = ["z"]
+        #expect(record.authorship.model == "m2")
+        #expect(record.relations.amendsAlso == ["z"])
+        #expect(record.amendsOrRepeals)
+        #expect(!Self.sample().amendsOrRepeals)
+    }
+
+    @Test("읽지 못한 cost 줄은 기록을 막지 않고 이유를 남긴다")
+    func costDecodeErrorSurfaced() throws {
+        let text = Self.sample(cost: LawCost(tokensIn: 1)).serialize()
+            .replacingOccurrences(of: #"cost: {"tokensIn":1}"#, with: "cost: {broken")
+        let parsed = try #require(LawRecordParser.parse(text))
+        #expect(parsed.record.cost == nil)
+        guard case .invalidJSON = parsed.costDecodeError else {
+            Issue.record("invalidJSON 이어야 함: \(String(describing: parsed.costDecodeError))")
+            return
+        }
+        let array = try #require(LawRecordParser.parse(text.replacingOccurrences(of: "{broken", with: "[1]")))
+        #expect(array.costDecodeError == .notObject)
+        let fine = try #require(LawRecordParser.parse(Self.sample(cost: LawCost(tokensIn: 1)).serialize()))
+        #expect(fine.costDecodeError == nil)
+        #expect(try LawCost.decode(jsonLine: "{}").get() == nil)
+    }
+
+    @Test("내용 id 모양 — 소문자 16진수 64자만")
+    func contentIDShape() {
+        #expect(LawHash.isContentID(Self.citedID))
+        #expect(LawHash.isContentID(LawHash.sha256Hex("x")))
+        #expect(!LawHash.isContentID(String(repeating: "A", count: 64)))
+        #expect(!LawHash.isContentID(String(repeating: "g", count: 64)))
+        #expect(!LawHash.isContentID(String(repeating: "a", count: 63)))
     }
 
     @Test("제목·태그 NFC, 본문은 그대로")
