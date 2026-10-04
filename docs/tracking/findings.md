@@ -61,3 +61,9 @@
 - 증상: 판결 확정(`--testimony`)과 대법원 결정은 `speaker: user` 증거라면 그 사건과 관계없는 옛 발화도 받는다.
 - 영향: 증거 자체는 세션 대조로 위조할 수 없지만, "사용자가 바로 이것을 승인했다"는 뜻까지 보장하지는 않는다.
 - 지금 못 고치는 이유: 공지 뒤에 공포된 증거만 받을지, 대상 id 를 인용한 증거만 받을지는 사용자가 정할 정책이다. 또한 "사용자 증언 인용" 판정이 `LawEnactPath.citesUserTestimony` 와 `LawEnactValidator.hasUserTestimony` 두 곳에 기준이 조금 다르게 있다(지금은 결과가 같다). 정책을 정할 때 한 곳으로 합친다.
+
+## 옛 원장의 blob 동기화가 퇴역한 garage 주소를 가리킨다
+
+- 증상: `agent-wiki gujo blob status` 가 "S3 도달 실패: A server with the specified hostname could not be found." 로 끝난다. `~/gujo-wiki/.git/gujo-s3.json` 의 엔드포인트가 퇴역한 내부 garage 호스트다(2026-10-04 확인). 환경 변수 `GUJO_S3_*` 도 없다.
+- 영향: 전신 `gujo-wiki` 의 blob 을 다른 기기에서 받을 수 없다. agent-law 증거물 동기화(R2 `agent-law` 버킷)와는 무관하다.
+- 지금 못 고치는 이유: 옛 blob 이 R2 `gujo-wiki-blobs` 에 다 있는지, 그 버킷 키가 어디 있는지 확인되지 않았다. 확인되면 `agent-wiki gujo blob config --endpoint … --bucket …` 로 설정만 바꾼다(소스에 기본값을 두지 않는다).
