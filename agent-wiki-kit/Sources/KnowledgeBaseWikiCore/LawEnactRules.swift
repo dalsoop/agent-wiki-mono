@@ -214,6 +214,7 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
     case targetRequiresDedicatedCommand(target: String, type: String, command: String)
     case targetIrreversible(target: String, type: String)
     case restoreRefused([String])
+    case restorePartiallyApplied(applied: [LawStoredRecord], remaining: [String], reason: String)
     case restoreDecidedCase(target: String, type: String)
     case confirmedJudgmentRequiresSupreme(target: String)
     case judgmentConfirmRequiresTestimony
@@ -259,6 +260,10 @@ public enum LawEnactError: Error, Equatable, CustomStringConvertible {
             }
         case .restoreRefused(let reasons):
             return "원상회복 거부(아무것도 쓰지 않음) — 되돌릴 수 없는 기록:\n" + reasons.map { "- \($0)" }.joined(separator: "\n")
+        case .restorePartiallyApplied(let applied, let remaining, let reason):
+            return "원상회복 부분 적용 — 검사 뒤 상태가 바뀌어 쓰는 도중 거부됨(\(reason)). 쓴 기록 \(applied.count)건은 지우지 않음"
+                + (applied.isEmpty ? "" : ":\n" + applied.map { "- \($0.id)" }.joined(separator: "\n"))
+                + "\n남은 대상 \(remaining.count)건:\n" + remaining.map { "- \($0)" }.joined(separator: "\n")
         case .restoreDecidedCase(let id, let t):
             return "드리밍 묶음의 \(t) \(id) 는 이미 결정이 났음 — 원상회복으로 지우지 않는다(다툼은 상고로)"
         case .confirmedJudgmentRequiresSupreme(let id):

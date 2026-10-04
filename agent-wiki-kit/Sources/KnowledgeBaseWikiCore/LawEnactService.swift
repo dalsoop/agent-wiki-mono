@@ -142,6 +142,10 @@ public enum LawEnactService {
             LawEnactAftermath.run(target: target, enacted: enacted)
             return enacted
         } catch let error as LawEnactError {
+            // 부분 적용이면 이미 쓴 기록도 커밋·색인 후처리를 거친다(지우지 않는다).
+            if case .restorePartiallyApplied(let applied, _, _) = error {
+                LawEnactAftermath.run(target: target, enacted: applied)
+            }
             throw LawEnactServiceError.enact(error)
         }
     }
