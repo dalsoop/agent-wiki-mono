@@ -78,7 +78,8 @@ public struct LawStore: Sendable {
 
     /// `restore <batch>` — 묶음의 기록마다 새 기록을 공포한다. 개정이었으면 이전 판을 다시 공포(`amends`),
     /// 신규였으면 폐지(`repeals`). 파일은 지우지 않는다. 새 기록들은 새 묶음 id 하나를 공유한다.
-    /// 만들 기록 하나하나를 먼저 `path.admit` 에 넣고, 하나라도 거부되면(대법원 결정·가림·다른 경로의 처리 기록)
+    /// 만들 기록 하나하나를 먼저 그 기록의 경로(`LawRestorePaths` — 일반 묶음은 `path`, 드리밍 묶음의 드리밍 기록은
+    /// `dream`·`court`)의 `admit` 에 넣고, 하나라도 거부되면(대법원 결정·가림·승격 영수증·다른 경로의 처리 기록·결정이 난 사건)
     /// 아무것도 쓰지 않고 거부 이유 목록과 함께 `restoreRefused` 를 던진다.
     /// - Parameter perRuling: 결정에 따른 원상회복이면 그 결정(`ruling`) id — `per-ruling` 으로 인용한다.
     /// - Parameter path: 원상회복을 부른 경로(CLI·화면은 `general`, 결정의 조치는 `court`).
@@ -94,16 +95,16 @@ public struct LawStore: Sendable {
         guard !targets.isEmpty else { throw LawEnactError.batchNotFound(batch) }
         let restoreBatch = LedgerID.generate(now: now)
         let rulingCite = perRuling.map { [LawCite(id: $0, rel: LawRelation.perRuling.rawValue)] } ?? []
-        let drafts: [(id: String, draft: LawDraft)] = targets.map { target in
+        let drafts: [(target: LawStoredRecord, draft: LawDraft)] = targets.map { target in
             if let previousID = target.record.amends, let previous = byID[previousID]?.record {
-                return (target.id, LawDraft(
+                return (target, LawDraft(
                     actor: actor, speaker: previous.speaker, title: previous.title,
                     type: previous.type ?? LawRecordType.record.rawValue, origin: previous.origin,
                     batch: restoreBatch, tags: previous.tags, cites: previous.cites + rulingCite,
                     exhibits: previous.exhibits, amends: target.id, source: previous.source,
                     body: previous.body))
             }
-            return (target.id, LawDraft(
+            return (target, LawDraft(
                 actor: actor, title: target.record.title.map { "폐지: \($0)" },
                 type: target.record.type ?? LawRecordType.record.rawValue, batch: restoreBatch,
                 cites: rulingCite, repeals: target.id, body: "restore \(batch)"))
@@ -111,11 +112,13 @@ public struct LawStore: Sendable {
         let find: (String) -> LawRecord? = { byID[$0]?.record ?? lookup($0) }
         var admitted: [LawDraft] = []
         var refusals: [String] = []
-        for (id, draft) in drafts {
+        let paths = LawRestorePaths(records: records)
+        for (target, draft) in drafts {
             do {
-                admitted.append(try path.admit(draft, target: find))
+                let recordPath = try paths.path(for: target, batch: batch, caller: path)
+                admitted.append(try recordPath.admit(draft, target: find))
             } catch let error as LawEnactError {
-                refusals.append("\(String(id.prefix(8))): \(error.description)")
+                refusals.append("\(String(target.id.prefix(8))): \(error.description)")
             }
         }
         guard refusals.isEmpty else { throw LawEnactError.restoreRefused(refusals) }

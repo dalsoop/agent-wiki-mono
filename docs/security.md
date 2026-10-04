@@ -76,8 +76,10 @@
 | 에이전트 세션 안의 CLI(실행 도구 세션 id 환경 변수·`AI_AGENT`·`CLAUDECODE`·`human` 이 아닌 `AGENT_WIKI_RUNTIME`) | 사람 작성자(`--as user:…`·`MEMO_LEDGER_AUTHOR=user:…`)로 공포·`dream resume` | 거부(종료 코드 1, "에이전트 세션에서 사람 작성자 불가") |
 | 일반 공포(`enact`·`amend`·화면 편집) | 처리 유형(`ruling`·`appeal`·`proposal`·`redaction`·`registration`·`contents`·`report`·`promotion-receipt`·`finding`) 공포 | 거부(종료 코드 1). 전용 명령(`court`·`redact`·`judgment`·`dream`/`contents`·`promote`·`finding`)만 공포 |
 | 어느 작성자 | 대법원 결정 | 승인·기각을 말한 사용자 발화 증언(`testifies`)이 없으면 거부 |
-| 어느 경로(`repeal`·`amend`·화면 편집·`restore`·전용 명령) | 대법원 결정·가림 기록의 개정·폐지 | 거부(종료 코드 1). 대법원 결정은 최종, 가림은 되돌릴 수 없음 |
-| 일반 경로(`repeal`·`amend`·화면 편집·CLI `restore`) | 항소심 결정·이의·개정안·판결 등록·목차·보고·사실인정의 개정·폐지 | 거부(종료 코드 1). 대상의 실제 유형으로 판정(초안 유형을 바꿔 적어도 같음). `restore` 는 묶음 전체를 쓰지 않음 |
+| 어느 경로(`repeal`·`amend`·화면 편집·`restore`·전용 명령) | 대법원 결정·가림 기록·승격 영수증의 개정·폐지 | 거부(종료 코드 1). 대법원 결정은 최종, 가림은 되돌릴 수 없음, 승격 영수증은 승격본 확인의 무결성 기록 |
+| 어느 경로(`judgment`·`court`·`restore`) | 확정(`status: confirmed`) 판결 등록의 개정·폐지 | 대법원 결정(`level: supreme`)의 `per-ruling` 인용이 없으면 거부 |
+| 어느 작성자 | 판결 등록의 확정(확정으로 등록·잠정 → 확정) | 사용자 발화 증언(`speaker: user` 증거를 `testifies`)이 없으면 거부 |
+| 일반 경로(`repeal`·`amend`·화면 편집·CLI `restore`) | 항소심 결정·이의·개정안·판결 등록·목차·보고·사실인정의 개정·폐지 | 거부(종료 코드 1). 대상의 실제 유형으로 판정(초안 유형을 바꿔 적어도 같음). `restore` 는 묶음 전체를 쓰지 않음. 예외: 드리밍 묶음의 원상회복은 드리밍이 만든 사실인정·목차·보고(드리밍 경로)와 심리 전 이의·개정안(`court` 경로)을 되돌린다 |
 
 ### 작성자·화자 신뢰
 
