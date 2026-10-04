@@ -1,0 +1,16 @@
+# SHIP CUTOFF — agent-wiki-reader (AgentWikiReader)
+
+**cutoff: 2026-10-04**
+**reason:** 읽기 전용 프록시 화면과 CLI 다. AgentWikiStudio 와 같은 화면 모듈을 쓰는 중복이고, 다른 앱·스킬·훅에서 `agent-wiki-reader` 를 부르는 곳이 없다(2026-10-04 조사, 사용자 결정 "6개 모두 퇴역", 결정 0008).
+번들 id `net.ranode.agent-wiki-reader` 은 역사로만 남기고 설치·배포는 중단한다. 소스는 지우지 않는다.
+
+**do not:**
+- `app-build-manager ship apps/agent-wiki-reader …`
+- `/Applications/AgentWikiReader.app` 재설치·Dock 재등록
+- `Versions/agent-wiki-reader` 올리기
+
+**use instead:**
+- 원장 열람 → AgentWikiStudio
+- 읽기 명령 → `agent-wiki show|list|search|context|contents`
+
+ADM `ShipService` 가 이 파일 또는 package-identity `ship_cutoff: true` 를 보면 ship 거부.

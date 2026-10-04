@@ -16,10 +16,12 @@
   "app_aliases": [
     "AgentWikiLocal.app"
   ],
-  "note": "public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).",
+  "note": "CUTOFF 2026-10-04 — 결정 0008. public CLI = kebab full name; dual_entry=helpers — PATH CLI product (never MacOS GUI app-link).",
   "purpose": "저장소 .wiki/의 작업그래프·승격·세계관을 다루는 로컬 Agent Wiki CLI",
   "state_root_env": "SWIFT_APP_STATE_ROOT",
   "cli_aliases": [
     "agent-wiki-local"
-  ]
+  ],
+  "ship_cutoff": true,
+  "desired": "absent"
 }
