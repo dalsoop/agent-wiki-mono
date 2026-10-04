@@ -68,31 +68,61 @@ public enum LawModelReport {
 
     /// 원장 기록에서 계산한다. `since` 가 있으면 그 뒤에 공포된 기록만 센다(개정·폐지·뒤집힘은 지금까지의 전체 기록으로 본다).
     public static func rows(records: [LawStoredRecord], since: Date? = nil) -> [LawModelReportRow] {
-        let view = LawLedgerView(records: records)
-        let amended = Set(records.flatMap(\.record.allAmends))
-        let overturned = overturnedTargets(records: records, view: view)
         var groups: [String: LawModelReportRow] = [:]
         var order: [String] = []
-        for stored in records where judgedTypes.contains(stored.record.type ?? "") && stored.record.repeals == nil {
-            if let since, stored.record.promulgated < since { continue }
-            let record = stored.record
-            let key = [record.runtime ?? none, record.model ?? none, record.effort ?? none]
-            let id = key.joined(separator: "\u{1F}")
+        for item in outcomes(records: records, since: since) {
+            let id = item.groupKey
             if groups[id] == nil {
                 groups[id] = LawModelReportRow(
-                    runtime: key[0], model: key[1], effort: key[2], enacted: 0, amended: 0, repealed: 0, overturned: 0)
+                    runtime: item.runtime, model: item.model, effort: item.effort,
+                    enacted: 0, amended: 0, repealed: 0, overturned: 0)
                 order.append(id)
             }
             groups[id]?.enacted += 1
-            if amended.contains(stored.id) { groups[id]?.amended += 1 }
-            if view.repealed.contains(stored.id) { groups[id]?.repealed += 1 }
-            if overturned.contains(stored.id) { groups[id]?.overturned += 1 }
+            if item.amended { groups[id]?.amended += 1 }
+            if item.repealed { groups[id]?.repealed += 1 }
+            if item.overturned { groups[id]?.overturned += 1 }
         }
         return order.compactMap { groups[$0] }
             .sorted {
                 $0.enacted != $1.enacted
                     ? $0.enacted > $1.enacted : ($0.runtime, $0.model, $0.effort) < ($1.runtime, $1.model, $1.effort)
             }
+    }
+
+    /// 센 기록 하나와 그 결과 — `rows` 와 화면의 줄 펼침이 같은 계산을 쓴다.
+    public struct Outcome: Sendable, Equatable {
+        public let record: LawStoredRecord
+        public let runtime: String
+        public let model: String
+        public let effort: String
+        public let amended: Bool
+        public let repealed: Bool
+        public let overturned: Bool
+
+        /// 묶는 열쇠(실행 도구 × 모델 × 추론 강도).
+        public var groupKey: String { LawModelReport.groupKey(runtime: runtime, model: model, effort: effort) }
+    }
+
+    public static func groupKey(runtime: String, model: String, effort: String) -> String {
+        [runtime, model, effort].joined(separator: "\u{1F}")
+    }
+
+    /// 판단이 담긴 기록 하나하나의 결과(공포 순). `since` 가 있으면 그 뒤에 공포된 기록만.
+    public static func outcomes(records: [LawStoredRecord], since: Date? = nil) -> [Outcome] {
+        let view = LawLedgerView(records: records)
+        let amended = Set(records.flatMap(\.record.allAmends))
+        let overturned = overturnedTargets(records: records, view: view)
+        var result: [Outcome] = []
+        for stored in records where judgedTypes.contains(stored.record.type ?? "") && stored.record.repeals == nil {
+            if let since, stored.record.promulgated < since { continue }
+            let record = stored.record
+            result.append(Outcome(
+                record: stored, runtime: record.runtime ?? none, model: record.model ?? none, effort: record.effort ?? none,
+                amended: amended.contains(stored.id), repealed: view.repealed.contains(stored.id),
+                overturned: overturned.contains(stored.id)))
+        }
+        return result
     }
 
     /// 이의를 받고 현행 결정이 뒤집은(overturn·승인) 기록.

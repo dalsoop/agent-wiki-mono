@@ -16,6 +16,24 @@ public enum LawDreamRecordFormat {
     public static let batchPrefix = "batch: "
     public static let alertPrefix = "경보: "
     public static let restorePrefix = "restore: "
+    public static let runPrefix = "run: "
+    public static let ledgerPrefix = "ledger: "
+    public static let triggerPrefix = "trigger: "
+    /// 보고 본문의 절 머리 — 뒤에 `<수>건` 이 붙는 절은 `countedHeading` 으로 쓴다.
+    public static let materialsHeading = "## 읽은 재료"
+    public static let appliedHeading = "## 적용한 변경"
+    public static let discardedHeading = "## 버린 제안"
+    public static let deferredHeading = "## 미룬 제안"
+    public static let alertsHeading = "## 경보"
+    public static let migrationsHeading = "## 이관"
+    public static let archiveHeading = "## 적재 보고"
+    /// 목록 줄 앞머리(적용한 변경·버린 제안).
+    public static let itemPrefix = "- "
+    /// 버린 제안 줄의 제안과 이유 사이.
+    public static let discardSeparator = ": "
+
+    /// `<머리> <수>건`.
+    public static func countedHeading(_ heading: String, _ count: Int) -> String { "\(heading) \(count)건" }
 
     public static func isDreamReport(_ record: LawRecord) -> Bool {
         record.type == LawRecordType.report.rawValue && record.author == appAuthor
@@ -31,6 +49,92 @@ public enum LawDreamRecordFormat {
         body.split(separator: "\n", omittingEmptySubsequences: false).compactMap { line in
             line.hasPrefix(prefix) ? String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces) : nil
         }.filter { !$0.isEmpty }
+    }
+}
+
+/// 드리밍 보고 본문에서 읽은 것. 쓰는 쪽은 `LawDreamService.reportBody`, 형식 상수는 `LawDreamRecordFormat` 하나다.
+public struct LawDreamReportSummary: Sendable, Equatable {
+    public struct Discarded: Sendable, Equatable {
+        public let proposal: String
+        public let reason: String
+
+        public init(proposal: String, reason: String) {
+            self.proposal = proposal
+            self.reason = reason
+        }
+    }
+
+    public var batch: String?
+    public var run: String?
+    public var ledgerKey: String?
+    public var trigger: String?
+    /// 적용한 변경 수(절 머리의 수).
+    public var appliedCount = 0
+    /// 적용한 변경 줄(`<종류>[ <대상 8자>] → <id 8자 …>[ (<메모>)]`).
+    public var applied: [String] = []
+    public var discardedCount = 0
+    public var discarded: [Discarded] = []
+    public var deferredCount = 0
+    public var alerts: [String] = []
+    public var migrations = 0
+
+    public init() {}
+
+    /// 보고 본문을 읽는다. 모르는 줄은 건너뛴다(보고 형식이 늘어도 읽기가 깨지지 않게).
+    public static func parse(_ body: String) -> LawDreamReportSummary {
+        typealias F = LawDreamRecordFormat
+        var summary = LawDreamReportSummary()
+        var section: String?
+        func count(_ line: String, heading: String) -> Int? {
+            guard line.hasPrefix(heading + " "), line.hasSuffix("건") else { return nil }
+            return Int(line.dropFirst(heading.count + 1).dropLast().trimmingCharacters(in: .whitespaces))
+        }
+        func value(_ line: String, _ prefix: String) -> String? {
+            line.hasPrefix(prefix) ? String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces) : nil
+        }
+        for raw in body.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(raw)
+            if line.hasPrefix("## ") {
+                section = nil
+                if let n = count(line, heading: F.appliedHeading) {
+                    summary.appliedCount = n
+                    section = F.appliedHeading
+                } else if let n = count(line, heading: F.discardedHeading) {
+                    summary.discardedCount = n
+                    section = F.discardedHeading
+                } else if let n = count(line, heading: F.deferredHeading) {
+                    summary.deferredCount = n
+                } else if count(line, heading: F.alertsHeading) != nil {
+                    section = F.alertsHeading
+                } else if let n = count(line, heading: F.migrationsHeading) {
+                    summary.migrations = n
+                }
+                continue
+            }
+            if section == nil {
+                if summary.batch == nil, let v = value(line, F.batchPrefix) { summary.batch = v; continue }
+                if summary.run == nil, let v = value(line, F.runPrefix) { summary.run = v; continue }
+                if summary.ledgerKey == nil, let v = value(line, F.ledgerPrefix) { summary.ledgerKey = v; continue }
+                if summary.trigger == nil, let v = value(line, F.triggerPrefix) { summary.trigger = v; continue }
+                continue
+            }
+            switch section {
+            case F.appliedHeading?:
+                if let item = value(line, F.itemPrefix) { summary.applied.append(item) }
+            case F.discardedHeading?:
+                guard let item = value(line, F.itemPrefix) else { continue }
+                if let range = item.range(of: F.discardSeparator) {
+                    summary.discarded.append(Discarded(
+                        proposal: String(item[..<range.lowerBound]), reason: String(item[range.upperBound...])))
+                } else {
+                    summary.discarded.append(Discarded(proposal: item, reason: ""))
+                }
+            case F.alertsHeading?:
+                if let alert = value(line, F.alertPrefix), !alert.isEmpty { summary.alerts.append(alert) }
+            default: break
+            }
+        }
+        return summary
     }
 }
 

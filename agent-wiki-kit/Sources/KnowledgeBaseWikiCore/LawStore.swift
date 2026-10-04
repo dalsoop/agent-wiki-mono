@@ -117,14 +117,34 @@ public struct LawStore: Sendable {
         batch: String, actor: LawActor, now: Date = Date(), context: LawEnactContext = LawEnactContext(),
         perRuling: String? = nil, path: LawEnactPath = .general, lookup: (String) -> LawRecord? = { _ in nil }
     ) throws -> [LawStoredRecord] {
+        let plan = try planRestore(
+            batch: batch, actor: actor, now: now, context: context, perRuling: perRuling, path: path, lookup: lookup)
+        return try applyRestore(plan)
+    }
+
+    /// 원상회복 계획 — 쓸 기록과 그 검사 결과. `planRestore` 가 만들고 `applyRestore` 가 쓴다.
+    struct RestorePlan {
+        typealias Item = (target: LawStoredRecord, draft: LawDraft, revival: LawRestoreRevival?)
+        let items: [Item]
+        let now: Date
+        let context: LawEnactContext
+    }
+
+    /// 원상회복의 검사 단계 — 아무것도 쓰지 않는다. 만들 기록 하나하나를 그 경로의 `admit` 과 공포 검증 전체에 넣고,
+    /// 하나라도 거부되면 거부 이유 목록과 함께 `restoreRefused` 를 던진다.
+    /// - Parameter restoreBatch: 새 기록들이 공유할 묶음 id(여러 원장을 한꺼번에 되돌릴 때 같은 값을 준다). 비우면 새로 만든다.
+    func planRestore(
+        batch: String, actor: LawActor, now: Date, context: LawEnactContext,
+        perRuling: String? = nil, path: LawEnactPath = .general, lookup: (String) -> LawRecord? = { _ in nil },
+        restoreBatch: String? = nil
+    ) throws -> RestorePlan {
         let records = scan()
         let byID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let targets = records.filter { $0.record.batch == batch }
         guard !targets.isEmpty else { throw LawEnactError.batchNotFound(batch) }
-        let restoreBatch = LedgerID.generate(now: now)
+        let restoreBatch = restoreBatch ?? LedgerID.generate(now: now)
         let rulingCite = perRuling.map { [LawCite(id: $0, rel: LawRelation.perRuling.rawValue)] } ?? []
-        typealias Planned = (target: LawStoredRecord, draft: LawDraft, revival: LawRestoreRevival?)
-        let drafts: [Planned] = targets.map { target in
+        let drafts: [RestorePlan.Item] = targets.map { target in
             if let previousID = target.record.amends, let previous = byID[previousID]?.record {
                 return (target, LawDraft(
                     actor: actor, speaker: previous.speaker, title: previous.title,
@@ -139,7 +159,7 @@ public struct LawStore: Sendable {
                 cites: rulingCite, repeals: target.id, body: "restore \(batch)"), nil)
         }
         let find: (String) -> LawRecord? = { byID[$0]?.record ?? lookup($0) }
-        var planned: [Planned] = []
+        var planned: [RestorePlan.Item] = []
         var refusals: [String] = []
         let paths = LawRestorePaths(records: records)
         for (target, draft, revival) in drafts {
@@ -153,13 +173,19 @@ public struct LawStore: Sendable {
             }
         }
         guard refusals.isEmpty else { throw LawEnactError.restoreRefused(refusals) }
+        return RestorePlan(items: planned, now: now, context: context)
+    }
+
+    /// 원상회복의 쓰기 단계 — 검사를 통과한 계획을 공포한다. 쓰는 도중 실패하면 쓴 기록은 지우지 않고(덧붙이기 전용)
+    /// `restorePartiallyApplied` 로 쓴 기록과 남은 대상을 보고한다.
+    func applyRestore(_ plan: RestorePlan) throws -> [LawStoredRecord] {
         var written: [LawStoredRecord] = []
-        for (index, item) in planned.enumerated() {
+        for (index, item) in plan.items.enumerated() {
             do {
-                written.append(try enact(item.draft, now: now, context: context, revival: item.revival))
+                written.append(try enact(item.draft, now: plan.now, context: plan.context, revival: item.revival))
             } catch {
                 throw LawEnactError.restorePartiallyApplied(
-                    applied: written, remaining: planned[index...].map(\.target.id),
+                    applied: written, remaining: plan.items[index...].map(\.target.id),
                     reason: (error as? LawEnactError)?.description ?? "\(error)")
             }
         }
