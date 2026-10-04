@@ -127,6 +127,16 @@ public enum LawActorResolution {
         return nil
     }
 
+    /// 접두어 없는 기본 작성자(`~/.config/citation-ledger/actor` 의 `jeonghan` 등)에 종류를 붙인다.
+    /// 에이전트 세션 표지가 있으면 `agent:<실행 도구>@<기기 키>`, 없으면 `user:<이름>`. 접두어가 있거나 콜론이 든 값은 그대로.
+    public static func qualified(author: String, environment: [String: String], device: String?) -> String {
+        let trimmed = author.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, !trimmed.contains(":") else { return trimmed }
+        guard agentSessionMarker(environment) != nil else { return "user:\(trimmed)" }
+        let runtime = SupportedAIAgentCLI.current(in: environment).flatMap { LawRuntime(cli: $0)?.rawValue } ?? "agent"
+        return "agent:\(runtime)@\(device ?? "unknown-device")"
+    }
+
     /// 공포 주체(CLI). 작성자 종류가 사람이면 에이전트 세션 표지가 없어야 한다(`agentSessionMarker`).
     /// 사람 공포는 모델 칸을 비우고(명시 인자를 주면 공포 검증이 거부한다) runtime 을 `human` 으로,
     /// 판단 없는 앱 공포는 runtime 을 `app` 으로 적는다. `device` 는 설정의 이 기기 키.
@@ -137,7 +147,7 @@ public enum LawActorResolution {
         device: String?,
         sessions: LawSessionRegistry = .standard
     ) throws -> LawActor {
-        let trimmed = author.trimmingCharacters(in: .whitespaces)
+        let trimmed = qualified(author: author, environment: environment, device: device)
         guard let kind = kind(of: trimmed) else { throw LawActorError.unknownAuthorKind(author) }
         switch kind {
         case .human:
