@@ -15,18 +15,26 @@ extension LedgerModel {
         let executionContext = explicitPath.flatMap {
             RepositoryContext.resolve(cwd: $0, config: config)
         }
-        let registry = (try? FleetStore().load()) ?? FleetRegistry()
-        let doctor = FleetDiagnostics.doctor(registry: registry)
+        // 기본 원장은 agent-law 다(agent-wiki-mono 결정 0007). 설정의 current 가 비었거나 등록되지 않은 이름이면
+        // agent-law 를 연다. 2026-10-04 실측: 사라진 current(test-throwaway)를 첫 world 로 대신 열고, 쓰지도 않을
+        // fleet 진단이 문서 폴더의 repo world 까지 훑다가 파일 접근 허용 창을 띄워 메인 스레드가 멈췄다.
+        let currentIsRegistered = config.currentWorld.map { name in
+            config.effectiveWorlds.contains(where: { $0.name == name })
+        } ?? false
+        if executionContext == nil, !currentIsRegistered,
+           config.effectiveWorlds.contains(where: { $0.name == Self.defaultLedgerWorldName }) {
+            config.currentWorld = Self.defaultLedgerWorldName
+            try? config.save()
+        }
         // 첫 기동(또는 current 가 비었을 때)에만 repo world 를 기본으로 고른다.
+        // fleet 진단(원장 폴더 파일 수 세기)은 이때만 돌린다 — 매 기동 메인 스레드에서 돌리지 않는다.
         // 사용자가 **명시적으로** 개인·실험 world 를 고른 것을 되돌리지 않는다 —
         // 실측 2026-08-11: CLI 로 person-yun-jeonghan 을 세우고 앱을 띄우면,
         // 이 조건문이 "repo 그룹이 아니면 → repo 로 강제 전환" 하면서 config 를
         // 덮어써 개인 world 화면을 못 봤다. "앱이 사용자보다 안다"는 전제가 함정이다.
         if executionContext == nil,
            (config.current?.name.isEmpty ?? true),
-           let preferred = RepositoryUIPresentation.preferredRepositoryWorldName(
-            worlds: config.effectiveWorlds, registry: registry, doctor: doctor
-        ) {
+           let preferred = Self.preferredRepositoryWorld(config: config) {
             config.currentWorld = preferred
             try? config.save()
         }
@@ -42,6 +50,16 @@ extension LedgerModel {
         session.refreshTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
             Task { @MainActor in LedgerModel.shared?.refresh() }
         }
+    }
+
+    /// 결정 0007 의 기본 원장.
+    static let defaultLedgerWorldName = "agent-law"
+
+    private static func preferredRepositoryWorld(config: LedgerConfig) -> String? {
+        let registry = (try? FleetStore().load()) ?? FleetRegistry()
+        let doctor = FleetDiagnostics.doctor(registry: registry)
+        return RepositoryUIPresentation.preferredRepositoryWorldName(
+            worlds: config.effectiveWorlds, registry: registry, doctor: doctor)
     }
 
     func switchWorld(_ world: LedgerWorld) {
