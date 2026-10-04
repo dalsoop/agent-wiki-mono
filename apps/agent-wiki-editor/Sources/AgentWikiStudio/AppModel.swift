@@ -31,7 +31,8 @@ enum StudioArea: String, CaseIterable, Identifiable {
 @MainActor
 @Observable
 final class AppModel {
-    let loc = LocalizationManager(baseBundle: ResourceBundle.localization())
+    let loc = LocalizationManager(baseBundle: ResourceBundle.localization(preferredName: "GujoAgentWikiEditor_AgentWikiStudio"))
+    // 자기 번역 묶음을 이름으로 고른다 — 패키지 이름(Gujo…)이 앱 이름과 달라 이름 순위가 화면 모듈 묶음을 먼저 집었다(2026-10-04 실측: 메뉴가 키 그대로).
     private let service = AgentWikiStudioService()
 
     var status: String = ""
