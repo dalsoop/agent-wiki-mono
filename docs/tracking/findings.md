@@ -55,3 +55,9 @@
 - 증상: CLI 에서 작성자를 사람(`user:`)으로 정한 공포·`dream resume` 은 실행 환경에 에이전트 표지(실행 도구 세션 id 환경 변수, `AI_AGENT`, `CLAUDECODE`, `human` 이 아닌 `AGENT_WIKI_RUNTIME`)가 없을 때만 받는다(`LawActorResolution`). 에이전트가 `env -u CLAUDE_CODE_SESSION_ID -u CLAUDECODE -u AI_AGENT … agent-wiki --as user:… enact …` 처럼 표지를 지우고 부르면 사람 공포로 통과한다.
 - 영향: 사람 공포는 `speaker: user` 로 고정되므로, 표지를 지운 에이전트가 증언 확인 없이 `speaker: user` 기록을 만들고 `dream resume` 으로 드리밍 정지를 풀 수 있다. 대법원 결정은 증거 기록의 증언 확인(세션 발화 대조)을 따로 요구하므로 이 경로만으로는 열리지 않는다.
 - 지금 못 고치는 이유: 같은 사용자 계정의 하위 프로세스에서 사람과 에이전트를 가를 신뢰할 수 있는 표지가 없다. 막으려면 사람만 가진 비밀(키체인 확인·생체 인증·서명 키)로 사람 공포를 서명하는 방식이 필요하고, 그 방식과 화면 편집·CLI 의 사용 흐름은 사용자가 정해야 한다.
+
+## 대법원·판결 확정의 증언이 그 사건에 묶이지 않는다
+
+- 증상: 판결 확정(`--testimony`)과 대법원 결정은 `speaker: user` 증거라면 그 사건과 관계없는 옛 발화도 받는다.
+- 영향: 증거 자체는 세션 대조로 위조할 수 없지만, "사용자가 바로 이것을 승인했다"는 뜻까지 보장하지는 않는다.
+- 지금 못 고치는 이유: 공지 뒤에 공포된 증거만 받을지, 대상 id 를 인용한 증거만 받을지는 사용자가 정할 정책이다. 또한 "사용자 증언 인용" 판정이 `LawEnactPath.citesUserTestimony` 와 `LawEnactValidator.hasUserTestimony` 두 곳에 기준이 조금 다르게 있다(지금은 결과가 같다). 정책을 정할 때 한 곳으로 합친다.
