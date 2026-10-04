@@ -247,6 +247,11 @@
 "law.dream.cancel" = "취소";
 "law.dream.result" = "결과";
 "law.dream.result_error" = "실패";
+"law.dream.result_reverted" = "% 되돌림 %ld건";
+"law.dream.result_failed" = "% 실패(그 전에 %ld건 씀) — %@";
+"law.dream.result_untouched" = "% 쓰지 않음";
+"law.dream.result_resumed" = "자동 드리밍을 재개했습니다 — 재개 기록 %@";
+"law.dream.result_not_paused" = "정지 상태가 아니라 쓰지 않았습니다.";
 "law.credibility.loading" = "모델 신빙성을 읽는 중…";
 "law.credibility.period_label" = "기간";
 "law.credibility.period_all" = "전체";
@@ -269,3 +274,13 @@
 "law.record.edit_done" = "편집 마침";
 "law.record.new" = "새 기록";
 "law.record.repeal" = "삭제";
+"law.record.repeal_title" = "이 기록을 삭제할까요?";
+"law.record.repeal_desc" = "폐지를 공포합니다. 기록은 원장에 남고 연혁에서 볼 수 있습니다.";
+"law.record.repeal_confirm" = "삭제";
+"law.record.cancel" = "취소";
+"law.record.new_placeholder" = "(새 기록)";
+"law.record.create_failed" = "생성 실패: %@";
+"law.record.save_failed" = "저장 실패: %@";
+"law.record.repeal_failed" = "삭제 실패: %@";
+"law.record.not_editable" = "편집할 기록을 지금 원장 목록에서 찾지 못했습니다: %@";
+"law.record.other_ledger" = "다른 원장의 기록 — %@. 여기서는 읽기만 합니다(고치려면 그 원장을 여세요).";

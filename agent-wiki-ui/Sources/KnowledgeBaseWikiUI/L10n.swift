@@ -160,6 +160,11 @@ enum L10nKey: String, CaseIterable {
     case LawDreamCancel = "law.dream.cancel"
     case LawDreamResult = "law.dream.result"
     case LawDreamResultError = "law.dream.result_error"
+    case LawDreamResultReverted = "law.dream.result_reverted"
+    case LawDreamResultFailed = "law.dream.result_failed"
+    case LawDreamResultUntouched = "law.dream.result_untouched"
+    case LawDreamResultResumed = "law.dream.result_resumed"
+    case LawDreamResultNotPaused = "law.dream.result_not_paused"
     case LawCredibilityLoading = "law.credibility.loading"
     case LawCredibilityPeriodLabel = "law.credibility.period_label"
     case LawCredibilityPeriodAll = "law.credibility.period_all"
@@ -287,6 +292,16 @@ enum LawRecordScreenKey: String, CaseIterable {
     case lawRecordEditDone = "law.record.edit_done"
     case lawRecordNew = "law.record.new"
     case lawRecordRepeal = "law.record.repeal"
+    case lawRecordRepealTitle = "law.record.repeal_title"
+    case lawRecordRepealDesc = "law.record.repeal_desc"
+    case lawRecordRepealConfirm = "law.record.repeal_confirm"
+    case lawRecordCancel = "law.record.cancel"
+    case lawRecordNewPlaceholder = "law.record.new_placeholder"
+    case lawRecordCreateFailed = "law.record.create_failed"
+    case lawRecordSaveFailed = "law.record.save_failed"
+    case lawRecordRepealFailed = "law.record.repeal_failed"
+    case lawRecordNotEditable = "law.record.not_editable"
+    case lawRecordOtherLedger = "law.record.other_ledger"
 }
 
 @MainActor

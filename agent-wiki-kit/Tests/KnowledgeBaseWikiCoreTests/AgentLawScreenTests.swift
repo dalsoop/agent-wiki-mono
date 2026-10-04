@@ -176,6 +176,37 @@ import WikiLedgerKit
         #expect(citedBy.isSuperset(of: ["finds \(finding.id)", "appeals \(appeal.id)", "proposes \(proposal.id)"]))
     }
 
+    /// 드리밍 묶음·다른 원장 보고·전신 검색 결과가 가리키는 기록 — 지금 원장에 없으면 드리밍 대상 원장·읽기 범위에서 찾는다.
+    @Test func recordDetailFindsOtherLedgersAndPredecessors() throws {
+        let fx = try Dream.fixture()
+        defer { fx.cleanup() }
+        let local = try Dream.enact(fx, fx.law, title: "공유 기록", body: "공유 본문")
+        let personal = try Dream.enact(fx, fx.person, title: "개인 메모", body: "개인 본문")
+        let records = Dream.records(fx.law)
+        let others = [(world: fx.person.worldName, records: Dream.records(fx.person))]
+
+        #expect(LawRecordDetail.load(id: personal.id, target: fx.law, records: records) == nil)
+        let mine = try #require(LawRecordDetail.load(id: local.id, target: fx.law, records: records, otherLedgers: others))
+        #expect(mine.world == "agent-law")
+        // 편집·삭제를 보이는 유형(목록 유형, type 없으면 record).
+        #expect(LawRecordList.isListed(type: nil) && LawRecordList.isListed(type: "article"))
+        #expect(!LawRecordList.isListed(type: "ruling") && !LawRecordList.isListed(type: "finding"))
+
+        // 드리밍 대상 원장(하위 원장은 읽기 범위 밖이어도 상세는 연다).
+        let other = try #require(LawRecordDetail.load(
+            id: String(personal.id.prefix(8)), target: fx.law, records: records, otherLedgers: others))
+        #expect(other.world == "agent-law-person-a" && other.record.id == personal.id && other.isInForce)
+
+        // 전신(ledger 2) 객체 — 검색 범위와 같은 범위에서 찾는다.
+        let predecessor = try #require(LawRecordDetail.load(
+            id: String(fx.knowledge.id.prefix(10)), target: fx.law, records: records, otherLedgers: []))
+        #expect(predecessor.world == "gujo-wiki" && predecessor.record.id == fx.knowledge.id)
+        #expect(predecessor.record.record.title == "전신 지식")
+
+        #expect(LawRecordDetail.load(
+            id: String(repeating: "f", count: 64), target: fx.law, records: records, otherLedgers: others) == nil)
+    }
+
     // MARK: - 심급
 
     @Test func courtScreenClosedCasesUseEngineValidity() throws {

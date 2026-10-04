@@ -19,6 +19,7 @@ struct LawRecordsView: View {
                     } label: {
                         Label(L(.lawRecordNew), systemImage: "square.and.pencil")
                     }
+                    .disabled(model.law.isWriting)
                 }
             }
             LawRecordFilterBar(model: model, query: $query)

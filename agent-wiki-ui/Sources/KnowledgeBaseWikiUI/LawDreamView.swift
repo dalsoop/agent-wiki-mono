@@ -158,7 +158,7 @@ struct LawDreamWriteDenials: View {
         if !denials.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
                 Text(L(.LawDreamWriteDenied)).font(.caption.weight(.semibold))
-                ForEach(denials, id: \.self) { Text($0).font(.caption) }
+                ForEach(Array(denials.enumerated()), id: \.offset) { _, denial in Text(denial).font(.caption) }
             }
             .foregroundStyle(.orange)
             .textSelection(.enabled)

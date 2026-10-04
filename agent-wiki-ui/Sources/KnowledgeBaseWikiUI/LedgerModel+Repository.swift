@@ -41,6 +41,8 @@ extension LedgerModel {
     }
 
     func selectDestination(_ newValue: RepositoryDestination) {
+        // 기록 편집 중에 다른 메뉴로 가면 남은 저장을 공포하고 편집을 닫는다(옛 편집기가 남지 않게).
+        if law.isEditingRecord, newValue != .lawRecords { finishLawRecordEdit(returnToRecord: false) }
         destination = newValue
         switch newValue {
         case .overview, .tasks, .promotion, .administration: break

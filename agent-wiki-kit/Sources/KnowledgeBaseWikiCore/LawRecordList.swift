@@ -47,6 +47,12 @@ public enum LawRecordList {
     /// 목록에 싣는 유형 — 지식 기록. 처리 기록은 목차·심급·드리밍 화면이 보인다.
     public static let listedTypes: [LawRecordType] = [.record, .article, .judgment]
 
+    /// 이 유형(기록의 `type:` 값, 없으면 record)이 목록에 싣는 유형인가 — 화면이 편집·삭제를 보일지 정할 때 쓴다.
+    public static func isListed(type: String?) -> Bool {
+        let raw = type ?? LawRecordType.record.rawValue
+        return listedTypes.contains { $0.rawValue == raw }
+    }
+
     public static func rows(index: LawScopeIndex, filter: LawRecordListFilter) -> [LawRecordListRow] {
         var views: [String: LawLedgerView] = [:]
         func view(of world: String) -> LawLedgerView {

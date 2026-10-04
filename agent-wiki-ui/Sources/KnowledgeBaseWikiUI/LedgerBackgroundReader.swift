@@ -150,7 +150,10 @@ enum LedgerBackgroundReader {
             // 검색어가 없으면 이 원장의 기록만 쓴다(전신 색인을 읽지 않는다).
             records: LawRecordList.load(
                 target: target, filter: input?.recordFilter ?? LawRecordListFilter(), records: records),
-            recordDetail: selected.flatMap { LawRecordDetail.load(id: $0, target: target, records: records) },
+            // 이 원장에 없으면 드리밍 대상 원장·읽기 범위(상위·전신)에서 찾는다 — 묶음 기록·보고·전신 검색 결과를 누른 경우.
+            recordDetail: selected.flatMap {
+                LawRecordDetail.load(id: $0, target: target, records: records, otherLedgers: dreamLedgers)
+            },
             batchChanges: batch.map { LawDreamBatchChanges.of(batch: $0, ledgers: dreamLedgers) } ?? [])
     }
 

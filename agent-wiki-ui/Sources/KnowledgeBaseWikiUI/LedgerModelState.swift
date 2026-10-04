@@ -36,6 +36,8 @@ struct LedgerSessionState {
     var remoteVersioningType: String?
     var checkpointJobLoaded = false
     var loadedHeadID: String?
+    /// 마지막으로 공포한 판의 내용 — 배경 읽기가 반영하기 전에도 다음 저장이 이것과 비교한다.
+    var savedRevision: LedgerModel.PendingRevision?
     var saveTask: Task<Void, Never>?
     var refreshTimer: Timer?
     var refresh = LedgerRefreshState()
@@ -65,6 +67,8 @@ struct LedgerLawUIState {
     var recordDetail: LawRecordDetail?
     /// 기록 상세에서 편집을 연 상태 — 기존 편집기(`select`·`editorChanged`, 저장 = 개정 공포)를 그대로 쓴다.
     var isEditingRecord = false
+    /// 기록 편집 쓰기(새 기록·편집 마침·삭제)가 배경에서 도는 중 — 그동안 편집·새 기록·삭제 버튼을 막는다.
+    var isWriting = false
     /// 드리밍 묶음 하나를 눌렀을 때 그 묶음이 바꾼 기록.
     var selectedBatch: String?
     var batchChanges: [LawBatchChange] = []
@@ -122,5 +126,17 @@ struct LedgerRefreshState {
     mutating func endApply() -> Bool {
         applying = false
         return pending
+    }
+}
+
+extension LedgerModel {
+    /// 편집기에 남은 변경 하나 — 기준 판(`headID`)을 개정하는 내용.
+    struct PendingRevision: Sendable, Equatable {
+        let headID: String
+        let title: String?
+        let body: String
+        let cites: [LedgerObject.Cite]
+
+        var action: LedgerHumanEditAction { .amend(target: headID, title: title, body: body, cites: cites) }
     }
 }
