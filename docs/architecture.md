@@ -60,7 +60,7 @@ world 목록은 호스트 파일 `~/.memo-citation-ledger/config.json`(`LedgerCo
 
 | 대상 | 쓰는 코드 | 전송 | 방향 |
 |---|---|---|---|
-| gujo-wiki git 원격(GitLab, seed) | `GujoSync` | `/usr/bin/env git` 하위 프로세스 | origin과 fetch·merge·push, 피어는 fetch·merge만 |
+| gujo-wiki git 원격(GitLab, seed) | `GujoSync` | `/usr/bin/env git` 하위 프로세스 | 전신: origin·피어에서 fetch·merge 만(push 없음) |
 | blob 저장소(Cloudflare R2, S3 호환) | `GujoBlobSync` | URLSession + SigV4 서명 | 원격에만 있는 blob pull(전신은 받기만 한다. push 는 64로 거부) |
 | wiki-hub | `GujoHubClient` | HTTPS GET, 응답은 `FleetPullResult` JSON | 읽기 전용 검색 |
 | restic 백업 | `CommandBackup` | `restic` 하위 프로세스 | `objects`·`events`·`blobs`만 백업 |

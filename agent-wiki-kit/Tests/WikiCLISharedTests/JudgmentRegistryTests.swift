@@ -124,9 +124,11 @@ import WikiLedgerKit
         let listed = JudgmentRegistry.entries(records: records)
         #expect(listed.map(\.id) == [amended.id])
         #expect(listed.map(\.number) == [number])
-        // 폐지되면 현행판이 없다.
-        _ = try LawEnactService.enact(
-            LawDraft(actor: Self.agent, title: "폐지: 판결 X", repeals: amended.id, body: ""), target: law)
+        // 판결 등록의 폐지는 judgment 경로만 한다(일반 repeal 은 거부). 폐지되면 현행판이 없다.
+        let repeal = LawDraft(
+            actor: Self.agent, title: "폐지: 판결 X", type: "registration", repeals: amended.id, body: "")
+        #expect(throws: LawEnactServiceError.self) { try LawEnactService.enact(repeal, target: law) }
+        _ = try LawEnactService.enact(repeal, target: law, path: .judgment)
         #expect(throws: JudgmentRegistryError.noInForce(number)) {
             try JudgmentRegistry.find(number, records: law.store.scan())
         }

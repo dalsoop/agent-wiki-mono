@@ -533,6 +533,7 @@ public enum LawSummonService {
         let draft = LawDraft(
             actor: actor, title: "증언: \(utterance.runtime)/\(utterance.session) #\(utterance.index)",
             type: LawRecordType.evidence.rawValue, exhibits: [sha], body: body)
+        // 공포 유형이 evidence 라 일반 경로(`.general`)다. 유형이 바뀌면 `LawEnactPath` 의 경로를 다시 검토한다.
         let stored = try LawEnactService.enact(draft, target: target, now: now)
 
         var uploaded = false

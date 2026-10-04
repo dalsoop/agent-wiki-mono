@@ -145,7 +145,9 @@
 
 - 지식 기록: `record`(일반), `article`(저장소를 넘는 조문), `judgment`(저장소를 넘는 판결 본문).
 - 처리 기록(사실인정을 요구하지 않음): `evidence`, `finding`, `appeal`, `proposal`, `ruling`, `redaction`, `contents`(목차), `report`, `checkpoint`, `registration`(판결 등록), `promotion-receipt`.
-- 처리 기록 중 `ruling`·`appeal`·`proposal`(`court`), `redaction`(`redact`), `registration`(`judgment`), `contents`(`contents`·드리밍), `report`(드리밍), `promotion-receipt`(`promote`), `finding`(`finding`·드리밍)은 괄호 안 전용 명령만 공포한다. 일반 공포(`enact`·`amend`·화면 편집)는 거부한다(폐지만 하는 기록은 예외). 승격은 원본 유형을 그대로 옮긴다. `redact` 는 가림 기록에 예약 태그 `path:redact` 를 붙이고, 일반 경로는 `path:` 로 시작하는 태그를 받지 않는다.
+- 처리 기록 중 `ruling`·`appeal`·`proposal`(`court`), `redaction`(`redact`), `registration`(`judgment`), `contents`(`contents`·드리밍), `report`(드리밍), `promotion-receipt`(`promote`), `finding`(`finding`·드리밍)은 괄호 안 전용 명령만 공포한다. 일반 공포(`enact`·`amend`·화면 편집)는 거부한다. 승격은 원본 유형을 그대로 옮긴다. `redact` 는 가림 기록에 예약 태그 `path:redact` 를 붙이고, 일반 경로는 `path:` 로 시작하는 태그를 받지 않는다.
+- 개정·폐지(`amends`·`amends-also`·`repeals`)는 초안이 적은 유형이 아니라 대상 기록의 실제 유형으로 판정하고, 어느 경로(`repeal`·`amend`·화면 편집·`restore`·전용 명령)든 같다. `ruling` 의 `level: supreme` 은 어느 경로로도 개정·폐지하지 못한다(대법원 결정은 최종). 항소심 `ruling`·`appeal`·`proposal` 은 `court`, `registration` 은 `judgment`, `contents`·`report` 는 드리밍·`contents`, `finding` 은 `finding`·드리밍 경로만 개정·폐지한다. `redaction` 은 폐지·개정하지 못한다(지운 증거물은 돌아오지 않으므로 가림은 되돌릴 수 없다). 그 밖의 기록(지식 기록 등)은 일반 경로도 개정·폐지한다. 폐지만 하는 기록은 대상 유형을 그대로 적고, 본문은 폐지 이유라 그 유형의 필수 머리 칸을 요구하지 않는다.
+- 승격(`promote`)은 지식 기록(`record`·`article`·`judgment`)과 `evidence` 만 한다. 그 밖의 유형은 거부한다(종료 코드 1).
 - `finding` 은 `finds` 대상이 정확히 하나다. `ruling` 의 `level: supreme` 은 `speaker: user` 증거 기록을 `testifies` 로 인용해야 공포된다.
 - 옛 분류(`domain`·`kind`·`knowledge`)와 분류 기준선은 ledger 3 에 없다. 분야는 사실인정의 `domain` 칸으로, 종류는 유형으로, 지식은 축 조합으로 대신한다.
 
@@ -195,7 +197,7 @@
 
 - 본문은 표준 입력. 빈 본문 거부(폐지 예외). 참조 id 는 공포 시점에 허용 범위에 있어야 한다.
 - 공포 직후 그 원장 파일만 git 에 커밋한다. 커밋은 저장소 잠금(대기 상한 기본 30초) 안에서 하고, 못 얻으면 "커밋 대기"로 남겨 다음 `sync` 가 커밋한다.
-- `restore <batch>`: 개정이었으면 이전 판을 다시 공포, 신규였으면 폐지. 파일을 지우지 않는다.
+- `restore <batch>`: 개정이었으면 이전 판을 다시 공포, 신규였으면 폐지. 파일을 지우지 않는다. 만들 기록 하나하나가 위 "유형"의 개정·폐지 판정을 받고(CLI·화면은 일반 경로, 결정의 조치는 `court` 경로), 되돌릴 수 없는 기록이 하나라도 있으면 아무것도 쓰지 않고 이유 목록과 함께 거부한다(종료 코드 1).
 - 갈라진 현행은 감사가 보고하고 `amends-also` 병합 개정으로 푼다.
 
 ## 드리밍

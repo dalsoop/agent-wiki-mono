@@ -103,6 +103,8 @@ public enum LedgerHumanEdit {
                 body: "restore \(id)")
         }
         do {
+            // 공포 유형이 record(새 기록)이거나 대상의 유형을 그대로 적은 개정·폐지라 일반 경로(`.general`)다 —
+            // 처리 유형 대상은 `LawEnactPath.admit` 이 거부한다. 유형이 바뀌면 경로를 다시 검토한다.
             return try LawEnactService.enact(draft, target: target, now: now).id
         } catch let error as LawEnactServiceError {
             throw LedgerHumanEditError.service(error)

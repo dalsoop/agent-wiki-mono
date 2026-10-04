@@ -22,6 +22,7 @@ public enum LawPromotionError: Error, CustomStringConvertible {
     case gate(String)
     case sourceMissing(String)
     case sourceIsReceipt
+    case typeNotPromotable(String)
     case sourceTampered(String)
     case testimonyRefused(String)
     case exhibitMissing(String)
@@ -32,6 +33,8 @@ public enum LawPromotionError: Error, CustomStringConvertible {
         case .gate(let message): return message
         case .sourceMissing(let id): return "원본 기록을 찾을 수 없음: \(id)"
         case .sourceIsReceipt: return "승격 영수증은 승격할 수 없음"
+        case .typeNotPromotable(let type):
+            return "유형 \(type) 는 승격할 수 없음 — 승격은 지식 기록(record·article·judgment)과 evidence 만"
         case .sourceTampered(let id): return "원본이 저장된 바이트와 다름(코어 재해시 불일치): \(id)"
         case .testimonyRefused(let id): return "원본 원장 범위에서 증언을 다시 확인하지 못해 승격 거부(증언 불일치): \(id)"
         case .exhibitMissing(let sha): return "증거 기록의 증거물을 원본 원장에서 찾을 수 없어 승격 거부: \(sha)"
@@ -41,6 +44,10 @@ public enum LawPromotionError: Error, CustomStringConvertible {
 }
 
 public enum LawPromotionService {
+    /// 승격할 수 있는 유형 — 지식 기록과 증거. 처리 기록(결정·이의·개정안·가림·판결 등록·목차·보고·사실인정·체크포인트·영수증)은
+    /// 그 원장의 절차에 묶여 있어 다른 원장으로 옮기지 않는다. 근거: docs/business-rules.md "유형", docs/contracts.md "승격".
+    public static let promotableTypes: Set<LawRecordType> = LawRecordType.knowledgeTypes.union([.evidence])
+
     public static func promote(
         sourceID: String, source: LawLedgerTarget, targetWorld rawTarget: String,
         actor: LawActor, now: Date = Date()
@@ -61,6 +68,10 @@ public enum LawPromotionService {
             throw LawPromotionError.sourceMissing(sourceID)
         }
         guard stored.record.type != LawRecordType.promotionReceipt.rawValue else { throw LawPromotionError.sourceIsReceipt }
+        let sourceType = stored.record.type ?? LawRecordType.record.rawValue
+        guard let parsedType = LawRecordType(rawValue: sourceType), promotableTypes.contains(parsedType) else {
+            throw LawPromotionError.typeNotPromotable(sourceType)
+        }
         guard stored.record.contentID() == stored.id else { throw LawPromotionError.sourceTampered(sourceID) }
 
         let sourceRoot = source.root.standardizedFileURL.path

@@ -405,7 +405,7 @@ public struct LawCourtService: Sendable {
         switch action {
         case .restore(let batch):
             let restored = try LawEnactService.restore(
-                batch: batch, actor: actor, target: target, perRuling: ruling.id, now: now)
+                batch: batch, actor: actor, target: target, perRuling: ruling.id, path: .court, now: now)
             return (restored.map(\.id), [])
         case .amend(let title, let body):
             let records = target.store.scan()
