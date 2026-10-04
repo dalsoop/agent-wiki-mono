@@ -96,4 +96,4 @@
 "CommandPublish.needBody" = "stdin 으로 본문을 주세요 (철회 발행만 본문 생략 가능)";
 "CommandPublish.missingRef" = "없는 객체 참조: %1$@";
 "CommandWorld.unknownOption" = "모르는 옵션: %1$@";
-"CommandWorld.setLayerUsage" = "사용법: world set-layer <이름> tenant --parent <공유world>";
+"CommandWorld.setLayerUsage" = "사용법: world set-layer <이름> <remoteShared|localPerson|repository|other> | world set-layer <이름> tenant --parent <공유world>";

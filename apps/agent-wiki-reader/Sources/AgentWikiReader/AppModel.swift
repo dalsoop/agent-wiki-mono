@@ -42,6 +42,10 @@ final class AppModel {
     var status: String = ""
     var world: String = WikiWorldPresentation.inferredPersonWorld()
     var worldCatalog: [WikiWorldListItem] = []
+    /// 고른 world 의 층 — 설정에 기록된 값(목록 항목)이 정본이다. 이름으로 판정하지 않는다.
+    var worldLayer: WikiWorldLayer {
+        worldCatalog.first { $0.name == world }?.layer ?? WikiWorldPresentation.classify(name: world, rootPath: "")
+    }
     var area: ReaderArea = .pages
     var busy = false
     var lastError: String = ""

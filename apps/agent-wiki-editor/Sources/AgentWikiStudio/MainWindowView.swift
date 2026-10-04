@@ -53,7 +53,7 @@ struct MainWindowView: View {
             WikiWorldChooser(items: model.worldCatalog, selection: $model.world) {
                 Task { await model.reloadCurrentArea() }
             }
-            if WikiWorldPresentation.classify(name: model.world, rootPath: "") == .remoteShared {
+            if model.worldLayer == .remoteShared {
                 Button(model.L(.cliRemoteStatus)) { Task { await model.loadRemoteStatus() } }
                     .help(model.L(.MainWindowViewHelp))
             }

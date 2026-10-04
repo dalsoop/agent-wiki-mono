@@ -114,10 +114,6 @@ public enum WikiWorldPresentation: Sendable {
         if trimmed.lowercased() == "gujo-wiki" || path.hasSuffix("/gujo-wiki") {
             return .remoteShared
         }
-        // ledger 3 공유 원장(결정 0007). 개인·테넌트 원장은 `layer: tenant` 를 명시한다.
-        if trimmed.lowercased() == "agent-law" {
-            return .remoteShared
-        }
         if trimmed.lowercased().hasPrefix("person-") {
             return .localPerson
         }
@@ -177,8 +173,14 @@ public enum WikiWorldPresentation: Sendable {
         }
     }
 
-    public static func title(name: String, rootPath: String) -> String {
-        switch classify(name: name, rootPath: rootPath) {
+    /// 설정에 기록된 층(`world add --layer`·`world set-layer`)이 있으면 그것, 없으면 경로·옛 이름 추정.
+    /// ledger 3 원장의 층은 이름으로 정하지 않는다(결정 0007, docs/business-rules.md "원장 구성").
+    public static func layer(of world: LedgerWorld) -> WikiWorldLayer {
+        WorldLayerInference.resolved(explicit: world.layer, name: world.name, rootPath: world.rootPath)
+    }
+
+    public static func title(name: String, rootPath: String, layer: WikiWorldLayer? = nil) -> String {
+        switch layer ?? classify(name: name, rootPath: rootPath) {
         case .localPerson:
             let slug = tenantSlug(worldName: name) ?? tenantSlugFromPath(rootPath) ?? name
             return "\(tenantDisplayName(slug: slug)) · 로컬 1인칭"
@@ -193,9 +195,9 @@ public enum WikiWorldPresentation: Sendable {
         }
     }
 
-    public static func subtitle(name: String, rootPath: String) -> String {
+    public static func subtitle(name: String, rootPath: String, layer: WikiWorldLayer? = nil) -> String {
         let path = (rootPath as NSString).abbreviatingWithTildeInPath
-        switch classify(name: name, rootPath: rootPath) {
+        switch layer ?? classify(name: name, rootPath: rootPath) {
         case .localPerson:
             return "이 Mac만 · 공유 위키로 안 올라감 · \(path)"
         case .tenant:
@@ -214,14 +216,14 @@ public enum WikiWorldPresentation: Sendable {
         selectedName: String?
     ) -> [WikiWorldListItem] {
         worlds.map { world in
-            let layer = classify(name: world.name, rootPath: world.rootPath)
+            let worldLayer = Self.layer(of: world)
             let resolvedDisplay = world.display ?? WorldDisplayNameMapper.defaultDisplayName(for: world.name)
             return WikiWorldListItem(
                 name: world.name,
                 rootPath: world.rootPath,
-                layer: layer,
-                title: title(name: world.name, rootPath: world.rootPath),
-                subtitle: subtitle(name: world.name, rootPath: world.rootPath),
+                layer: worldLayer,
+                title: title(name: world.name, rootPath: world.rootPath, layer: worldLayer),
+                subtitle: subtitle(name: world.name, rootPath: world.rootPath, layer: worldLayer),
                 selected: world.name == selectedName,
                 display: resolvedDisplay,
                 displayName: resolvedDisplay

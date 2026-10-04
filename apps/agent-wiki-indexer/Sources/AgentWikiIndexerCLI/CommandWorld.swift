@@ -26,7 +26,7 @@ func runWorld(arguments: [String]) {
         let updated = applyWorldSetLayer(
             file: &file,
             rawFlags: Array(arguments.dropFirst(2)),
-            usageMessage: "사용법: world set-layer <이름> tenant --parent <공유world>",
+            usageMessage: "사용법: world set-layer <이름> <remoteShared|localPerson|repository|other> | world set-layer <이름> tenant --parent <공유world>",
             unknownOptionMessage: { "모르는 옵션: \($0)" })
         WorldBoundIO.save(file)
         print("world \(updated.name) layer=\(updated.layer) parent=\(updated.parent ?? "-")")
@@ -38,9 +38,10 @@ func runWorld(arguments: [String]) {
 let worldUsage = """
 사용법: world list [--json]
        world add <이름> <경로> [--layer tenant --parent <공유world>]
-       world set-layer <이름> tenant --parent <공유world>
-       world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]
+       world set-layer <이름> <remoteShared|localPerson|repository|other> | world set-layer <이름> tenant --parent <공유world>
+       world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>]
        world tenant-map <테넌트> <원장> | world device register <키> | world dream-device <키>
+       world storage [--endpoint <url>] [--bucket <b>] [--region <r>] | world ai dream|arbiters|show
 """
 
 func loadBoundFile() -> BoundLedgerFile {

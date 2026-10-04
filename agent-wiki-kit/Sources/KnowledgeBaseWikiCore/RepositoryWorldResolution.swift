@@ -104,7 +104,7 @@ public enum RepositoryWorldResolution {
 
         let resolvedWiki = URL(fileURLWithPath: cwdInfo.worktree)
             .appendingPathComponent(".wiki", isDirectory: true).standardizedFileURL.path
-        return LedgerWorld(name: world.name, rootPath: resolvedWiki, display: world.display)
+        return LedgerWorld(name: world.name, rootPath: resolvedWiki, display: world.display, layer: world.layer)
     }
 
     /// 여러 world 목록을 주어진 cwd 기준으로 해석한다.

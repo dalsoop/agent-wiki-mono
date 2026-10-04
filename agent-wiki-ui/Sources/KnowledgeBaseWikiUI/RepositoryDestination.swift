@@ -115,7 +115,7 @@ enum RepositoryUIPresentation {
             let inspected = GitRepositoryInspector.inspect(worldRoot: path)
             let repoId = fleet?.repoId ?? inspected?.repoId
             let registration = repoId.flatMap { registrations[$0] }
-            let layer = WikiWorldPresentation.classify(name: world.name, rootPath: world.rootPath)
+            let layer = WikiWorldPresentation.layer(of: world)
             let group: WorldPickerGroup
             switch layer {
             case .localPerson: group = .personal
@@ -150,8 +150,8 @@ enum RepositoryUIPresentation {
                 world: world,
                 group: group,
                 layer: layer,
-                title: WikiWorldPresentation.title(name: world.name, rootPath: world.rootPath),
-                subtitle: WikiWorldPresentation.subtitle(name: world.name, rootPath: world.rootPath),
+                title: WikiWorldPresentation.title(name: world.name, rootPath: world.rootPath, layer: layer),
+                subtitle: WikiWorldPresentation.subtitle(name: world.name, rootPath: world.rootPath, layer: layer),
                 health: health,
                 repoId: repoId,
                 remote: registration?.normalizedRemote ?? fleet?.normalizedGitRemote
