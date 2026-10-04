@@ -2,34 +2,8 @@ import Foundation
 import KnowledgeBaseWikiCore
 
 // search·context (ledger 3 원장) — 범위는 `WorldSearchScope.entries`(같은 원장·상위·그 각각의 전신)이고
-// 전신 결과에는 `[전신 <world>]` 표시(JSON 은 `predecessor: true`)를 붙인다.
+// 전신 결과에는 `[전신 <world>]` 표시(JSON 은 `predecessor: true`)를 붙인다. 검색 본체는 엔진 `LawScopedSearch`.
 // 근거: docs/business-rules.md "전신"(검색·컨텍스트 범위도 같고 전신 객체에는 표시가 붙는다).
-
-struct LawSearchHit {
-    let item: LawScopeObject
-    let score: Int
-}
-
-/// 범위 안 각 world 를 그 형식대로 읽어 같은 점수 규칙(`LedgerSearch`)으로 순위를 매긴다.
-func lawScopedHits(index: LawScopeIndex, parsed: WorldScopedSearchParse) -> [LawSearchHit] {
-    var merged: [LawSearchHit] = []
-    for entry in index.entries {
-        let items = index.objects.filter { $0.world == entry.name }
-        guard let world = index.catalog.world(named: entry.name), !items.isEmpty else { continue }
-        let ledgerThree = index.catalog.isLedgerThree(entry.name)
-        let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        let search = LedgerSearch(
-            store: LedgerStore(root: URL(fileURLWithPath: world.rootPath)), objects: items.map(\.object),
-            query: parsed.queryText,
-            domain: ledgerThree ? nil : parsed.domainFilter, kind: ledgerThree ? nil : parsed.kindFilter,
-            knowledge: ledgerThree ? nil : parsed.knowledgeFilter)
-        for hit in search.hits {
-            guard let item = byID[hit.object.id] else { continue }
-            merged.append(LawSearchHit(item: item, score: hit.score))
-        }
-    }
-    return Array(merged.sorted { $0.score > $1.score }.prefix(parsed.limit))
-}
 
 public func runLawSearchOrContext(context: LawCommandContext, arguments: [String]) {
     guard let command = arguments.first else { return }
@@ -42,7 +16,7 @@ public func runLawSearchOrContext(context: LawCommandContext, arguments: [String
     FileHandle.standardError.write(Data((
         "# world: " + index.entries.map { $0.predecessor ? "\($0.name)(전신)" : $0.name }.joined(separator: " + ")
         + "\n").utf8))
-    let top = lawScopedHits(index: index, parsed: parsed)
+    let top = LawScopedSearch.hits(index: index, parsed: parsed)
     if command == "search" {
         if parsed.asJSON {
             struct Hit: Encodable {

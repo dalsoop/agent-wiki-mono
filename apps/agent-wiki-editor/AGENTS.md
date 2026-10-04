@@ -2,7 +2,7 @@
 
 ## 범위
 
-- Studio GUI `AgentWikiStudio`(내 기록·수집·최근·world·간단 발행 창, 메뉴바). 원장 화면은 `agent-wiki-ui`의 `KnowledgeBaseWikiUI`를 쓴다.
+- Studio GUI `AgentWikiStudio`(내 기록·수집·최근·world·간단 발행 창, 메뉴바). 원장 화면은 `agent-wiki-ui`의 `KnowledgeBaseWikiUI`를 쓴다. ledger 3 원장은 설정(`WorldBindingCatalog.isLedgerThree`)으로 판정해 전용 메뉴(목차·기록·심급·드리밍·모델 신빙성)를 보이고, 화면 계산은 엔진(`KnowledgeBaseWikiCore` 의 `Law*Screen`·`LawRecord*`)이 배경에서 만든다. 원장 폴더가 git 저장소인지로 원장 종류를 판정하지 않는다.
 - 얇은 CLI `agent-wiki-editor`(런타임 슬러그 `agent-wiki-studio`): `capabilities`, `dual-entry status|adopt`(설치된 CLI 인계) 등.
 - `AgentWikiStudioCore`(StateMirror `~/.swift-app-state/agent-wiki-studio.json`, `DualEntryAdoption`).
 

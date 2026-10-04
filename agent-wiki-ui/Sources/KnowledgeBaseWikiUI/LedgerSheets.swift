@@ -236,7 +236,7 @@ struct HistorySheet: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .textSelection(.enabled)
                         }
-                        if version.id != document.head.id {
+                        if version.id != document.head.id, !model.isReadOnlyWorld {
                             Button("이 시점으로 복원") {
                                 model.restore(version: version, in: document)
                                 dismiss()

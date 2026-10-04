@@ -2,6 +2,8 @@ import Foundation
 import KnowledgeBaseWikiCore
 import SwiftUI
 
+/// 옆 메뉴의 목적지. ledger 2 원장(옛 형식)은 개요·지식·작업·승격·담당 에이전트·관리,
+/// ledger 3 원장은 목차·기록·심급·드리밍·모델 신빙성(`LawScreenMenu`) — 어느 쪽인지는 설정으로 판정한다(`LawLedgerScreenKind`).
 enum RepositoryDestination: String, CaseIterable, Identifiable {
     case overview
     case knowledge
@@ -9,12 +11,44 @@ enum RepositoryDestination: String, CaseIterable, Identifiable {
     case promotion
     case contributors
     case administration
+    case lawContents
+    case lawRecords
+    case lawCourt
+    case lawDream
+    case lawCredibility
 
     var id: String { rawValue }
+
+    /// ledger 2 원장의 메뉴.
+    static let legacyMenu: [RepositoryDestination] = [
+        .overview, .knowledge, .tasks, .promotion, .contributors, .administration,
+    ]
+
+    /// ledger 3 원장의 메뉴(엔진의 메뉴 순서를 그대로).
+    static var lawMenu: [RepositoryDestination] { LawScreenMenu.allCases.map(RepositoryDestination.init) }
+
+    /// 열린 원장의 메뉴. 판정 전(nil)이면 옛 메뉴.
+    static func menu(for kind: LawLedgerScreenKind?) -> [RepositoryDestination] {
+        kind?.usesLawScreens == true ? lawMenu : legacyMenu
+    }
+
+    init(_ menu: LawScreenMenu) {
+        switch menu {
+        case .contents: self = .lawContents
+        case .records: self = .lawRecords
+        case .court: self = .lawCourt
+        case .dream: self = .lawDream
+        case .credibility: self = .lawCredibility
+        }
+    }
+
+    /// ledger 3 원장 화면인가.
+    var isLaw: Bool { !Self.legacyMenu.contains(self) }
 
     /// AX 자동화와 UI 테스트가 행을 안정적으로 찾는 식별자.
     var sidebarAccessibilityIdentifier: String { "destination-\(rawValue)" }
 
+    @MainActor
     var title: String {
         switch self {
         case .overview: String(localized: "nav.overview", defaultValue: "개요")
@@ -23,6 +57,11 @@ enum RepositoryDestination: String, CaseIterable, Identifiable {
         case .promotion: String(localized: "nav.promotion", defaultValue: "승격")
         case .contributors: String(localized: "nav.contributors", defaultValue: "담당 에이전트")
         case .administration: String(localized: "nav.administration", defaultValue: "관리")
+        case .lawContents: L(.LawNavContents)
+        case .lawRecords: L(.LawNavRecords)
+        case .lawCourt: L(.LawNavCourt)
+        case .lawDream: L(.LawNavDream)
+        case .lawCredibility: L(.LawNavCredibility)
         }
     }
 
@@ -34,6 +73,11 @@ enum RepositoryDestination: String, CaseIterable, Identifiable {
         case .promotion: "arrow.up.forward.square"
         case .contributors: "person.2.badge.gearshape"
         case .administration: "gearshape.2"
+        case .lawContents: "list.bullet.rectangle"
+        case .lawRecords: "doc.text.magnifyingglass"
+        case .lawCourt: "building.columns"
+        case .lawDream: "moon.stars"
+        case .lawCredibility: "chart.bar.xaxis"
         }
     }
 }
@@ -96,6 +140,7 @@ enum RepositoryUIPresentation {
         worlds: [LedgerWorld],
         registry: FleetRegistry,
         doctor: FleetDoctorReport,
+        catalog: WorldBindingCatalog,
         fileManager: FileManager = .default
     ) -> [WorldPickerItem] {
         let healthByPath = Dictionary(uniqueKeysWithValues: doctor.worlds.map {
@@ -108,14 +153,20 @@ enum RepositoryUIPresentation {
         return worlds.map { world in
             let path = URL(fileURLWithPath: (world.rootPath as NSString).expandingTildeInPath)
                 .standardizedFileURL.path
-            let fleet = registry.worlds.first {
+            // 원장 형식은 설정으로 판정한다(`LawLedgerScreenKind`).
+            let kind = LawLedgerScreenKind(worldName: world.name, catalog: catalog)
+            let isLedgerThree = kind.isLedgerThree
+            let fleet = isLedgerThree ? nil : registry.worlds.first {
                 $0.name == world.name
                     || URL(fileURLWithPath: $0.rootPath).standardizedFileURL.path == path
             }
-            let inspected = GitRepositoryInspector.inspect(worldRoot: path)
+            // ledger 3 원장은 저장소 위키가 아니다 — 폴더가 git 저장소여도 저장소로 살피지 않는다(설정으로 판정).
+            let inspected = isLedgerThree
+                ? nil : GitRepositoryInspector.inspect(worldRoot: path)
             let repoId = fleet?.repoId ?? inspected?.repoId
             let registration = repoId.flatMap { registrations[$0] }
-            let layer = WikiWorldPresentation.layer(of: world)
+            // ledger 3 원장의 층은 설정에 기록된 값만 쓴다(이름·경로로 추정하지 않는다). 기록이 없으면 `other`.
+            let layer = isLedgerThree ? (kind.recordedLayer ?? .other) : WikiWorldPresentation.layer(of: world)
             let group: WorldPickerGroup
             switch layer {
             case .localPerson: group = .personal
@@ -167,9 +218,9 @@ enum RepositoryUIPresentation {
     }
 
     static func preferredRepositoryWorldName(
-        worlds: [LedgerWorld], registry: FleetRegistry, doctor: FleetDoctorReport
+        worlds: [LedgerWorld], registry: FleetRegistry, doctor: FleetDoctorReport, catalog: WorldBindingCatalog
     ) -> String? {
-        pickerItems(worlds: worlds, registry: registry, doctor: doctor)
+        pickerItems(worlds: worlds, registry: registry, doctor: doctor, catalog: catalog)
             .first { $0.group == .repositories && $0.health != .unavailable }?.world.name
     }
 }

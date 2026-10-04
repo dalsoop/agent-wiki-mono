@@ -50,6 +50,8 @@ import Testing
     @Test func repositoryDestinationKeysStayValidatedByCore() {
         #expect(RepositoryDestinationKey.isValid("tasks"))
         #expect(RepositoryDestinationKey.isValid("promotion"))
+        #expect(RepositoryDestinationKey.isValid("lawRecords"))
+        #expect(RepositoryDestinationKey.isValid("lawCredibility"))
         #expect(!RepositoryDestinationKey.isValid("task"))
     }
 }

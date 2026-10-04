@@ -234,7 +234,14 @@ extension LedgerModel {
             ?? selectedDocumentID.flatMap { id in
                 // 방금 개정으로 head id 가 바뀐 경우 계보로 추적.
                 documentsRaw.first { $0.versions.contains { $0.id == id } }
+                    // ledger 3 원장의 기록 편집 — 옛 화면의 검색어·삭제 보기로 걸러지지 않은 목록에서 찾는다.
+                    ?? (law.isEditingRecord ? lawEditableDocument(containing: id) : nil)
             }
+    }
+
+    /// 삭제되지 않은 문서 중 이 판(`id`)을 계보에 가진 것 — 거르지 않은 목록(`baseDocuments`)에서.
+    func lawEditableDocument(containing id: String) -> LedgerDocument? {
+        baseDocuments.first { !$0.isDeleted && $0.document.versions.contains { $0.id == id } }?.document
     }
 
     /// 이 문서를 참조(인용)한 다른 문서들.

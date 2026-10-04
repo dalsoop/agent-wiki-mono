@@ -178,7 +178,10 @@ public struct LawDreamService: Sendable {
     }
 
     /// 드리밍 대상 원장 — 원장 키가 있고 보관되지 않았고 로컬 루트가 있는 ledger 3 원장. 공유(상위 없음) 원장이 먼저.
-    public var targets: [LawLedgerTarget] {
+    public var targets: [LawLedgerTarget] { Self.targets(file: file, catalog: catalog) }
+
+    /// 드리밍 대상 원장(서비스 없이 — 화면의 드리밍 상태·묶음 되돌리기가 같은 집합을 쓴다).
+    public static func targets(file: BoundLedgerFile, catalog: WorldBindingCatalog) -> [LawLedgerTarget] {
         catalog.worlds.filter { world in
             catalog.isLedgerThree(world.name) && (world.key.map(LedgerKeyFormat.isValid) ?? false)
                 && !catalog.isArchived(world.name) && FileManager.default.fileExists(atPath: world.rootPath)
@@ -704,30 +707,32 @@ public struct LawDreamService: Sendable {
 
     // MARK: - 보고 본문
 
+    /// 드리밍 보고 본문. 읽는 쪽은 `LawDreamReportSummary.parse`, 형식 상수는 `LawDreamRecordFormat` 하나다.
     static func reportBody(
         _ ledger: LawDreamLedgerOutcome, run: String, batch: String, trigger: LawDreamTrigger,
         archive: LawDreamArchiveSummary?, archiveError: String?
     ) -> String {
+        typealias F = LawDreamRecordFormat
         let m = ledger.materials
         var lines = [
-            LawDreamRecordFormat.batchPrefix + batch, "run: \(run)", "ledger: \(ledger.ledgerKey)", "trigger: \(trigger.rawValue)",
-            "", "## 읽은 재료",
+            F.batchPrefix + batch, F.runPrefix + run, F.ledgerPrefix + ledger.ledgerKey, F.triggerPrefix + trigger.rawValue,
+            "", F.materialsHeading,
             "- 적재 실행 요약 \(m.manifests.count)건, 세션 조각 \(m.chunks)건(가린 조각 \(m.redactedChunks)), 세션 \(m.sessions), 발화 \(m.utterances)",
             "- 전신 객체 \(m.predecessors.count)건" + (m.predecessors.isEmpty ? "" : ": " + m.predecessors.map { String($0.prefix(8)) }.joined(separator: " ")),
             "- 저장소 문서 \(m.repositoryFiles.count)건",
             "- 최근 바뀐 기록 \(m.recentRecords)건, 지난 실행에서 미룬 제안 \(m.deferredIn)건",
-            "", "## 적용한 변경 \(ledger.applied.count)건",
+            "", F.countedHeading(F.appliedHeading, ledger.applied.count),
         ]
         lines += ledger.applied.map { item in
             let target = item.target.map { " \($0.prefix(8))" } ?? ""
             let note = item.note.map { " (\($0))" } ?? ""
-            return "- \(item.kind)\(target) → \(item.ids.map { String($0.prefix(8)) }.joined(separator: " "))\(note)"
+            return F.itemPrefix + "\(item.kind)\(target) → \(item.ids.map { String($0.prefix(8)) }.joined(separator: " "))\(note)"
         }
-        lines += ["", "## 버린 제안 \(ledger.discarded.count)건"]
-        lines += ledger.discarded.map { "- \($0.proposal): \(LawContents.oneLine($0.reason))" }
-        lines += ["", "## 미룬 제안 \(ledger.deferred)건", "", "## 경보 \(ledger.alerts.count)건"]
-        lines += ledger.alerts.map { LawDreamRecordFormat.alertPrefix + LawContents.oneLine($0) }
-        lines += ["", "## 이관 \(ledger.migrations)건", "", "## 적재 보고"]
+        lines += ["", F.countedHeading(F.discardedHeading, ledger.discarded.count)]
+        lines += ledger.discarded.map { F.itemPrefix + $0.proposal + F.discardSeparator + LawContents.oneLine($0.reason) }
+        lines += ["", F.countedHeading(F.deferredHeading, ledger.deferred), "", F.countedHeading(F.alertsHeading, ledger.alerts.count)]
+        lines += ledger.alerts.map { F.alertPrefix + LawContents.oneLine($0) }
+        lines += ["", F.countedHeading(F.migrationsHeading, ledger.migrations), "", F.archiveHeading]
         if let archive {
             let unassigned = archive.unassigned.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")
             lines.append("- 조각 \(archive.chunks)건, 발화 \(archive.utterances), unassigned \(archive.unassigned.values.reduce(0, +))건"

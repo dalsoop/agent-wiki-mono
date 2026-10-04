@@ -28,7 +28,7 @@ swiftkit-sparkle ─────────────────────
 | `swiftkit-appscaffold` | 앱 수명주기, `GujoManaged` 진입 가드(trait `GujoManaged`·`SelfUpdating`·`Telemetry`) | `swiftkit` |
 | `swiftkit-sparkle` | Sparkle 자동 업데이트 래퍼(`SparkleUpdateKit`) | Sparkle |
 
-`agent-wiki-ui`(SwiftUI 원장 화면, 제품 `KnowledgeBaseWikiUI`)는 editor와 reader가 `../../agent-wiki-ui`(저장소 루트 안의 `agent-wiki-ui/`) 경로로 의존하지만 git이 추적하지 않는 디렉터리다.
+`agent-wiki-ui`(SwiftUI 원장 화면, 제품 `KnowledgeBaseWikiUI`)는 editor가 `../../agent-wiki-ui`(저장소 루트 안의 `agent-wiki-ui/`) 경로로 의존한다. ledger 3 화면(목차·기록·심급·드리밍·모델 신빙성)의 표시 모델은 이 모듈이 아니라 엔진 `KnowledgeBaseWikiCore` 에 있고(시험 대상), 이 모듈은 2초 갱신 때 원장을 배경에서 읽어 결과만 메인 스레드에 반영한다(`LedgerBackgroundReader`).
 
 ## 원장(world) 디렉터리 구조
 
