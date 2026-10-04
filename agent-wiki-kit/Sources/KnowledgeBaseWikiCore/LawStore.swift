@@ -47,19 +47,44 @@ public struct LawStore: Sendable {
     @discardableResult
     public func enact(_ draft: LawDraft, now: Date = Date(), context: LawEnactContext = LawEnactContext()) throws
         -> LawStoredRecord {
-        let existing = scan()
+        try enact(draft, now: now, context: context, revival: nil)
+    }
+
+    /// 공포(원상회복 표지 포함). `revival` 은 `restore` 만 만든다(`LawRestoreRevival`).
+    func enact(_ draft: LawDraft, now: Date, context: LawEnactContext, revival: LawRestoreRevival?) throws
+        -> LawStoredRecord {
+        try write(prepare(draft, now: now, context: context, existing: scan(), revival: revival))
+    }
+
+    /// 검증을 마친, 쓸 차례의 기록.
+    struct PreparedRecord {
+        let stored: LawStoredRecord
+        let url: URL
+        let payload: Data
+    }
+
+    /// 쓰지 않고 공포 검증 전체(증언·관계·참조·화자)와 같은 id 충돌을 본다.
+    func prepare(
+        _ draft: LawDraft, now: Date, context: LawEnactContext, existing: [LawStoredRecord], revival: LawRestoreRevival?
+    ) throws -> PreparedRecord {
         var context = context
         if context.promotions == nil { context.promotions = LawPromotionWitness(records: existing) }
         let record = try LawEnactValidator(
             store: self, context: context, sameLedger: LawSameLedgerResolver(records: existing)
-        ).validatedRecord(draft, promulgated: LawTime.truncatedToMilliseconds(now))
+        ).validatedRecord(draft, promulgated: LawTime.truncatedToMilliseconds(now), revival: revival)
         let id = record.contentID()
         let url = objectURL(id: id, promulgated: record.promulgated)
         let payload = Data(record.serialize(id: id).utf8)
+        if let present = try? Data(contentsOf: url), present != payload { throw LawEnactError.duplicateID(id) }
+        return PreparedRecord(stored: LawStoredRecord(id: id, record: record), url: url, payload: payload)
+    }
+
+    func write(_ prepared: PreparedRecord) throws -> LawStoredRecord {
+        let (url, payload, id) = (prepared.url, prepared.payload, prepared.stored.id)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         if let present = try? Data(contentsOf: url) {
             guard present == payload else { throw LawEnactError.duplicateID(id) }
-            return LawStoredRecord(id: id, record: record)
+            return prepared.stored
         }
         do {
             try payload.write(to: url, options: [.withoutOverwriting])
@@ -67,20 +92,23 @@ public struct LawStore: Sendable {
             // 경합으로 그 사이 같은 id 가 쓰였으면 바이트 비교로 멱등 판정.
             if let present = try? Data(contentsOf: url) {
                 guard present == payload else { throw LawEnactError.duplicateID(id) }
-                return LawStoredRecord(id: id, record: record)
+                return prepared.stored
             }
             throw error
         }
-        return LawStoredRecord(id: id, record: record)
+        return prepared.stored
     }
 
     // MARK: - 원상회복
 
     /// `restore <batch>` — 묶음의 기록마다 새 기록을 공포한다. 개정이었으면 이전 판을 다시 공포(`amends`),
     /// 신규였으면 폐지(`repeals`). 파일은 지우지 않는다. 새 기록들은 새 묶음 id 하나를 공유한다.
-    /// 만들 기록 하나하나를 먼저 그 기록의 경로(`LawRestorePaths` — 일반 묶음은 `path`, 드리밍 묶음의 드리밍 기록은
-    /// `dream`·`court`)의 `admit` 에 넣고, 하나라도 거부되면(대법원 결정·가림·승격 영수증·다른 경로의 처리 기록·결정이 난 사건)
-    /// 아무것도 쓰지 않고 거부 이유 목록과 함께 `restoreRefused` 를 던진다.
+    /// 전부 아니면 전무: 만들 기록 하나하나를 쓰기 전에 그 기록의 경로(`LawRestorePaths` — 일반 묶음은 `path`, 드리밍 묶음의
+    /// 드리밍 기록은 `dream`·`court`)의 `admit` 과 공포 검증 전체(증언·관계·참조·화자)에 넣고, 하나라도 거부되면 아무것도
+    /// 쓰지 않고 거부 이유 목록과 함께 `restoreRefused` 를 던진다.
+    /// 되살린 이전 판은 원래 화자를 그대로 가진다(`LawRestoreRevival` — 사람 작성자의 화자 고정을 이 기록에만 열지 않는다).
+    /// 검사와 쓰기 사이에 상태가 바뀌어 쓰는 도중 실패하면 쓴 기록은 지우지 않고(덧붙이기 전용)
+    /// `restorePartiallyApplied` 로 쓴 기록과 남은 대상을 보고한다.
     /// - Parameter perRuling: 결정에 따른 원상회복이면 그 결정(`ruling`) id — `per-ruling` 으로 인용한다.
     /// - Parameter path: 원상회복을 부른 경로(CLI·화면은 `general`, 결정의 조치는 `court`).
     /// - Parameter lookup: 같은 원장 밖 대상 기록을 찾는 함수(허용 범위). 같은 원장은 항상 먼저 본다.
@@ -95,34 +123,47 @@ public struct LawStore: Sendable {
         guard !targets.isEmpty else { throw LawEnactError.batchNotFound(batch) }
         let restoreBatch = LedgerID.generate(now: now)
         let rulingCite = perRuling.map { [LawCite(id: $0, rel: LawRelation.perRuling.rawValue)] } ?? []
-        let drafts: [(target: LawStoredRecord, draft: LawDraft)] = targets.map { target in
+        typealias Planned = (target: LawStoredRecord, draft: LawDraft, revival: LawRestoreRevival?)
+        let drafts: [Planned] = targets.map { target in
             if let previousID = target.record.amends, let previous = byID[previousID]?.record {
                 return (target, LawDraft(
                     actor: actor, speaker: previous.speaker, title: previous.title,
                     type: previous.type ?? LawRecordType.record.rawValue, origin: previous.origin,
                     batch: restoreBatch, tags: previous.tags, cites: previous.cites + rulingCite,
                     exhibits: previous.exhibits, amends: target.id, source: previous.source,
-                    body: previous.body))
+                    body: previous.body), LawRestoreRevival())
             }
             return (target, LawDraft(
                 actor: actor, title: target.record.title.map { "폐지: \($0)" },
                 type: target.record.type ?? LawRecordType.record.rawValue, batch: restoreBatch,
-                cites: rulingCite, repeals: target.id, body: "restore \(batch)"))
+                cites: rulingCite, repeals: target.id, body: "restore \(batch)"), nil)
         }
         let find: (String) -> LawRecord? = { byID[$0]?.record ?? lookup($0) }
-        var admitted: [LawDraft] = []
+        var planned: [Planned] = []
         var refusals: [String] = []
         let paths = LawRestorePaths(records: records)
-        for (target, draft) in drafts {
+        for (target, draft, revival) in drafts {
             do {
                 let recordPath = try paths.path(for: target, batch: batch, caller: path)
-                admitted.append(try recordPath.admit(draft, target: find))
+                let admitted = try recordPath.admit(draft, target: find)
+                _ = try prepare(admitted, now: now, context: context, existing: records, revival: revival)
+                planned.append((target, admitted, revival))
             } catch let error as LawEnactError {
                 refusals.append("\(String(target.id.prefix(8))): \(error.description)")
             }
         }
         guard refusals.isEmpty else { throw LawEnactError.restoreRefused(refusals) }
-        return try admitted.map { try enact($0, now: now, context: context) }
+        var written: [LawStoredRecord] = []
+        for (index, item) in planned.enumerated() {
+            do {
+                written.append(try enact(item.draft, now: now, context: context, revival: item.revival))
+            } catch {
+                throw LawEnactError.restorePartiallyApplied(
+                    applied: written, remaining: planned[index...].map(\.target.id),
+                    reason: (error as? LawEnactError)?.description ?? "\(error)")
+            }
+        }
+        return written
     }
 
     // MARK: - 조회
@@ -144,4 +185,12 @@ public struct LawStore: Sendable {
         for case let url as URL in enumerator where url.pathExtension == "md" { urls.append(url) }
         return urls.sorted { $0.path < $1.path }
     }
+}
+
+/// 원상회복 경로 표지 — `LawStore.restore` 가 되살리는 이전 판(개정이었던 기록의 원상회복)에만 붙인다.
+/// 이 파일 밖에서는 만들 수 없어 일반 공포가 흉내 내지 못한다. 공포 검증은 이 표지가 있을 때만
+/// 사람 작성자의 화자 고정(`humanSpeakerFixed`)을 적용하지 않고 원래 화자를 그대로 둔다(`LawEnactValidator.resolvedSpeaker`).
+/// 근거: docs/business-rules.md "공포·개정·폐지·원상회복".
+struct LawRestoreRevival: Sendable {
+    fileprivate init() {}
 }

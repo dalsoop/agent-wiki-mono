@@ -12,7 +12,8 @@ struct LawEnactValidator {
         sameLedger.resolve(id) ?? context.resolver?.resolve(id)
     }
 
-    func validatedRecord(_ draft: LawDraft, promulgated: Date) throws -> LawRecord {
+    /// - Parameter revival: 원상회복이 되살리는 이전 판이면 그 표지(`LawRestoreRevival` — `LawStore.restore` 만 만든다).
+    func validatedRecord(_ draft: LawDraft, promulgated: Date, revival: LawRestoreRevival? = nil) throws -> LawRecord {
         guard let type = LawRecordType(rawValue: draft.type) else { throw LawEnactError.unknownType(draft.type) }
         let actor = try validatedActor(draft.actor)
         try checkValue("speaker", draft.speaker, LawSpeaker.self)
@@ -36,7 +37,8 @@ struct LawEnactValidator {
         let resolved = try checkReferences(draft, type: type)
         try checkOrigin(draft)
         try checkProcessRecord(draft, type: type, head: head, resolved: resolved)
-        let speaker = try resolvedSpeaker(draft, type: type, actor: actor, head: head, resolved: resolved)
+        let speaker = try resolvedSpeaker(
+            draft, type: type, actor: actor, head: head, resolved: resolved, revival: revival)
 
         let authorship = LawAuthorship(
             authorKind: actor.kind.rawValue, device: actor.device, runtime: actor.runtime,
@@ -173,7 +175,7 @@ struct LawEnactValidator {
 
     func resolvedSpeaker(
         _ draft: LawDraft, type: LawRecordType, actor: LawActor, head: LawHeadFieldBlock,
-        resolved: [(LawCite, LawResolvedReference)]
+        resolved: [(LawCite, LawResolvedReference)], revival: LawRestoreRevival? = nil
     ) throws -> String? {
         if type == .evidence {
             // 세션에서 소환한 증거(머리 칸 session) 또는 user 화자 주장은 증언 확인을 거친다.
@@ -194,11 +196,14 @@ struct LawEnactValidator {
             if let claimed = draft.speaker, claimed != witnessed.rawValue { throw LawEnactError.testimonyMismatch }
             return witnessed.rawValue
         }
-        // 사람 공포의 화자는 user 로 고정한다(다른 값을 적으면 거부).
-        if actor.kind == .human, let claimed = draft.speaker, claimed != LawSpeaker.user.rawValue {
+        // 원상회복이 되살린 이전 판은 원래 화자의 말이므로 원래 화자(없으면 없음)를 그대로 둔다 — 사람 화자 고정의
+        // 유일한 예외이고, 표지(`LawRestoreRevival`)는 `LawStore.restore` 만 만든다. 원래 화자가 user 면 아래 증언 규칙은
+        // 그대로 보고, 그 증언은 원래 판의 `testifies` 인용을 그대로 가져간다.
+        // 그 밖의 사람 공포의 화자는 user 로 고정한다(다른 값을 적으면 거부).
+        if revival == nil, actor.kind == .human, let claimed = draft.speaker, claimed != LawSpeaker.user.rawValue {
             throw LawEnactError.humanSpeakerFixed(claimed)
         }
-        let speaker = draft.speaker ?? {
+        let speaker = revival != nil ? draft.speaker : draft.speaker ?? {
             switch actor.kind {
             case .agent: return LawSpeaker.agent.rawValue
             case .human: return LawSpeaker.user.rawValue
