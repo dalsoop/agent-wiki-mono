@@ -128,6 +128,7 @@
 | `effort` | `low` · `medium` · `high` · `xhigh` · `max` · `unknown` |
 | `app`, `app-version` | 앱 슬러그·버전 |
 
+- 접두어 없는 기본 작성자(`~/.config/citation-ledger/actor` 등)는 에이전트 세션 표지가 있으면 `agent:<실행 도구>@<기기 키>`, 없으면 `user:<이름>` 으로 읽는다.
 - `agent` 공포는 `runtime`·`model` 이 없으면 거부한다. 추론 강도를 모르면 `unknown`.
 - `app` 공포는 `app`·`app-version` 필수. AI 판단을 거친 앱 기록(드리밍·중재)은 그 판단의 `runtime`·`model`·`effort` 도 적는다. 판단 없이 기계적으로 만든 기록은 모델 칸을 비운다.
 - `human` 공포는 모델 칸을 비운다.

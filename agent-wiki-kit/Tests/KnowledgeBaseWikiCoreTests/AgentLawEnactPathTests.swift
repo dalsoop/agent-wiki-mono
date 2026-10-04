@@ -141,9 +141,10 @@ import WikiLedgerKit
         #expect(app.kind == .app)
         #expect(app.app == "agent-wiki")
         #expect(LawActorResolution.kind(of: "yun@host") == nil)
-        #expect(throws: LawActorError.self) {
-            try LawActorResolution.actor(author: "yun@host", environment: [:], device: "mac")
-        }
+        // 접두어 없는 기본 작성자는 에이전트 표지가 없으면 사람(`user:`)으로 읽는다(LawDefaultAuthorTests).
+        let bare = try LawActorResolution.actor(author: "yun@host", environment: [:], device: "mac")
+        #expect(bare.kind == .human)
+        #expect(bare.author == "user:yun@host")
     }
 
     // MARK: - 인용 범위
