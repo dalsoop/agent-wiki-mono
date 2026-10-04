@@ -386,7 +386,9 @@ struct WikiSectionBlock: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if hovering && !editing {
                     HStack(spacing: 8) {
-                        Button("편집") { draft = section.raw; reason = ""; editing = true }
+                        if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 편집 버튼을 숨긴다
+                            Button("편집") { draft = section.raw; reason = ""; editing = true }
+                        }
                         Button("이의") { objection = ""; arguing = true }
                     }
                     .font(.caption).buttonStyle(.plain).foregroundStyle(.teal)

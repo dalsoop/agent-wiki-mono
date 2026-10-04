@@ -24,6 +24,16 @@ struct LedgerDetailPane: View {
                 AdministrationOverviewView(model: model)
             }
         case .knowledge, .contributors: legacyDetailColumn
+        case .lawContents: LawContentsView(model: model)
+        case .lawRecords:
+            if model.law.selectedRecordID != nil {
+                LawRecordDetailView(model: model)
+            } else {
+                LawRecordsView(model: model)
+            }
+        case .lawCourt: LawCourtView(model: model)
+        case .lawDream: LawDreamView(model: model)
+        case .lawCredibility: LawCredibilityView(model: model)
         }
     }
 

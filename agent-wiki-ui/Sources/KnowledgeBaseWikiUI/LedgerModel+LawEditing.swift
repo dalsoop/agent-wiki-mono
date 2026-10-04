@@ -7,18 +7,14 @@ extension LedgerModel {
     /// 현재 world 의 쓰기 대상(호스트 설정 파일 하나에서 world 목록·기기 키를 읽는다).
     var editTarget: LawLedgerTarget? {
         guard let name = currentWorldName, let rootURL else { return nil }
-        let config = LedgerConfig.load()
-        let file = WorldBoundBootstrap.load(from: LedgerConfig.configURL, overlay: config)
-        var catalog = WorldCatalogLoader.merging(file: file, config: config)
-        if catalog.world(named: name) == nil {
-            catalog.worlds.append(BoundWorld(name: name, rootPath: rootURL.path))
-        }
-        return LawLedgerTarget(
-            worldName: name, root: rootURL, catalog: catalog,
-            registeredDevices: file.devices ?? [], currentDevice: file.currentDevice, file: file)
+        return LedgerBackgroundReader.lawTarget(worldName: name, root: rootURL, config: LedgerConfig.load())
     }
 
-    var isLedgerThreeWorld: Bool { editTarget?.isLedgerThree ?? false }
+    /// 설정상 ledger 3 원장인가. 배경 읽기가 판정해 둔 값(`law.kind`)을 먼저 쓰고, 아직 없으면 설정을 읽는다.
+    var isLedgerThreeWorld: Bool {
+        if let kind = law.kind, kind.worldName == currentWorldName { return kind.isLedgerThree }
+        return editTarget?.isLedgerThree ?? false
+    }
 
     /// 편집 하나를 쓰고 새 기록 id 를 돌려준다.
     func performEdit(_ action: LedgerHumanEditAction) throws -> String {
@@ -50,10 +46,5 @@ extension LedgerModel {
             return nil
         }
         return store
-    }
-
-    /// ledger 3 원장의 기록을 화면 목록용 투영으로 읽는다(읽기 전용).
-    func ledgerThreeObjects(root: URL) -> [LedgerObject] {
-        LawLedgerProjection.objects(LawStore(root: root).scan())
     }
 }

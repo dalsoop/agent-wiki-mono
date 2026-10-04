@@ -49,11 +49,16 @@ extension LedgerModel {
                  .learning, .triage, .review, .trash].contains(area) { area = .wiki }
         case .contributors:
             if ![.agents, .activity, .events].contains(area) { area = .agents }
+        case .lawRecords:
+            closeLawRecord()  // 메뉴로 들어오면 목록부터
+        case .lawContents, .lawCourt, .lawDream, .lawCredibility: break
         }
         publishState()
     }
 
     func syncDestination(for area: LedgerArea) {
+        // ledger 3 원장의 메뉴에는 옛 영역(area)이 없다 — 영역이 바뀌어도 목적지를 옛 메뉴로 옮기지 않는다.
+        guard law.kind?.usesLawScreens != true else { return }
         switch area {
         case .agents, .activity, .events: destination = .contributors
         // 구조는 관리 소속이다. 여기 빠져 있으면 area 를 .structure 로 바꾸는 순간
@@ -63,19 +68,22 @@ extension LedgerModel {
         }
     }
 
+    /// 저장소 개요·world 고르기 표시를 배경에서 다시 만든다(fleet 진단·git 살피기는 메인 밖).
+    /// ledger 3 원장은 저장소 위키가 아니므로 저장소로 살피지 않는다(`LedgerBackgroundReader.repository`).
     func refreshRepositoryPresentation() {
-        let registry = (try? FleetStore().load()) ?? FleetRegistry()
-        let doctor = FleetDiagnostics.doctor(registry: registry)
-        worldPickerItems = RepositoryUIPresentation.pickerItems(
-            worlds: worlds, registry: registry, doctor: doctor)
-        repositoryIdentity = rootURL.flatMap { GitRepositoryInspector.inspect(worldRoot: $0.path) }
-        if let identity = repositoryIdentity, let store {
-            repositorySummary = RepositorySummaryContract(
-                identity: identity, store: store, peerWorlds: worlds)
-            integrityProblemCount = repositorySummary?.integrity.issues.count ?? 0
-        } else {
-            repositorySummary = nil
+        let (worlds, rootURL, worldName) = (worlds, rootURL, currentWorldName)
+        Task.detached(priority: .utility) { [weak self] in
+            let snapshot = LedgerBackgroundReader.repository(worlds: worlds, rootURL: rootURL, worldName: worldName)
+            await self?.applyRepositoryPresentation(snapshot, rootURL: rootURL)
         }
+    }
+
+    private func applyRepositoryPresentation(_ snapshot: LedgerRepositorySnapshot, rootURL: URL?) {
+        worldPickerItems = snapshot.pickerItems
+        guard rootURL == self.rootURL else { return }  // 그 사이 다른 원장을 열었다
+        repositoryIdentity = snapshot.identity
+        repositorySummary = snapshot.summary
+        if let summary = snapshot.summary { integrityProblemCount = summary.integrity.issues.count }
     }
 
     /// repo world 는 `repositoryIdentity` 로 승격하고, repo 가 아닌 world(개인·실험 등)는

@@ -57,10 +57,12 @@ struct ActivityListView: View {
                 }
                 .buttonStyle(.link)
             }
-            Button("이 작업 전체 되돌리기", role: .destructive) {
-                model.rollback(batch: batch)
+            if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 되돌리기를 숨긴다
+                Button("이 작업 전체 되돌리기", role: .destructive) {
+                    model.rollback(batch: batch)
+                }
+                .font(.callout)
             }
-            .font(.callout)
         } label: {
             batchLabel(batch)
         }

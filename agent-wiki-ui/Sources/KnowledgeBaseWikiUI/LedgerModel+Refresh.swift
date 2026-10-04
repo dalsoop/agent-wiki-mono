@@ -83,6 +83,8 @@ extension LedgerModel {
         rootURL = URL(fileURLWithPath: path)
         selectedDocumentID = nil
         destination = .overview
+        law = LedgerLawUIState()  // 원장 판정·표시 모델은 배경 읽기가 새 원장으로 다시 채운다
+        session.refresh.forceLawReload = true
         promotionPreview = nil
         promotionResult = nil
         promotionMessage = nil
@@ -146,47 +148,67 @@ extension LedgerModel {
         publishState()
     }
 
-    func refresh() {
+    /// 화면 갱신. 설정·원장 폴더 읽기는 배경(`LedgerBackgroundReader.read`)에서 하고 결과만 메인에 반영한다 —
+    /// 2초 타이머가 메인 스레드에서 원장 폴더를 훑지 않는다. 한 번에 하나만 돌고, 도는 중 들어온 요청은 끝난 뒤 한 번 더 돈다.
+    /// - Parameter then: 결과를 반영한 뒤 메인에서 부를 일(쓰기 직후 새 기록 고르기 등).
+    func refresh(then: (@MainActor () -> Void)? = nil) {
         applyControlFile()
         maybeRecheckCLI()   // 원장 무변경으로 조기 반환하기 전에 — 유휴 앱에서도 드리프트를 잡는다
-
-        // CLI `world use` 로 밖에서 세계관이 바뀌면 앱도 따라간다 (설정 파일이 정본)
-        let config = LedgerConfig.load()
-        let executionContext = openedRepositoryPath.flatMap {
-            RepositoryContext.resolve(cwd: $0, config: config)
-        }
-        let selectedWorld = executionContext?.world ?? config.current
-        let refreshedWorlds = Self.mergedWorlds(
-            config.effectiveWorlds, executionWorld: executionContext?.world)
-        var worldChanged = false
-        if selectedWorld.map({ URL(fileURLWithPath: $0.rootPath) }) != rootURL {
-            rootURL = selectedWorld.map { URL(fileURLWithPath: $0.rootPath) }
-            selectedDocumentID = nil
-            scanCache = LedgerStore.ScanCache()
-            worldChanged = true
-        }
-        if worlds != refreshedWorlds || currentWorldName != selectedWorld?.name {
-            worlds = refreshedWorlds
-            currentWorldName = selectedWorld?.name
-            worldChanged = true
-        }
-        guard let store else {
-            objects = []
+        if let then { session.refresh.waiting.append(then) }
+        guard !session.refresh.inFlight else {
+            session.refresh.pending = true
             return
         }
-        if isLedgerThreeWorld {
-            // ledger 3 원장 — 읽기 전용 투영으로 같은 화면에 싣는다(결정 0007).
-            let projected = ledgerThreeObjects(root: store.root)
-            guard projected.map(\.id) != objects.map(\.id) || worldChanged else { return }
-            objects = projected
-        } else {
-            let result = store.scan(cache: &scanCache)
-            guard result.changed || objects.isEmpty || worldChanged else { return }  // 무변경 → 렌더 무효화 없음
-            objects = result.objects
+        session.refresh.inFlight = true
+        session.refresh.running = session.refresh.waiting
+        session.refresh.waiting = []
+        session.refresh.pending = false
+        let input = LedgerRefreshInput(
+            openedRepositoryPath: openedRepositoryPath, rootURL: rootURL, currentWorldName: currentWorldName,
+            worlds: worlds, objectIDs: objects.map(\.id), scanCache: scanCache,
+            forceLawReload: session.refresh.forceLawReload, lawLoaded: law.contents != nil, recordFilter: law.recordFilter,
+            credibilityPeriod: law.credibilityPeriod, selectedRecordID: law.selectedRecordID,
+            selectedBatch: law.selectedBatch)
+        session.refresh.forceLawReload = false
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let snapshot = LedgerBackgroundReader.read(input)
+            await self?.applyRefresh(snapshot)
         }
-        rebuildDerived(store: store)
-        refreshRepositoryPresentation()
-        publishState()
+    }
+
+    /// 배경 읽기 결과를 반영한다. 읽는 사이 메인에서 원장을 바꿨으면(world 전환) 버리고 다시 읽는다.
+    private func applyRefresh(_ snapshot: LedgerRefreshSnapshot) {
+        session.refresh.inFlight = false
+        let input = snapshot.input
+        guard input.rootURL == rootURL, input.currentWorldName == currentWorldName else {
+            session.refresh.forceLawReload = true
+            session.refresh.waiting = session.refresh.running + session.refresh.waiting
+            session.refresh.running = []
+            refresh()
+            return
+        }
+        if snapshot.rootChanged {
+            rootURL = snapshot.rootURL
+            selectedDocumentID = nil
+            law = LedgerLawUIState()
+        }
+        if worlds != snapshot.worlds || currentWorldName != snapshot.selectedWorldName {
+            worlds = snapshot.worlds
+            currentWorldName = snapshot.selectedWorldName
+        }
+        scanCache = snapshot.scanCache
+        applyLawKind(snapshot.kind)
+        if let screens = snapshot.law { applyLawScreens(screens, for: input) }
+        if let objects = snapshot.objects {
+            self.objects = objects
+            if let store { rebuildDerived(store: store) }
+            refreshRepositoryPresentation()
+            publishState()
+        }
+        let completions = session.refresh.running
+        session.refresh.running = []
+        for completion in completions { completion() }
+        if session.refresh.pending { refresh() }
     }
 
     /// 파생 인덱스 재구축 — 객체가 실제로 바뀔 때 한 번만 (옵시디언 MetadataCache 방식).

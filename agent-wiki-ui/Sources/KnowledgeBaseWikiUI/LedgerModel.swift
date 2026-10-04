@@ -44,6 +44,7 @@ final class LedgerModel {
     var repo = LedgerRepositoryUIState()
     var caches = LedgerDerivedIndex()
     var session = LedgerSessionState()
+    var law = LedgerLawUIState()
 
     var store: LedgerStore? { rootURL.map(LedgerStore.init) }
     var storeForGraph: LedgerStore? { store }

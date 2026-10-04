@@ -202,7 +202,7 @@ struct LedgerContentColumn: View {
         }
         .contextMenu {
             // 플레이북은 낡으면 폐기(철회)해 조회에서 감춘다 — 역사는 휴지통에 남는다.
-            if isPlaybook {
+            if isPlaybook, !model.isReadOnlyWorld {
                 if model.showDeleted {
                     Button("복구") { model.restoreDeleted(doc) }
                 } else {
@@ -228,7 +228,9 @@ struct LedgerContentColumn: View {
             }
             .tag(document.id)
             .contextMenu {
-                if model.showDeleted {
+                if model.isReadOnlyWorld {
+                    EmptyView()  // 보관된 원장(전신)은 편집하지 않는다
+                } else if model.showDeleted {
                     Button("복구") { model.restoreDeleted(document) }
                 } else {
                     Button("삭제", role: .destructive) { model.delete(document) }
@@ -239,12 +241,14 @@ struct LedgerContentColumn: View {
         .navigationSplitViewColumnWidth(min: 230, ideal: 280)
         .toolbar {
             ToolbarItemGroup {
-                Button {
-                    model.newDocument()
-                } label: {
-                    Label("새 기록", systemImage: "square.and.pencil")
+                if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 새 기록 버튼을 숨긴다
+                    Button {
+                        model.newDocument()
+                    } label: {
+                        Label("새 기록", systemImage: "square.and.pencil")
+                    }
+                    .keyboardShortcut("n", modifiers: .command)
                 }
-                .keyboardShortcut("n", modifiers: .command)
                 Menu {
                     Toggle("삭제된 기록 보기", isOn: $model.showDeleted)
                 } label: {
