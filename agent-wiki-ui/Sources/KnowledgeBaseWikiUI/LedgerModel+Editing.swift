@@ -35,32 +35,58 @@ extension LedgerModel {
     }
 
     private func saveRevision() {
-        guard !isReadOnlyWorld else { return }
-        guard let headID = loadedHeadID,
-              let current = objects.first(where: { $0.id == headID }) else { return }
-        let title = editorTitle.trimmingCharacters(in: .whitespaces)
-        guard editorBody != current.body || title != (current.title ?? "") else { return }
+        guard let pending = pendingRevision() else { return }
         do {
             // 저장 = 개정. ledger 3 는 공포 경로, ledger 2 는 옛 발행(LedgerHumanEdit 한 자리).
-            let revisionID = try performEdit(.amend(
-                target: headID, title: title.isEmpty ? nil : title, body: editorBody, cites: current.cites))
-            loadedHeadID = revisionID
-            selectedDocumentID = revisionID
-            refresh()
+            let revisionID = try performEdit(pending.action)
+            recordSavedRevision(revisionID, from: pending)
+            // 새 판은 배경 읽기가 반영한 뒤에 고른다. 그 전에 새 id 로 바꾸면 목록에 아직 없어 `selectedDocument` 가
+            // nil 이 되고 편집기가 빈 화면으로 깜빡인다(초점 잃음). 옛 head 로 두면 반영 뒤 계보로 이어진다.
+            refresh { [weak self] in
+                guard let self, let document = self.selectedDocument,
+                      document.versions.contains(where: { $0.id == revisionID }) else { return }
+                self.selectedDocumentID = document.head.id
+            }
             errorMessage = nil
         } catch {
-            errorMessage = "저장 실패: \(error)"
+            errorMessage = L(.lawRecordSaveFailed, "\(error)")
         }
     }
+
+    /// 편집기에 남은 변경 — 마지막으로 읽었거나 공포한 판과 다르면 그 판의 개정 동작. 같거나 쓸 수 없으면 nil.
+    func pendingRevision() -> PendingRevision? {
+        guard !isReadOnlyWorld, let headID = loadedHeadID, let current = revisionBase(headID) else { return nil }
+        let title = editorTitle.trimmingCharacters(in: .whitespaces)
+        guard editorBody != current.body || title != (current.title ?? "") else { return nil }
+        return PendingRevision(
+            headID: headID, title: title.isEmpty ? nil : title, body: editorBody, cites: current.cites)
+    }
+
+    /// 공포한 판을 편집기의 기준으로 — 배경 읽기가 반영하기 전에도 다음 저장이 이 판과 비교한다.
+    func recordSavedRevision(_ id: String, from pending: PendingRevision) {
+        session.savedRevision = PendingRevision(headID: id, title: pending.title, body: pending.body, cites: pending.cites)
+        if loadedHeadID == pending.headID { loadedHeadID = id }
+    }
+
+    /// 판 하나의 제목·본문·인용 — 읽은 목록에 없으면 방금 공포한 판(`session.savedRevision`).
+    private func revisionBase(_ id: String) -> (title: String?, body: String, cites: [LedgerObject.Cite])? {
+        if let object = objects.first(where: { $0.id == id }) { return (object.title, object.body, object.cites) }
+        if let saved = session.savedRevision, saved.headID == id { return (saved.title, saved.body, saved.cites) }
+        return nil
+    }
+
+    /// 화면 삭제의 폐지 이유(원장 기록 본문 — 화면 문구가 아니다).
+    static let deletedByUserReason = "deleted by user"
 
     func newDocument() {
         flushPendingSave()
         do {
             // ledger 3 는 빈 본문 공포를 거부하므로 자리 표시 본문으로 시작한다.
-            let objectID = try performEdit(.create(title: nil, body: isLedgerThreeWorld ? "(새 기록)\n" : "", cites: []))
+            let objectID = try performEdit(.create(
+                title: nil, body: isLedgerThreeWorld ? Self.newRecordPlaceholderBody : "", cites: []))
             refresh { [weak self] in self?.select(self?.documents.first { $0.id == objectID }) }
         } catch {
-            errorMessage = "생성 실패: \(error)"
+            errorMessage = L(.lawRecordCreateFailed, "\(error)")
         }
     }
 
@@ -68,7 +94,7 @@ extension LedgerModel {
     func delete(_ document: LedgerDocument) {
         flushPendingSave()
         do {
-            _ = try performEdit(.repeal(target: document.head.id, reason: "deleted by user"))
+            _ = try performEdit(.repeal(target: document.head.id, reason: Self.deletedByUserReason))
             if selectedDocumentID == document.id { select(nil) }
             refresh()
         } catch {

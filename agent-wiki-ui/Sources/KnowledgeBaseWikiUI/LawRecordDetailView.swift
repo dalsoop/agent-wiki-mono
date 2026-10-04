@@ -6,6 +6,7 @@ import SwiftUI
 /// 근거: docs/business-rules.md "작성자와 모델 기록"·"화자"·"본문 머리 칸"·"관계"·"사실인정과 4종류"·"심급제".
 struct LawRecordDetailView: View {
     @Bindable var model: LedgerModel
+    @State private var confirmRepeal = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -17,21 +18,39 @@ struct LawRecordDetailView: View {
                 }
                 .buttonStyle(.borderless)
                 Spacer()
-                if model.law.recordDetail != nil, !model.isReadOnlyWorld {
+                // 편집·삭제는 지금 원장의 현행 판, 목록이 다루는 유형일 때만(`canEditLawRecord`).
+                if let detail = model.law.recordDetail, model.canEditLawRecord(detail) {
                     Button {
                         model.editLawRecord()
                     } label: {
                         Label(L(.lawRecordEdit), systemImage: "pencil")
                     }
+                    .disabled(model.law.isWriting)
                     Button(role: .destructive) {
-                        model.repealLawRecord()
+                        confirmRepeal = true
                     } label: {
                         Label(L(.lawRecordRepeal), systemImage: "trash")
                     }
+                    .disabled(model.law.isWriting)
                 }
             }
             .padding(.horizontal, 24)
             .padding(.top, 16)
+            .confirmationDialog(L(.lawRecordRepealTitle), isPresented: $confirmRepeal, titleVisibility: .visible) {
+                Button(L(.lawRecordRepealConfirm), role: .destructive) { model.repealLawRecord() }
+                Button(L(.lawRecordCancel), role: .cancel) {}
+            } message: {
+                Text(L(.lawRecordRepealDesc))
+            }
+            if let detail = model.law.recordDetail, detail.world != model.currentWorldName {
+                // 다른 원장(드리밍 대상·상위·전신)의 기록 — 읽기만 한다.
+                Label(L(.lawRecordOtherLedger, detail.world), systemImage: "arrow.triangle.branch")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+                    .accessibilityIdentifier("law-record-other-ledger")
+            }
             if let detail = model.law.recordDetail {
                 ScrollView {
                     LawRecordDetailContent(model: model, detail: detail)

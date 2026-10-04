@@ -247,6 +247,11 @@
 "law.dream.cancel" = "Cancel";
 "law.dream.result" = "Result";
 "law.dream.result_error" = "Failed";
+"law.dream.result_reverted" = "% reverted %ld records";
+"law.dream.result_failed" = "% failed (%ld records written before) — %@";
+"law.dream.result_untouched" = "% not written";
+"law.dream.result_resumed" = "Automatic dreaming resumed — resume record %@";
+"law.dream.result_not_paused" = "Dreaming is not paused, so nothing was written.";
 "law.credibility.loading" = "Reading model credibility…";
 "law.credibility.period_label" = "Period";
 "law.credibility.period_all" = "All time";
@@ -269,3 +274,13 @@
 "law.record.edit_done" = "Done";
 "law.record.new" = "New Record";
 "law.record.repeal" = "Delete";
+"law.record.repeal_title" = "Delete this record?";
+"law.record.repeal_desc" = "This promulgates a repeal. The record stays in the ledger and remains visible in its history.";
+"law.record.repeal_confirm" = "Delete";
+"law.record.cancel" = "Cancel";
+"law.record.new_placeholder" = "(new record)";
+"law.record.create_failed" = "Could not create: %@";
+"law.record.save_failed" = "Could not save: %@";
+"law.record.repeal_failed" = "Could not delete: %@";
+"law.record.not_editable" = "Could not find this record in the open ledger to edit: %@";
+"law.record.other_ledger" = "A record from another ledger — %@. Read-only here (open that ledger to change it).";

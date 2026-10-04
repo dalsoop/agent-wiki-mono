@@ -64,6 +64,8 @@ extension LedgerModel {
     }
 
     func switchWorld(_ world: LedgerWorld) {
+        // 기록 편집 중이면 남은 저장을 지금 원장에 쓰고 닫는다(쓰기 대상은 바꾸기 전에 잡는다).
+        if law.isEditingRecord { finishLawRecordEdit(returnToRecord: false) }
         var config = LedgerConfig.load()
         let path = URL(fileURLWithPath: world.rootPath).standardizedFileURL.path
         if let registered = config.effectiveWorlds.first(where: {
@@ -137,7 +139,8 @@ extension LedgerModel {
             if let area = LedgerArea(controlKey: argument) { recordNavigation(); self.area = area }
         case "destination":
             if RepositoryDestinationKey.isValid(argument),
-               let destination = RepositoryDestination(rawValue: argument) {
+               let destination = RepositoryDestination(rawValue: argument),
+               sidebarDestinations.contains(destination) {  // 지금 원장의 메뉴에 없는 목적지는 무시
                 selectDestination(destination)
             }
         case "jump":
@@ -181,6 +184,8 @@ extension LedgerModel {
             return
         }
         if snapshot.rootChanged {
+            // 밖에서 원장이 바뀌었다 — 기록 편집 중이면 남은 저장을 옛 원장에 쓰고 닫는다(대상은 바꾸기 전에 잡는다).
+            if law.isEditingRecord { finishLawRecordEdit(returnToRecord: false) }
             rootURL = snapshot.rootURL
             selectedDocumentID = nil
             law = LedgerLawUIState()

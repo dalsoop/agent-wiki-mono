@@ -94,8 +94,8 @@ struct LedgerView: View {
             }
             .safeAreaInset(edge: .top) {
                 VStack(spacing: 0) {
-                    if model.isReadOnlyWorld {
-                        // 보관된 원장(전신) — 읽기 전용. 편집 버튼은 각 화면이 `isReadOnlyWorld` 로 숨긴다.
+                    if model.isArchivedWorld {
+                        // 보관된 원장(전신) — 읽기 전용. 편집 버튼은 각 화면이 `isReadOnlyWorld` 로 숨긴다(판정 전에도 숨김).
                         HStack(spacing: 8) {
                             Image(systemName: "archivebox.fill").foregroundStyle(.secondary)
                             Text(L(.LawNavArchivedBanner)).font(.caption.weight(.semibold))
