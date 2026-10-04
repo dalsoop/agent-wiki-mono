@@ -74,3 +74,11 @@
 "LedgerView.empty_root_title" = "Choose a records folder";
 "LedgerView.empty_root_desc" = "Every record written here keeps a full edit history automatically.";
 "LedgerView.empty_root_action" = "Choose folder…";
+"law.nav.section" = "Ledger";
+"law.nav.contents" = "Contents";
+"law.nav.records" = "Records";
+"law.nav.record_detail" = "Record";
+"law.nav.court" = "Court";
+"law.nav.dream" = "Dreaming";
+"law.nav.credibility" = "Model credibility";
+"law.nav.archived_banner" = "Archived ledger (predecessor) — read-only";

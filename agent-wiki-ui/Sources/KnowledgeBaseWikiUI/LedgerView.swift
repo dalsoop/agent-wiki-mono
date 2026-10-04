@@ -17,6 +17,7 @@ struct LedgerView: View {
 
     /// content 열이 안내 플레이스홀더뿐인 영역 — 2열(sidebar+detail)로 공간을 준다.
     private var usesTwoColumnLayout: Bool {
+        if model.destination.isLaw { return true }  // ledger 3 화면은 옆 메뉴 + 본문 2열
         if ![.knowledge, .contributors].contains(model.destination) { return true }
         switch model.area {
         case .graph, .triage, .review, .settings: return true
@@ -92,16 +93,29 @@ struct LedgerView: View {
                 if newArea == .settings { openSettings() }
             }
             .safeAreaInset(edge: .top) {
-                if let stale = model.cliStaleVersion {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                        Text("CLI 버전 불일치 — 설치본 \(stale), 앱 \(LedgerVersion.current). 앱이 옛 CLI 를 부를 수 있습니다.")
-                            .font(.caption)
-                        Spacer()
-                        staleCLIActions
+                VStack(spacing: 0) {
+                    if model.isReadOnlyWorld {
+                        // 보관된 원장(전신) — 읽기 전용. 편집 버튼은 각 화면이 `isReadOnlyWorld` 로 숨긴다.
+                        HStack(spacing: 8) {
+                            Image(systemName: "archivebox.fill").foregroundStyle(.secondary)
+                            Text(L(.LawNavArchivedBanner)).font(.caption.weight(.semibold))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.gray.opacity(0.15))
+                        .accessibilityIdentifier("archived-ledger-banner")
                     }
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(.orange.opacity(0.15))
+                    if let stale = model.cliStaleVersion {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                            Text("CLI 버전 불일치 — 설치본 \(stale), 앱 \(LedgerVersion.current). 앱이 옛 CLI 를 부를 수 있습니다.")
+                                .font(.caption)
+                            Spacer()
+                            staleCLIActions
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.orange.opacity(0.15))
+                    }
                 }
             }
             .sheet(isPresented: $showAgentTask) {
@@ -216,8 +230,8 @@ struct LedgerView: View {
                     }
                 }
             }
-            Section("Repository") {
-                ForEach(RepositoryDestination.allCases) { destination in
+            Section(model.law.kind?.usesLawScreens == true ? L(.LawNavSection) : "Repository") {
+                ForEach(model.sidebarDestinations) { destination in
                     Button {
                         // List 선택만 믿으면 AX 클라이언트의 행 클릭이 바인딩까지 닿지 않는다.
                         // 명시적으로 같은 선택 경로를 호출해 상태 미러 등의 부수 효과도 보존한다.

@@ -97,6 +97,7 @@ struct EvidenceListView: View {
                 } label: {
                     Label("근거 추가", systemImage: "doc.badge.plus")
                 }
+                .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)에는 쓰지 않는다
             }
         }
         .sheet(isPresented: $showAddEvidence) {

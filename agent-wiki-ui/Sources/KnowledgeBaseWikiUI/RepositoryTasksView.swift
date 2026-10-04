@@ -47,7 +47,7 @@ struct RepositoryTasksView: View {
                     Label("새 작업", systemImage: "plus")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(model.repositorySummary == nil)
+                .disabled(model.repositorySummary == nil || model.isReadOnlyWorld)
                 .accessibilityIdentifier("repository-task-new")
                 Picker("상태", selection: $filter) {
                     Text("전체").tag(RepositoryTaskItem.Status?.none)
@@ -238,6 +238,7 @@ struct RepositoryTasksView: View {
                 .font(.caption.monospaced()).frame(minHeight: 74)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
             runButtons(item)
+                .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)에는 쓰지 않는다
         }
     }
 
@@ -303,6 +304,7 @@ struct RepositoryTasksView: View {
                         .disabled(checker.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .accessibilityIdentifier("repository-task-verify-complete")
                     }
+                    .disabled(model.isReadOnlyWorld)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 5)
@@ -327,6 +329,7 @@ struct RepositoryTasksView: View {
                     Label("노하우 후보 발행 후 승격 화면 열기", systemImage: "arrow.up.forward.square")
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(model.isReadOnlyWorld)
                 .disabled(knowledgeTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                           || knowledgeBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("repository-task-knowledge-candidate")

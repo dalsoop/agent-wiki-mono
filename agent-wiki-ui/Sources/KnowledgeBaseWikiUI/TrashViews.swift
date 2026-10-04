@@ -19,12 +19,14 @@ struct TrashDetailView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Button {
-                    model.restore(document: row.document)
-                } label: {
-                    Label("복원 발행 (restores)", systemImage: "arrow.uturn.backward.circle")
+                if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 복원 발행하지 않는다
+                    Button {
+                        model.restore(document: row.document)
+                    } label: {
+                        Label("복원 발행 (restores)", systemImage: "arrow.uturn.backward.circle")
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
                 Divider()
                 Text("원문").font(.headline)
                 MarkdownBody(text: row.document.head.body)

@@ -4,19 +4,28 @@ import StateRootKit
 
 extension LedgerModel {
     func refreshProtectionStatus() {
-        guard let store else { return }
+        guard let store, let rootURL else { return }
+        let worldName = currentWorldName
         Task.detached(priority: .background) {
-            var problems = store.verify()
-            if let checkpointProblems = store.verifyCheckpoint() {
-                problems.append(contentsOf: checkpointProblems)
+            // ledger 3 원장의 무결성은 ledger 3 감사(판단 대기는 위반 아님)가 정한다 — 화면 표시 모델 반영 때 채운다.
+            // 옛 형식 검사(`LedgerStore.verify`)로 보면 모든 기록이 위반처럼 보인다.
+            let isLedgerThree = worldName.map {
+                LedgerBackgroundReader.lawTarget(worldName: $0, root: rootURL, config: LedgerConfig.load()).isLedgerThree
+            } ?? false
+            var problems: [LedgerStore.Violation] = []
+            if !isLedgerThree {
+                problems = store.verify()
+                if let checkpointProblems = store.verifyCheckpoint() {
+                    problems.append(contentsOf: checkpointProblems)
+                }
             }
-            let checkpoint = store.latestCheckpoint(store.scan())
+            let checkpoint = isLedgerThree ? nil : store.latestCheckpoint(store.scan())
             let job = FileManager.default.fileExists(
                 atPath: StateRootKit.path("Library/LaunchAgents/net.ranode.memo-citation-ledger.checkpoint.plist"))
             let (sync, versioning) = await Self.syncthingStatus()
             await MainActor.run {
                 guard let model = LedgerModel.shared else { return }
-                model.integrityProblemCount = problems.count
+                if !isLedgerThree { model.integrityProblemCount = problems.count }
                 model.lastCheckpoint = checkpoint
                 model.checkpointJobLoaded = job
                 model.remoteSyncPercent = sync

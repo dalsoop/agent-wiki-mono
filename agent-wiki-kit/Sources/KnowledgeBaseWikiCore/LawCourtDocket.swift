@@ -101,12 +101,52 @@ public struct LawCourtNotices: Sendable, Equatable {
     public let proposalsInObjection: [LawCourtCase]
 }
 
+/// 닫힌 사건 하나 — 이의·개정안 기록과 그것을 닫은 결정. 결정은 사건 목록의 유효성 검사를 통과한 것만이다.
+public struct LawClosedCase: Sendable, Equatable {
+    /// 이의·개정안 기록 id.
+    public let id: String
+    public let kind: LawCourtCaseKind
+    /// 이의·개정 대상 기록 id.
+    public let target: String
+    public let title: String?
+    public let filed: Date
+    /// 사건을 닫은 결정.
+    public let ruling: LawStoredRecord
+    public let level: LawRulingLevel
+    public let outcome: LawRulingOutcome
+
+    init(case stored: LawStoredRecord, kind: LawCourtCaseKind, target: String, ruling: LawStoredRecord) {
+        id = stored.id
+        self.kind = kind
+        self.target = target
+        title = stored.record.title
+        filed = stored.record.promulgated
+        self.ruling = ruling
+        let head = LawCourtDocket.rulingHead(ruling)
+        level = head?.level ?? .appellate
+        outcome = head?.outcome ?? .uphold
+    }
+
+    public var decidedAt: Date { ruling.record.promulgated }
+    /// 항소심 결정을 낸 모델(다른 모델이 없어 AI 없이 낸 회부면 nil).
+    public var decidingModel: String? { ruling.record.model }
+    public var decidingRuntime: String? { ruling.record.runtime }
+    public var decidingEffort: String? { ruling.record.effort }
+    /// 대법원 결정이 인용한 사용자 발화 증언(증거 기록 id).
+    public var testimonies: [String] {
+        ruling.record.cites.filter { $0.rel == LawRelation.testifies.rawValue }.map(\.id)
+    }
+}
+
 /// 원장 기록에서 계산한 사건 목록. 저장하지 않는다.
 public struct LawCourtDocket: Sendable {
     public let records: [LawStoredRecord]
     public let objectionPeriod: TimeInterval
     /// 열린 사건(항소심·대법원 대기). 제기 순.
     public let open: [LawCourtCase]
+    /// 닫힌 사건 — 규칙을 지킨 결정(`isValidAppellate`·`isValidSupreme`)이 닫은 건만. 제기 순.
+    /// 규칙을 어긴 결정(위조 결정)은 사건을 닫지 않으므로 여기에 나오지 않고 그 사건은 `open` 에 남는다.
+    public let closed: [LawClosedCase]
 
     public init(records: [LawStoredRecord], objectionPeriod: TimeInterval = LawCourtSettings.defaultObjectionPeriodHours * 3600) {
         self.records = records
@@ -129,21 +169,30 @@ public struct LawCourtDocket: Sendable {
                 }
             }
         }
-        var supreme: Set<String> = []
+        // 대법원 결정 → 그 결정이 닫은 사건(공포 순이라 마지막이 가장 늦다).
+        var supreme: [String: LawStoredRecord] = [:]
         for entry in supremeRulings where Self.isValidSupreme(
             entry.ruling, caseID: entry.caseID, appellate: appellate, byID: byID, objectionPeriod: objectionPeriod) {
-            supreme.insert(entry.caseID)
+            supreme[entry.caseID] = entry.ruling
         }
 
         var open: [LawCourtCase] = []
+        var closed: [LawClosedCase] = []
         for stored in records where view.isInForce(stored.id) {
-            guard let kind = LawCourtCaseKind(recordType: stored.record.type), !supreme.contains(stored.id),
+            guard let kind = LawCourtCaseKind(recordType: stored.record.type),
                   let target = stored.record.cites.first(where: { $0.rel == kind.relation.rawValue })?.id
             else { continue }
+            if let ruling = supreme[stored.id] {
+                closed.append(LawClosedCase(case: stored, kind: kind, target: target, ruling: ruling))
+                continue
+            }
             let isFinalAppeal = kind == .appeal && byID[target]?.record.type == LawRecordType.ruling.rawValue
             let filed = stored.record.promulgated
             if let ruling = appellate[stored.id] {
-                guard Self.rulingHead(ruling)?.outcome == .refer else { continue }  // 항소심에서 닫힘
+                guard Self.rulingHead(ruling)?.outcome == .refer else {  // 항소심에서 닫힘
+                    closed.append(LawClosedCase(case: stored, kind: kind, target: target, ruling: ruling))
+                    continue
+                }
                 let notice = ruling.record.promulgated
                 open.append(LawCourtCase(
                     id: stored.id, kind: kind, level: .supreme, target: target, title: stored.record.title,
@@ -161,6 +210,7 @@ public struct LawCourtDocket: Sendable {
             }
         }
         self.open = open
+        self.closed = closed
     }
 
     public var appellatePending: [LawCourtCase] { open.filter { $0.level == .appellate } }

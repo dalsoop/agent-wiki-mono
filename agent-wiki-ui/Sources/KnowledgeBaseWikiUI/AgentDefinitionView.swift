@@ -46,8 +46,10 @@ struct AgentDefinitionView: View {
             if !history.isEmpty {
                 Text("원장 판 \(history.count)개").font(.caption2).foregroundStyle(.tertiary)
             }
-            Button(isEditing ? "취소" : "정의 수정") { toggleEditing() }
-            .controlSize(.small)
+            if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 역할 정의를 고치지 않는다
+                Button(isEditing ? "취소" : "정의 수정") { toggleEditing() }
+                .controlSize(.small)
+            }
         }
     }
 
@@ -63,7 +65,7 @@ struct AgentDefinitionView: View {
 
     @ViewBuilder
     private var definitionBody: some View {
-        if isEditing {
+        if isEditing, !model.isReadOnlyWorld {
             TextEditor(text: $draft)
                 .font(.system(.callout, design: .monospaced))
                 .frame(minHeight: 220)

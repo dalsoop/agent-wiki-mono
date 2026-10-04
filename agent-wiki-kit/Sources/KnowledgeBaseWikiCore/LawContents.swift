@@ -11,6 +11,10 @@ public enum LawContents {
     public static let lineLimit = 150
     /// 목차 기록의 제목 접두어.
     public static let titlePrefix = "목차: "
+    /// 목차 맨 위 공지 줄의 머리말 — 목차를 쓰는 쪽(`lines`)과 읽는 쪽(`LawContentsScreen.idPrefix`)이 같이 쓴다.
+    public static let alertLinePrefix = "경보: "
+    public static let supremeNoticePrefix = "대법원 공지: "
+    public static let objectionNoticePrefix = "이의 기간 개정안: "
 
     /// 목차에 싣는 현행 기록의 유형 순서(지식 기록 + 판결 등록).
     static let listedTypes: [LawRecordType] = [.article, .judgment, .registration, .record]
@@ -22,14 +26,14 @@ public enum LawContents {
         objectionPeriod: TimeInterval
     ) -> [String] {
         let limit = max(1, maxLines)
-        var head: [String] = alerts.map { "경보: \(oneLine($0))" }
+        var head: [String] = alerts.map { alertLinePrefix + oneLine($0) }
         for item in notices.supreme {
             let when = item.decidableAt.map { " — 결정 가능 \(LawTime.format($0))" } ?? ""
-            head.append("대법원 공지: \(item.id.prefix(8)) \(oneLine(item.title ?? ""))\(when)")
+            head.append(supremeNoticePrefix + "\(item.id.prefix(8)) \(oneLine(item.title ?? ""))\(when)")
         }
         for item in notices.proposalsInObjection {
             let until = LawTime.format(item.noticedAt.addingTimeInterval(objectionPeriod))
-            head.append("이의 기간 개정안: \(item.id.prefix(8)) \(oneLine(item.title ?? "")) — \(until) 까지")
+            head.append(objectionNoticePrefix + "\(item.id.prefix(8)) \(oneLine(item.title ?? "")) — \(until) 까지")
         }
         head = head.map(clip)
         if head.count >= limit {

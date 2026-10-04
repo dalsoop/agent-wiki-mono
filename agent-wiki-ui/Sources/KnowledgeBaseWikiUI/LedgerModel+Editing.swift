@@ -18,7 +18,8 @@ extension LedgerModel {
     }
 
     func editorChanged() {
-        guard loadedHeadID != nil else { return }
+        // 보관된 원장(전신)은 쓰지 않는다 — 입력칸이 막혀도 자동 저장이 돌지 않게 여기서 한 번 더 막는다.
+        guard loadedHeadID != nil, !isReadOnlyWorld else { return }
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(2))
@@ -34,6 +35,7 @@ extension LedgerModel {
     }
 
     private func saveRevision() {
+        guard !isReadOnlyWorld else { return }
         guard let headID = loadedHeadID,
               let current = objects.first(where: { $0.id == headID }) else { return }
         let title = editorTitle.trimmingCharacters(in: .whitespaces)
@@ -56,8 +58,7 @@ extension LedgerModel {
         do {
             // ledger 3 는 빈 본문 공포를 거부하므로 자리 표시 본문으로 시작한다.
             let objectID = try performEdit(.create(title: nil, body: isLedgerThreeWorld ? "(새 기록)\n" : "", cites: []))
-            refresh()
-            select(documents.first { $0.id == objectID })
+            refresh { [weak self] in self?.select(self?.documents.first { $0.id == objectID }) }
         } catch {
             errorMessage = "생성 실패: \(error)"
         }
@@ -80,8 +81,11 @@ extension LedgerModel {
         do {
             let objectID = try performEdit(.restore(target: document.head.id))
             showDeleted = false
-            refresh()
-            select(documents.first { $0.id == objectID } ?? documents.first { $0.id == document.head.id })
+            let headID = document.head.id
+            refresh { [weak self] in
+                guard let self else { return }
+                select(documents.first { $0.id == objectID } ?? documents.first { $0.id == headID })
+            }
         } catch {
             errorMessage = "복구 실패: \(error)"
         }
@@ -95,8 +99,7 @@ extension LedgerModel {
         do {
             let revisionID = try performEdit(.amend(
                 target: document.head.id, title: document.head.title, body: document.head.body, cites: cites))
-            refresh()
-            select(documents.first { $0.id == revisionID })
+            refresh { [weak self] in self?.select(self?.documents.first { $0.id == revisionID }) }
         } catch {
             errorMessage = "인용 부착 실패: \(error)"
         }
@@ -108,8 +111,7 @@ extension LedgerModel {
         do {
             let revisionID = try performEdit(.amend(
                 target: document.head.id, title: document.head.title, body: document.head.body, cites: cites))
-            refresh()
-            select(documents.first { $0.id == revisionID })
+            refresh { [weak self] in self?.select(self?.documents.first { $0.id == revisionID }) }
         } catch {
             errorMessage = "인용 해제 실패: \(error)"
         }
@@ -151,8 +153,7 @@ extension LedgerModel {
         do {
             let revisionID = try performEdit(.amend(
                 target: document.head.id, title: version.title, body: version.body, cites: version.cites))
-            refresh()
-            select(documents.first { $0.id == revisionID })
+            refresh { [weak self] in self?.select(self?.documents.first { $0.id == revisionID }) }
         } catch {
             errorMessage = "복원 실패: \(error)"
         }

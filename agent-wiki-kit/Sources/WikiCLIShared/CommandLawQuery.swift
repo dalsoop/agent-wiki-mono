@@ -17,11 +17,10 @@ func lookupOne(_ token: String, index: LawScopeIndex) -> LawScopeObject {
     fail("기록을 못 찾음: \(token)")
 }
 
-/// 전신 표시 — `[전신 gujo-wiki]`, 상위 원장은 `[상위 agent-law]`.
+/// 전신 표시 — `[전신 gujo-wiki]`, 상위 원장은 `[상위 agent-law]`(표기 정본은 `LawScopedSearch.mark`).
 func scopeMark(_ item: LawScopeObject, current: String) -> String {
-    if item.isPredecessor { return "  [전신 \(item.world)]" }
-    if item.world != current { return "  [상위 \(item.world)]" }
-    return ""
+    let mark = LawScopedSearch.mark(item, current: current)
+    return mark.isEmpty ? "" : "  " + mark
 }
 
 /// 4종류 등 ledger 3 보기(같은 원장 기록일 때).

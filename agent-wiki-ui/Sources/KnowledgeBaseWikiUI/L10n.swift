@@ -73,6 +73,14 @@ enum L10nKey: String, CaseIterable {
     case LedgerViewEmptyRootTitle = "LedgerView.empty_root_title"
     case LedgerViewEmptyRootDesc = "LedgerView.empty_root_desc"
     case LedgerViewEmptyRootAction = "LedgerView.empty_root_action"
+    case LawNavSection = "law.nav.section"
+    case LawNavContents = "law.nav.contents"
+    case LawNavRecords = "law.nav.records"
+    case LawNavRecordDetail = "law.nav.record_detail"
+    case LawNavCourt = "law.nav.court"
+    case LawNavDream = "law.nav.dream"
+    case LawNavCredibility = "law.nav.credibility"
+    case LawNavArchivedBanner = "law.nav.archived_banner"
 }
 
 @MainActor

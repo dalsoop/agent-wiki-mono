@@ -28,7 +28,8 @@ struct TriageView: View {
                       systemImage: showIngest ? "chevron.down" : "plus.circle")
                     .font(.callout.weight(.medium))
             }.buttonStyle(.plain)
-            if showIngest {
+            .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)에는 쓰지 않는다
+            if showIngest, !model.isReadOnlyWorld {
                 TextField("제목(선택)", text: $pasteTitle).textFieldStyle(.roundedBorder)
                 TextField("프로젝트(선택)", text: $pasteProject).textFieldStyle(.roundedBorder)
                 TextField("여기에 유튜브 스크립트 등 원문을 붙여넣기…", text: $pasteText, axis: .vertical)
@@ -146,7 +147,7 @@ struct TriageView: View {
                         Button("취소") { showKeep = false }
                         Button("선별") { keepIfValid(row.document) }
                             .keyboardShortcut(.defaultAction)
-                            .disabled(keepRationale.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .disabled(model.isReadOnlyWorld || keepRationale.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
                 .padding(20)
@@ -165,6 +166,7 @@ struct TriageView: View {
                             showDiscard = false
                         }
                         .keyboardShortcut(.defaultAction)
+                        .disabled(model.isReadOnlyWorld)
                     }
                 }
                 .padding(20)
@@ -323,10 +325,12 @@ struct DigestReviewRow: View {
                         model.acceptDigest(digest, scores: scores, comment: comment)
                     } label: { Label("수락 · 위키 확립", systemImage: "checkmark.seal.fill") }
                         .tint(.green)
+                        .disabled(model.isReadOnlyWorld)
                     Button {
                         model.rejectDigest(digest, scores: scores, comment: comment)
                     } label: { Label("반려", systemImage: "arrow.uturn.left") }
                         .tint(.orange)
+                        .disabled(model.isReadOnlyWorld)
                     Spacer()
                 }
             }

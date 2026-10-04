@@ -74,3 +74,11 @@
 "LedgerView.empty_root_title" = "기록 폴더를 지정하세요";
 "LedgerView.empty_root_desc" = "여기 쓰는 모든 기록은 자동으로 전체 수정 이력이 보존됩니다.";
 "LedgerView.empty_root_action" = "폴더 고르기…";
+"law.nav.section" = "원장";
+"law.nav.contents" = "목차";
+"law.nav.records" = "기록";
+"law.nav.record_detail" = "기록 상세";
+"law.nav.court" = "심급";
+"law.nav.dream" = "드리밍";
+"law.nav.credibility" = "모델 신빙성";
+"law.nav.archived_banner" = "보관된 원장(전신) — 읽기 전용";
