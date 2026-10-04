@@ -50,6 +50,7 @@ struct LedgerContentColumn: View {
                     Label("새 저장소 역할", systemImage: "person.badge.plus")
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)에는 쓰지 않는다
                 .accessibilityIdentifier("repository-agent-role-new")
             } header: {
                 Text("저장소 책임 편성")

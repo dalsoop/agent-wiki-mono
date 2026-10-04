@@ -46,6 +46,7 @@ struct PromotionQueueView: View {
                             model.previewPromotion(objectID: selectedID)
                         } label: { Label("승격 미리보기", systemImage: "doc.text.magnifyingglass") }
                             .buttonStyle(.borderedProminent)
+                            .disabled(model.isReadOnlyWorld)
                     } else {
                         Label("왼쪽에서 후보를 선택하세요", systemImage: "cursorarrow.click")
                             .foregroundStyle(.secondary)
@@ -113,6 +114,7 @@ struct PromotionQueueView: View {
                     model.publishPromotion()
                 } label: { Label("확인하고 gujo wiki에 승격", systemImage: "arrow.up.forward.app.fill") }
                     .buttonStyle(.borderedProminent).tint(.purple)
+                    .disabled(model.isReadOnlyWorld)
             }.padding(.top, 5)
         }
     }

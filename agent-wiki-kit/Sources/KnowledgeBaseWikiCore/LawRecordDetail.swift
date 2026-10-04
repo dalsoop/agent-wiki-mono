@@ -194,15 +194,22 @@ public struct LawRecordDetail: Sendable {
     /// 원장 하나에서 읽어 만든다. `id` 는 64자 id 또는 이 원장 안에서 하나로 정해지는 앞자리(4자 이상).
     /// 이 원장에 없으면 nil(상위·전신 기록은 그 원장을 열어 본다).
     public static func load(id: String, target: LawLedgerTarget) -> LawRecordDetail? {
-        let records = target.store.scan()
+        load(id: id, target: target, records: target.store.scan())
+    }
+
+    /// 이미 읽은 이 원장의 기록으로 만든다. 범위(상위·전신)는 같은 원장 밖 참조를 찾을 때만 읽는다.
+    public static func load(id: String, target: LawLedgerTarget, records: [LawStoredRecord]) -> LawRecordDetail? {
         guard let resolved = records.contains(where: { $0.id == id }) ? id : LawContentsScreen.resolve(prefix: id, in: records)
         else { return nil }
-        let index = LawScopeIndex(current: target.worldName, catalog: target.catalog)
+        var index: LawScopeIndex?
         let court = target.file?.court ?? LawCourtSettings()
         return make(
             id: resolved, world: target.worldName, records: records,
             docket: LawCourtDocket(records: records, objectionPeriod: court.objectionPeriod),
-            lookup: { index.object(id: $0) },
+            lookup: { ref in
+                if index == nil { index = LawScopeIndex(current: target.worldName, catalog: target.catalog) }
+                return index?.object(id: ref)
+            },
             exhibitExists: { world, sha in
                 guard let root = target.catalog.world(named: world)?.rootPath else { return false }
                 return FileManager.default.fileExists(

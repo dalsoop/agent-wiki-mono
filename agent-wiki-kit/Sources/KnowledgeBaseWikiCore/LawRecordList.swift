@@ -91,8 +91,38 @@ public enum LawRecordList {
         return Array(result.prefix(max(0, filter.limit)))
     }
 
-    /// 현재 원장의 범위(같은 원장·상위·전신)를 읽어 만든다. 화면은 배경에서 부른다.
+    /// 검색어 없는 목록 — 이 원장의 현행 지식 기록만(범위·전신 색인을 읽지 않는다). `rows(index:filter:)` 의 목록과 같은 줄.
+    public static func currentRows(world: String, records: [LawStoredRecord], filter: LawRecordListFilter) -> [LawRecordListRow] {
+        let view = LawLedgerView(records: records)
+        var result = view.inForce.filter { stored in
+            guard let type = stored.record.type.flatMap(LawRecordType.init(rawValue:)), listedTypes.contains(type) else {
+                return false
+            }
+            return filter.type.map { $0 == type } ?? true
+        }
+        .sorted { ($0.record.promulgated, $0.id) > ($1.record.promulgated, $1.id) }
+        .map { stored in
+            LawRecordListRow(
+                id: stored.id, title: stored.record.title, type: stored.record.type, world: world, isPredecessor: false,
+                scopeMark: "", memoryKind: view.memoryKind(of: stored.id), promulgated: stored.record.promulgated,
+                author: stored.record.author, score: nil)
+        }
+        if let kind = filter.memoryKind { result = result.filter { $0.memoryKind == kind } }
+        return Array(result.prefix(max(0, filter.limit)))
+    }
+
+    /// 화면 목록. 검색어가 없으면 이 원장만 읽고, 있으면 범위(같은 원장·상위·전신)를 읽어 검색한다. 화면은 배경에서 부른다.
     public static func load(target: LawLedgerTarget, filter: LawRecordListFilter) -> [LawRecordListRow] {
-        rows(index: LawScopeIndex(current: target.worldName, catalog: target.catalog), filter: filter)
+        load(target: target, filter: filter, records: nil)
+    }
+
+    /// 이미 읽은 이 원장의 기록으로 만든다(검색어가 없을 때 쓴다).
+    public static func load(
+        target: LawLedgerTarget, filter: LawRecordListFilter, records: [LawStoredRecord]?
+    ) -> [LawRecordListRow] {
+        guard filter.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return rows(index: LawScopeIndex(current: target.worldName, catalog: target.catalog), filter: filter)
+        }
+        return currentRows(world: target.worldName, records: records ?? target.store.scan(), filter: filter)
     }
 }

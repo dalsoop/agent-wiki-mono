@@ -89,9 +89,15 @@ extension LedgerModel {
         runLawAction {
             switch try LawDreamBatchRestore.restore(batch: batch, actor: actor, file: file, catalog: catalog) {
             case .restored(let ledgers):
-                return (ledgers.map { "\($0.world) \($0.records.count)" }.joined(separator: " · "), false)
+                return (ledgers.map { "\($0.world): 되돌림 \($0.records.count)건" }.joined(separator: "\n"), false)
             case .refused(let reasons):
                 return (reasons.joined(separator: "\n"), true)
+            case .partial(let written, let failed, let untouched, let reason):
+                // 검사 뒤 쓰기 중 실패 — 어느 원장까지 썼는지 원장별로 남긴다(다음 화면의 확인 창이 보인다).
+                let lines = written.map { "\($0.world): 되돌림 \($0.records.count)건" }
+                    + ["\(failed.world): 실패(그 전에 \(failed.records.count)건 씀) — \(reason)"]
+                    + untouched.map { "\($0): 쓰지 않음" }
+                return (lines.joined(separator: "\n"), true)
             }
         }
     }

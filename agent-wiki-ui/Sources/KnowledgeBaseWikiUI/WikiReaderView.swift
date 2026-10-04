@@ -342,7 +342,8 @@ struct WikiDiscussionSection: View {
                     draft = ""
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                // 보관된 원장(전신)에는 토론을 발행하지 않는다.
+                .disabled(model.isReadOnlyWorld || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             Text(kind == .objection
                  ? "이의는 undercuts 인용으로 발행 — 페이지 신뢰도에 반영되고 사서가 다음 루프에서 처리"
@@ -386,15 +387,15 @@ struct WikiSectionBlock: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if hovering && !editing {
                     HStack(spacing: 8) {
-                        if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 편집 버튼을 숨긴다
+                        if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 편집·이의 버튼을 숨긴다
                             Button("편집") { draft = section.raw; reason = ""; editing = true }
+                            Button("이의") { objection = ""; arguing = true }
                         }
-                        Button("이의") { objection = ""; arguing = true }
                     }
                     .font(.caption).buttonStyle(.plain).foregroundStyle(.teal)
                 }
             }
-            if editing {
+            if editing, !model.isReadOnlyWorld {
                 TextEditor(text: $draft)
                     .font(.system(.callout, design: .monospaced)).frame(minHeight: 120)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
@@ -409,7 +410,7 @@ struct WikiSectionBlock: View {
                         .disabled(reason.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            if arguing {
+            if arguing, !model.isReadOnlyWorld {
                 HStack {
                     TextField("이 섹션에 이의…", text: $objection, axis: .vertical).textFieldStyle(.roundedBorder)
                     Button("취소") { arguing = false }

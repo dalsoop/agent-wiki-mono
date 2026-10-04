@@ -59,7 +59,8 @@ extension LedgerModel {
         let registry = (try? FleetStore().load()) ?? FleetRegistry()
         let doctor = FleetDiagnostics.doctor(registry: registry)
         return RepositoryUIPresentation.preferredRepositoryWorldName(
-            worlds: config.effectiveWorlds, registry: registry, doctor: doctor)
+            worlds: config.effectiveWorlds, registry: registry, doctor: doctor,
+            catalog: LedgerBackgroundReader.catalog(config: config))
     }
 
     func switchWorld(_ world: LedgerWorld) {
@@ -149,23 +150,16 @@ extension LedgerModel {
     }
 
     /// 화면 갱신. 설정·원장 폴더 읽기는 배경(`LedgerBackgroundReader.read`)에서 하고 결과만 메인에 반영한다 —
-    /// 2초 타이머가 메인 스레드에서 원장 폴더를 훑지 않는다. 한 번에 하나만 돌고, 도는 중 들어온 요청은 끝난 뒤 한 번 더 돈다.
-    /// - Parameter then: 결과를 반영한 뒤 메인에서 부를 일(쓰기 직후 새 기록 고르기 등).
+    /// 2초 타이머가 메인 스레드에서 원장 폴더를 훑지 않는다. 한 번에 하나만 돌고, 도는 중·반영 중에 들어온 요청은
+    /// 끝난 뒤 한 번만 더 돈다(`LedgerRefreshState`).
+    /// - Parameter then: 결과를 반영한 뒤 메인에서 부를 일(쓰기 직후 새 기록 고르기 등). 이 호출 뒤에 시작한 읽기를 기다린다.
     func refresh(then: (@MainActor () -> Void)? = nil) {
         applyControlFile()
         maybeRecheckCLI()   // 원장 무변경으로 조기 반환하기 전에 — 유휴 앱에서도 드리프트를 잡는다
-        if let then { session.refresh.waiting.append(then) }
-        guard !session.refresh.inFlight else {
-            session.refresh.pending = true
-            return
-        }
-        session.refresh.inFlight = true
-        session.refresh.running = session.refresh.waiting
-        session.refresh.waiting = []
-        session.refresh.pending = false
+        guard session.refresh.request(then: then) else { return }
         let input = LedgerRefreshInput(
             openedRepositoryPath: openedRepositoryPath, rootURL: rootURL, currentWorldName: currentWorldName,
-            worlds: worlds, objectIDs: objects.map(\.id), scanCache: scanCache,
+            worlds: worlds, objectIDs: objects.map(\.id), scanCache: scanCache, lawFingerprint: law.fingerprint,
             forceLawReload: session.refresh.forceLawReload, lawLoaded: law.contents != nil, recordFilter: law.recordFilter,
             credibilityPeriod: law.credibilityPeriod, selectedRecordID: law.selectedRecordID,
             selectedBatch: law.selectedBatch)
@@ -177,13 +171,12 @@ extension LedgerModel {
     }
 
     /// 배경 읽기 결과를 반영한다. 읽는 사이 메인에서 원장을 바꿨으면(world 전환) 버리고 다시 읽는다.
+    /// 반영 중 표시 모델 다시 읽기가 요청되면(`reloadLawScreens`) 끝에서 한 번만 돈다 — 맡은 일(completions)을 잃지 않는다.
     private func applyRefresh(_ snapshot: LedgerRefreshSnapshot) {
-        session.refresh.inFlight = false
+        let completions = session.refresh.beginApply()
         let input = snapshot.input
         guard input.rootURL == rootURL, input.currentWorldName == currentWorldName else {
-            session.refresh.forceLawReload = true
-            session.refresh.waiting = session.refresh.running + session.refresh.waiting
-            session.refresh.running = []
+            session.refresh.discard(completions)
             refresh()
             return
         }
@@ -198,6 +191,7 @@ extension LedgerModel {
         }
         scanCache = snapshot.scanCache
         applyLawKind(snapshot.kind)
+        if let fingerprint = snapshot.lawFingerprint { law.fingerprint = fingerprint }
         if let screens = snapshot.law { applyLawScreens(screens, for: input) }
         if let objects = snapshot.objects {
             self.objects = objects
@@ -205,10 +199,8 @@ extension LedgerModel {
             refreshRepositoryPresentation()
             publishState()
         }
-        let completions = session.refresh.running
-        session.refresh.running = []
         for completion in completions { completion() }
-        if session.refresh.pending { refresh() }
+        if session.refresh.endApply() { refresh() }
     }
 
     /// 파생 인덱스 재구축 — 객체가 실제로 바뀔 때 한 번만 (옵시디언 MetadataCache 방식).

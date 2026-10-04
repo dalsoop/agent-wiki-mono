@@ -20,15 +20,30 @@ public enum LawDreamBatchRestoreOutcome: Sendable {
     case restored([LawBatchRestoreLedger])
     /// 아무 원장에도 쓰지 않았다 — 거부 이유 목록(`<원장> <기록 8자>: <이유>`).
     case refused([String])
+    /// 모든 원장의 검사는 통과했지만 쓰는 도중 실패했다(검사와 쓰기 사이 경합). 쓴 기록은 지우지 않는다(덧붙이기 전용).
+    /// - `written`: 끝까지 쓴 원장들. - `failed`: 실패한 원장과 그 원장에서 실패 전에 쓴 기록.
+    /// - `untouched`: 아직 쓰지 않은 원장 이름들. - `reason`: 실패 이유.
+    case partial(written: [LawBatchRestoreLedger], failed: LawBatchRestoreLedger, untouched: [String], reason: String)
 }
 
 public enum LawDreamBatchRestore {
     /// - Parameter targets: 살펴볼 원장들(보통 `LawDreamService.targets`). 그중 묶음 기록이 있는 원장만 되돌린다.
     /// - Parameter testimony: 증언 확인자(시험). 비우면 원장마다 `LawLedgerTarget.defaultTestimony`.
-    /// 검사 뒤 쓰는 도중 실패하면(경합) 쓴 기록은 지우지 않고 후처리한 뒤 `LawEnactServiceError.enact` 를 던진다.
+    /// 검사 뒤 쓰는 도중 실패하면(경합) 쓴 기록은 지우지 않고 후처리한 뒤 `.partial` 로 어느 원장까지 썼는지 돌려준다.
     public static func restore(
         batch: String, actor: LawActor, targets: [LawLedgerTarget], now: Date = Date(),
         testimony: (any LawTestimonyVerifying)? = nil
+    ) throws -> LawDreamBatchRestoreOutcome {
+        try restore(
+            batch: batch, actor: actor, targets: targets, now: now, testimony: testimony,
+            writer: { target, plan in try target.store.applyRestore(plan) })
+    }
+
+    /// `writer` 는 원장 하나의 계획을 쓴다(시험이 쓰기 도중 실패를 흉내 낸다).
+    static func restore(
+        batch: String, actor: LawActor, targets: [LawLedgerTarget], now: Date,
+        testimony: (any LawTestimonyVerifying)?,
+        writer: (LawLedgerTarget, LawStore.RestorePlan) throws -> [LawStoredRecord]
     ) throws -> LawDreamBatchRestoreOutcome {
         let scanned = targets.map { (target: $0, records: $0.store.scan()) }
         let involved = scanned.filter { $0.records.contains { $0.record.batch == batch } }
@@ -70,16 +85,22 @@ public enum LawDreamBatchRestore {
 
         // 쓰기 — 모든 원장의 검사가 통과한 뒤에만.
         var written: [LawBatchRestoreLedger] = []
-        for (target, plan) in plans {
+        for (index, (target, plan)) in plans.enumerated() {
             do {
-                let records = try target.store.applyRestore(plan)
+                let records = try writer(target, plan)
                 LawEnactAftermath.run(target: target, enacted: records)
                 written.append(LawBatchRestoreLedger(world: target.worldName, records: records))
-            } catch let error as LawEnactError {
-                if case .restorePartiallyApplied(let applied, _, _) = error {
-                    LawEnactAftermath.run(target: target, enacted: applied)
+            } catch {
+                var applied: [LawStoredRecord] = []
+                var reason = (error as? LawEnactError)?.description ?? "\(error)"
+                if case .restorePartiallyApplied(let partial, _, let why)? = error as? LawEnactError {
+                    applied = partial
+                    reason = why
+                    LawEnactAftermath.run(target: target, enacted: partial)
                 }
-                throw LawEnactServiceError.enact(error)
+                return .partial(
+                    written: written, failed: LawBatchRestoreLedger(world: target.worldName, records: applied),
+                    untouched: plans[(index + 1)...].map(\.target.worldName), reason: reason)
             }
         }
         return .restored(written)

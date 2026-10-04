@@ -220,3 +220,30 @@ public struct LawStore: Sendable {
 struct LawRestoreRevival: Sendable {
     fileprivate init() {}
 }
+
+/// `objects/` 의 변화 표지 — 파일 수·크기 합·가장 늦은 수정 시각(파싱하지 않고 stat 만).
+/// 원장 파일은 덧붙이기 전용이라 새 기록은 이 값을 바꾼다. 화면은 이 값이 같으면 원장을 다시 읽지 않는다.
+public struct LawObjectsFingerprint: Sendable, Equatable {
+    public let count: Int
+    public let totalSize: Int
+    public let latestModification: Date?
+}
+
+extension LawStore {
+    public func objectsFingerprint() -> LawObjectsFingerprint {
+        var count = 0
+        var size = 0
+        var latest: Date?
+        if let enumerator = FileManager.default.enumerator(
+            at: objectsDir, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+            options: [.skipsHiddenFiles]) {
+            for case let url as URL in enumerator where url.pathExtension == "md" {
+                let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+                count += 1
+                size += values?.fileSize ?? 0
+                if let date = values?.contentModificationDate, date > (latest ?? .distantPast) { latest = date }
+            }
+        }
+        return LawObjectsFingerprint(count: count, totalSize: size, latestModification: latest)
+    }
+}

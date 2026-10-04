@@ -140,8 +140,8 @@ enum RepositoryUIPresentation {
         worlds: [LedgerWorld],
         registry: FleetRegistry,
         doctor: FleetDoctorReport,
-        fileManager: FileManager = .default,
-        ledgerThreeWorlds: Set<String> = []
+        catalog: WorldBindingCatalog,
+        fileManager: FileManager = .default
     ) -> [WorldPickerItem] {
         let healthByPath = Dictionary(uniqueKeysWithValues: doctor.worlds.map {
             (URL(fileURLWithPath: $0.rootPath).standardizedFileURL.path, $0)
@@ -153,7 +153,9 @@ enum RepositoryUIPresentation {
         return worlds.map { world in
             let path = URL(fileURLWithPath: (world.rootPath as NSString).expandingTildeInPath)
                 .standardizedFileURL.path
-            let isLedgerThree = ledgerThreeWorlds.contains(world.name)
+            // 원장 형식은 설정으로 판정한다(`LawLedgerScreenKind`).
+            let kind = LawLedgerScreenKind(worldName: world.name, catalog: catalog)
+            let isLedgerThree = kind.isLedgerThree
             let fleet = isLedgerThree ? nil : registry.worlds.first {
                 $0.name == world.name
                     || URL(fileURLWithPath: $0.rootPath).standardizedFileURL.path == path
@@ -163,7 +165,8 @@ enum RepositoryUIPresentation {
                 ? nil : GitRepositoryInspector.inspect(worldRoot: path)
             let repoId = fleet?.repoId ?? inspected?.repoId
             let registration = repoId.flatMap { registrations[$0] }
-            let layer = WikiWorldPresentation.layer(of: world)
+            // ledger 3 원장의 층은 설정에 기록된 값만 쓴다(이름·경로로 추정하지 않는다). 기록이 없으면 `other`.
+            let layer = isLedgerThree ? (kind.recordedLayer ?? .other) : WikiWorldPresentation.layer(of: world)
             let group: WorldPickerGroup
             switch layer {
             case .localPerson: group = .personal
@@ -215,9 +218,9 @@ enum RepositoryUIPresentation {
     }
 
     static func preferredRepositoryWorldName(
-        worlds: [LedgerWorld], registry: FleetRegistry, doctor: FleetDoctorReport
+        worlds: [LedgerWorld], registry: FleetRegistry, doctor: FleetDoctorReport, catalog: WorldBindingCatalog
     ) -> String? {
-        pickerItems(worlds: worlds, registry: registry, doctor: doctor)
+        pickerItems(worlds: worlds, registry: registry, doctor: doctor, catalog: catalog)
             .first { $0.group == .repositories && $0.health != .unavailable }?.world.name
     }
 }

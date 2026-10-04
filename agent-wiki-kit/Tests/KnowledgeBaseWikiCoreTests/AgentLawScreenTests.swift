@@ -425,6 +425,99 @@ import WikiLedgerKit
         #expect(LawLedgerView(records: Dream.records(fx.law)).isInForce(plain.id))
     }
 
+    /// 보고 본문 바이트 고정 — 상수로 옮기기 전(옛 문자열 리터럴) 출력과 바이트 단위로 같아야 한다.
+    @Test func dreamReportBodyBytesAreUnchanged() {
+        let ledger = LawDreamLedgerOutcome(
+            world: "agent-law", ledgerKey: "law", active: true, materials: LawDreamMaterials(),
+            applied: [LawDreamApplied(
+                kind: "amend", world: "agent-law", target: String(repeating: "a", count: 64),
+                ids: [String(repeating: "b", count: 64)], note: "메모")],
+            discarded: [LawDreamDiscard(proposal: "repeal 12345678", reason: "폐지 상한\n초과")],
+            deferred: 2, alerts: ["경보 하나"], migrations: 1)
+        let body = LawDreamService.reportBody(
+            ledger, run: "v261004000000", batch: "batch-1", trigger: .manual, archive: nil, archiveError: "끊김\n두 줄")
+        let expected = """
+            batch: batch-1
+            run: v261004000000
+            ledger: law
+            trigger: manual
+
+            ## 읽은 재료
+            - 적재 실행 요약 0건, 세션 조각 0건(가린 조각 0), 세션 0, 발화 0
+            - 전신 객체 0건
+            - 저장소 문서 0건
+            - 최근 바뀐 기록 0건, 지난 실행에서 미룬 제안 0건
+
+            ## 적용한 변경 1건
+            - amend aaaaaaaa → bbbbbbbb (메모)
+
+            ## 버린 제안 1건
+            - repeal 12345678: 폐지 상한 초과
+
+            ## 미룬 제안 2건
+
+            ## 경보 1건
+            경보: 경보 하나
+
+            ## 이관 1건
+
+            ## 적재 보고
+            - 적재 없음 — 실패: 끊김 두 줄
+
+            """
+        #expect(Data(body.utf8) == Data(expected.utf8))
+    }
+
+    /// 검사는 모두 통과했는데 쓰는 도중 한 원장이 실패하면(경합) 어느 원장까지 썼는지 돌려준다.
+    @Test func multiLedgerBatchRestoreReportsPartialWrite() throws {
+        let fx = try Dream.fixture()
+        defer { fx.cleanup() }
+        let dream = try Self.multiDream(fx)
+        fx.clock.advance(60)
+        let outcome = try LawDreamBatchRestore.restore(
+            batch: dream.batch, actor: Dream.human, targets: LawDreamService.targets(file: fx.file, catalog: fx.catalog),
+            now: fx.now, testimony: nil,
+            writer: { target, plan in
+                if target.worldName == "agent-law-person-a" {
+                    throw LawEnactError.restorePartiallyApplied(applied: [], remaining: [], reason: "경합")
+                }
+                return try target.store.applyRestore(plan)
+            })
+        guard case .partial(let written, let failed, let untouched, let reason) = outcome else {
+            Issue.record("쓰기 도중 실패가 partial 로 오지 않음: \(outcome)")
+            return
+        }
+        #expect(written.map(\.world) == ["agent-law"] && written.first?.records.count == dream.lawApplied.count)
+        #expect(failed.world == "agent-law-person-a" && failed.records.isEmpty)
+        #expect(untouched.isEmpty && reason == "경합")
+        let lawView = LawLedgerView(records: Dream.records(fx.law))
+        for id in dream.lawApplied { #expect(!lawView.isInForce(id)) }
+        let personView = LawLedgerView(records: Dream.records(fx.person))
+        for id in dream.personApplied { #expect(personView.isInForce(id)) }
+    }
+
+    /// 화면 한 벌이 기록을 한 번만 읽는 길(기록을 넘겨 만들기)과 범위 색인 길이 같은 목록을 낸다.
+    @Test func recordsBasedLoadsMatchScopeLoads() throws {
+        let fx = try Dream.fixture()
+        defer { fx.cleanup() }
+        let rule = try Dream.enact(fx, fx.law, title: "배포 규칙", body: "배포는 화요일")
+        _ = try Dream.enact(fx, fx.law, title: "조문", type: "article", body: "조문 본문")
+        _ = try Self.finding(fx.law, of: rule.id, at: fx.now)
+        let records = Dream.records(fx.law)
+        let index = LawScopeIndex(current: "agent-law", catalog: fx.catalog)
+        for filter in [LawRecordListFilter(), LawRecordListFilter(memoryKind: .project), LawRecordListFilter(type: .article)] {
+            #expect(LawRecordList.load(target: fx.law, filter: filter, records: records)
+                    == LawRecordList.rows(index: index, filter: filter))
+        }
+        let before = fx.law.store.objectsFingerprint()
+        #expect(before == fx.law.store.objectsFingerprint())
+        _ = try Dream.enact(fx, fx.law, title: "새 기록", body: "새 본문")
+        #expect(fx.law.store.objectsFingerprint() != before)
+        #expect(fx.law.store.objectsFingerprint().count == records.count + 1)
+        // 목차 공지 머리말은 쓰는 쪽과 읽는 쪽이 같은 상수를 쓴다.
+        #expect(LawContentsScreen.idPrefix(ofLine: LawContents.objectionNoticePrefix + "abcdef12 제목") == "abcdef12")
+    }
+
     // MARK: - 모델 신빙성
 
     @Test func credibilityRowsPeriodAndExpansion() throws {

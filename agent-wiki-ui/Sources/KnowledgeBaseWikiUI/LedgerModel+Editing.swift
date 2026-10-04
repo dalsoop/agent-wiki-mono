@@ -18,7 +18,8 @@ extension LedgerModel {
     }
 
     func editorChanged() {
-        guard loadedHeadID != nil else { return }
+        // 보관된 원장(전신)은 쓰지 않는다 — 입력칸이 막혀도 자동 저장이 돌지 않게 여기서 한 번 더 막는다.
+        guard loadedHeadID != nil, !isReadOnlyWorld else { return }
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(2))
@@ -34,6 +35,7 @@ extension LedgerModel {
     }
 
     private func saveRevision() {
+        guard !isReadOnlyWorld else { return }
         guard let headID = loadedHeadID,
               let current = objects.first(where: { $0.id == headID }) else { return }
         let title = editorTitle.trimmingCharacters(in: .whitespaces)

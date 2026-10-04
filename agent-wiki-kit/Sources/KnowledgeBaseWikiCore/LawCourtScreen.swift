@@ -25,6 +25,12 @@ public struct LawCourtScreen: Sendable {
 
     /// 원장 하나를 읽어 만든다(설정의 이의 기간). 화면은 배경에서 부른다.
     public static func load(target: LawLedgerTarget) -> LawCourtScreen {
-        LawCourtScreen(docket: LawCourtDocket.of(target))
+        load(target: target, records: target.store.scan())
+    }
+
+    /// 이미 읽은 기록으로 만든다.
+    public static func load(target: LawLedgerTarget, records: [LawStoredRecord]) -> LawCourtScreen {
+        let court = target.file?.court ?? LawCourtSettings()
+        return LawCourtScreen(docket: LawCourtDocket(records: records, objectionPeriod: court.objectionPeriod))
     }
 }

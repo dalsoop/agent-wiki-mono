@@ -119,7 +119,7 @@ public struct LawContentsScreen: Sendable {
         return String(token)
     }
 
-    static let noticePrefixes = ["대법원 공지: ", "이의 기간 개정안: "]
+    static let noticePrefixes = [LawContents.supremeNoticePrefix, LawContents.objectionNoticePrefix]
 
     // MARK: - 만들기
 
@@ -153,26 +153,67 @@ public struct LawContentsScreen: Sendable {
 
     /// 원장 하나를 읽어 만든다. 화면은 배경에서 부른다(원장 폴더를 훑는다).
     public static func load(target: LawLedgerTarget, now: Date = Date()) -> LawContentsScreen {
-        let records = target.store.scan()
+        load(target: target, records: target.store.scan(), dreamLedgers: nil, now: now)
+    }
+
+    /// 이미 읽은 기록으로 만든다(화면 한 벌이 기록을 한 번만 읽게).
+    /// - Parameter dreamLedgers: 드리밍 원장들의 기록(정지 판정용). nil 이면 여기서 읽는다(이 원장은 `records` 를 쓴다).
+    public static func load(
+        target: LawLedgerTarget, records: [LawStoredRecord], dreamLedgers: [(world: String, records: [LawStoredRecord])]?,
+        now: Date = Date()
+    ) -> LawContentsScreen {
         let court = target.file?.court ?? LawCourtSettings()
         let docket = LawCourtDocket(records: records, objectionPeriod: court.objectionPeriod)
         let file = target.file ?? BoundLedgerFile(worlds: target.catalog.worlds)
-        let pause = LawDreamPause.evaluate(LawDreamService.targets(file: file, catalog: target.catalog).map {
-            $0.worldName == target.worldName ? records : $0.store.scan()
-        })
+        let ledgers = dreamLedgers ?? LawDreamService.targets(file: file, catalog: target.catalog).map {
+            ($0.worldName, $0.worldName == target.worldName ? records : $0.store.scan())
+        }
+        let pause = LawDreamPause.evaluate(ledgers.map(\.records))
         let maxLines = (file.dream ?? LawDreamSettings()).resolvedContentsMaxLines
         return make(
             worldName: target.worldName, records: records, notices: docket.notices(now: now),
-            objectionPeriod: court.objectionPeriod, pause: pause, audit: LawScreenAudit.audit(target),
+            objectionPeriod: court.objectionPeriod, pause: pause, audit: LawScreenAudit.audit(target, records: records),
             maxLines: maxLines, now: now)
     }
 }
 
-/// 화면 요약용 감사 — 공포 경로와 같은 범위 해석기(같은 원장·상위·전신)와 승격본 확인자로 본다.
+/// 화면 요약용 감사 — 공포 경로와 같은 범위(같은 원장·상위·전신)로 참조를 풀고 승격본을 확인한다.
+/// 전신 원장(옛 형식, 큼)은 같은 원장·상위 원장에서 풀리지 않는 참조가 있을 때만 읽는다(`LawLazyScopeResolver`).
 enum LawScreenAudit {
-    static func audit(_ target: LawLedgerTarget) -> LawAuditReport {
-        let index = LawScopeIndex(current: target.worldName, catalog: target.catalog)
+    static func audit(_ target: LawLedgerTarget, records: [LawStoredRecord]) -> LawAuditReport {
+        let catalog = target.catalog
+        // 승격본 확인 — 같은 원장과 상위 사슬의 ledger 3 기록(`LawPromotionWitness(index:)` 와 같은 항목, 전신은 ledger 3 가 아니라 빠진다).
+        var entries = records.map { ($0.id, LawPromotionWitness.Entry(world: target.worldName, record: $0.record)) }
+        for ancestor in catalog.ancestorNames(of: target.worldName) where catalog.isLedgerThree(ancestor) {
+            guard let root = catalog.world(named: ancestor)?.rootPath else { continue }
+            entries += LawStore(root: URL(fileURLWithPath: root)).scan().map {
+                ($0.id, LawPromotionWitness.Entry(world: ancestor, record: $0.record))
+            }
+        }
         return target.store.audit(context: LawEnactContext(
-            resolver: LawScopeReferenceResolver(index: index), promotions: LawPromotionWitness(index: index)))
+            resolver: LawLazyScopeResolver(current: target.worldName, catalog: catalog),
+            promotions: LawPromotionWitness(entries: entries, catalog: catalog)))
+    }
+}
+
+/// 범위 해석기를 처음 쓸 때 만든다 — 같은 원장 안에서 모두 풀리면 범위(전신 포함)를 읽지 않는다.
+final class LawLazyScopeResolver: LawReferenceResolving, @unchecked Sendable {
+    private let current: String
+    private let catalog: WorldBindingCatalog
+    private let lock = NSLock()
+    private var resolver: LawScopeReferenceResolver?
+
+    init(current: String, catalog: WorldBindingCatalog) {
+        self.current = current
+        self.catalog = catalog
+    }
+
+    func resolve(_ id: String) -> LawResolvedReference? {
+        lock.withLock {
+            if resolver == nil {
+                resolver = LawScopeReferenceResolver(index: LawScopeIndex(current: current, catalog: catalog))
+            }
+            return resolver?.resolve(id)
+        }
     }
 }

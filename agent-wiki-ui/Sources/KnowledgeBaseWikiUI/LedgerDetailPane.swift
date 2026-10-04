@@ -170,12 +170,14 @@ struct LedgerDetailPane: View {
                     .font(.title2.weight(.semibold))
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 8)
+                    .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)은 편집 불가
                     .onChange(of: model.editorTitle) { model.editorChanged() }
                 Divider().padding(.horizontal, 20)
                 TextEditor(text: $model.editorBody)
                     .font(.body)
                     .scrollContentBackground(.hidden)
                     .padding(.horizontal, 14).padding(.vertical, 6)
+                    .disabled(model.isReadOnlyWorld)
                     .onChange(of: model.editorBody) { model.editorChanged() }
 
                 editorCitations(document)
@@ -183,10 +185,12 @@ struct LedgerDetailPane: View {
             }
             .toolbar {
                 ToolbarItemGroup {
-                    Button {
-                        showAttachCitation = true
-                    } label: {
-                        Label("근거 붙이기", systemImage: "link.badge.plus")
+                    if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 인용을 붙이지 않는다
+                        Button {
+                            showAttachCitation = true
+                        } label: {
+                            Label("근거 붙이기", systemImage: "link.badge.plus")
+                        }
                     }
                     if document.versions.count > 1 {
                         Text("판 \(document.versions.count)").font(.caption).foregroundStyle(.secondary)
@@ -222,6 +226,7 @@ struct LedgerDetailPane: View {
             } label: {
                 Label("작업 실행", systemImage: "play.fill")
             }
+            .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)에는 쓰지 않는다
             .buttonStyle(.borderedProminent).controlSize(.small)
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -249,6 +254,7 @@ struct LedgerDetailPane: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             .help("클릭해 실행 엔진 변경 — 정의 개정판이 원장에 발행됩니다")
+            .disabled(model.isReadOnlyWorld)  // 보관된 원장(전신)에는 쓰지 않는다
         }
     }
 
@@ -280,12 +286,14 @@ struct LedgerDetailPane: View {
             Text("(\(relLabel(card.rel)))")
                 .font(.caption).foregroundStyle(.secondary)
             staleCitationBadge(card.stale)
-            Button {
-                model.detachCitation(from: document, evidenceID: card.citedID)
-            } label: {
-                Image(systemName: "xmark.circle").font(.caption)
+            if !model.isReadOnlyWorld {  // 보관된 원장(전신)은 인용을 떼지 않는다
+                Button {
+                    model.detachCitation(from: document, evidenceID: card.citedID)
+                } label: {
+                    Image(systemName: "xmark.circle").font(.caption)
+                }
+                .buttonStyle(.plain).foregroundStyle(.tertiary)
             }
-            .buttonStyle(.plain).foregroundStyle(.tertiary)
         }
     }
 
