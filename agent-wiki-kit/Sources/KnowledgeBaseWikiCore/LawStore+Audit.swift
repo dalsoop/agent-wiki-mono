@@ -27,7 +27,7 @@ public struct LawAuditReport: Sendable, Equatable {
 
 extension LawStore {
     /// 감사 — 파일 읽기·형식, id 중복, 파일명-id, 본문 sha256(본문 변조), 코어 재해시(코어 변조),
-    /// 참조 무결성, 관계 규칙, 증거물 부재(가림 기록이 있으면 "가림")를 검사하고,
+    /// 참조 무결성, 관계 규칙, 승격본 주장(원본 원장의 영수증·원본 증거 대조), 증거물 부재(가림 기록이 있으면 "가림")를 검사하고,
     /// 판단 대기와 갈라진 현행을 보고한다. 근거: docs/business-rules.md "사실인정과 4종류"·
     /// "공포·개정·폐지·원상회복", docs/security.md "R2 와 세션"(가림 감사).
     /// - Parameter context: `resolver` 로 같은 원장 밖 참조를 푼다(없으면 같은 원장 안만).
@@ -83,6 +83,15 @@ extension LawStore {
                 if let target, !relation.allowsTarget(type: target.type, isPredecessor: target.scope == .predecessor) {
                     violations.append(Violation(id: stored.id, problem: "관계 규칙 위반 — \(cite.rel) 도착 \(cite.id)"))
                 }
+            }
+        }
+
+        // 승격본이라고 주장하는 증거(`promoted` 태그·대상 영수증)는 원본 원장의 영수증과 원본 증거로 확인한다.
+        // 확인된 승격본은 세션 증언 없이도 위반이 아니다.
+        let promotions = context.promotions ?? LawPromotionWitness(records: records)
+        for stored in records where stored.record.type == LawRecordType.evidence.rawValue {
+            if case .unproven(let reason) = promotions.status(of: stored.id) {
+                violations.append(Violation(id: stored.id, problem: "승격본 미확인 — \(reason)"))
             }
         }
 

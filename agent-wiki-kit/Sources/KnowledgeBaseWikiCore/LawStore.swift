@@ -48,6 +48,8 @@ public struct LawStore: Sendable {
     public func enact(_ draft: LawDraft, now: Date = Date(), context: LawEnactContext = LawEnactContext()) throws
         -> LawStoredRecord {
         let existing = scan()
+        var context = context
+        if context.promotions == nil { context.promotions = LawPromotionWitness(records: existing) }
         let record = try LawEnactValidator(
             store: self, context: context, sameLedger: LawSameLedgerResolver(records: existing)
         ).validatedRecord(draft, promulgated: LawTime.truncatedToMilliseconds(now))
