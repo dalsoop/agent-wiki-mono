@@ -98,7 +98,8 @@ agent-wiki capabilities                             # InteropKit 계약 JSON
 근거: 결정 0007.
 
 - 기기 등록: `agent-wiki world device register <기기 키>`. 드리밍 기기 지정: `agent-wiki world dream-device <기기 키>`.
-- 원장 만들기: `agent-wiki world add agent-law --key law --root ~/agent-law/law --predecessor gujo-wiki` 등(원장 구성표대로). 테넌트 대응: `agent-wiki world tenant-map personal agent-law-person-yun-jeonghan`.
-- R2 키: 금고에서 꺼내 키체인 서비스 `agent-law-r2` 에 넣는다(화면에 출력하지 않는다). 엔드포인트·버킷 이름은 `agent-wiki world storage --endpoint … --bucket agent-law` 로 호스트 설정에 둔다(생략하면 기존 R2 계정 엔드포인트와 버킷 `agent-law`).
+- 원장 만들기: `agent-wiki world add agent-law --key law --root ~/agent-law/law --layer remoteShared --predecessor gujo-wiki` 등(원장 구성표대로). 층은 이름으로 정해지지 않으므로 공유 원장은 `--layer remoteShared` 를 준다. 이미 등록한 원장은 `agent-wiki world set-layer agent-law remoteShared` 로 한 번 기록한다. 테넌트 대응: `agent-wiki world tenant-map personal agent-law-person-yun-jeonghan`.
+- R2 키: 금고에서 꺼내 키체인 서비스 `agent-law-r2` 에 넣는다(화면에 출력하지 않는다). 엔드포인트·버킷 이름은 `agent-wiki world storage --endpoint <url> [--bucket <b>]` 로 호스트 설정에 둔다. 엔드포인트는 기본값이 없다 — 설정하지 않으면 `archive`(`--dry-run` 제외)·`redact` 는 "R2 엔드포인트 미설정" 안내와 함께 종료 코드 1, `summon` 의 R2 읽기·`sync` 의 증거물 동기화는 그 단계를 건너뛰고(키체인 키가 없을 때와 같다), `dream run` 은 거부 1. 버킷을 생략하면 `agent-law`.
+- 드리밍 AI·중재자: `agent-wiki world ai dream --runtime <지원 CLI> --model <모델 id> [--effort <강도>]`, `agent-wiki world ai arbiters --add <runtime>:<model>[:<effort>]…` (비우기 `--clear`), 확인 `agent-wiki world ai show [--json]`. 소스에 기본 모델이 없다 — 드리밍 AI 가 없으면 `dream run` 은 1, 중재자가 없으면 `court hear` 는 항소심 사건을 대법원으로 회부한다.
 - 예약 실행: `agent-wiki schedule` 이 체크포인트·감사·동기화(10분)·적재(하루)·드리밍(하루, 드리밍 기기만) 틱을 등록한다(위 "정기 작업과 동기화" 표).
 - 확인: `agent-wiki audit`, `agent-wiki dream status`, `agent-wiki contents`.

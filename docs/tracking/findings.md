@@ -61,3 +61,9 @@
 - 증상: 판결 확정(`--testimony`)과 대법원 결정은 `speaker: user` 증거라면 그 사건과 관계없는 옛 발화도 받는다.
 - 영향: 증거 자체는 세션 대조로 위조할 수 없지만, "사용자가 바로 이것을 승인했다"는 뜻까지 보장하지는 않는다.
 - 지금 못 고치는 이유: 공지 뒤에 공포된 증거만 받을지, 대상 id 를 인용한 증거만 받을지는 사용자가 정할 정책이다. 또한 "사용자 증언 인용" 판정이 `LawEnactPath.citesUserTestimony` 와 `LawEnactValidator.hasUserTestimony` 두 곳에 기준이 조금 다르게 있다(지금은 결과가 같다). 정책을 정할 때 한 곳으로 합친다.
+
+## 옛 blob 동기화가 R2 계정 엔드포인트를 소스에 적어 둔다
+
+- 증상: `agent-wiki-kit/Sources/KnowledgeBaseWikiCore/GujoBlobSync.swift` 의 `GujoBlobConfig` 기본값(`init(endpoint:)`, 환경 변수 `GUJO_S3_ENDPOINT` 가 없을 때)이 Cloudflare 계정 id 가 든 R2 엔드포인트 주소를 리터럴로 적는다. agent-law 쪽(`LawStorageSettings`)은 2026-10-04 에 이 기본값을 지우고 `world storage --endpoint` 설정에서만 받도록 바꿨다.
+- 영향: 공개 저장소에 계정 엔드포인트가 남는다(docs/standards.md "소스에 새 호스트 이름을 적지 않는다", docs/security.md). 전신 원장 blob 의 `gujo blob status|pull` 은 설정 없이도 이 계정으로 붙는다.
+- 지금 못 고치는 이유: 결정 0003 시절 전신 원장 전송 코드라 agent-law 작업 범위 밖이고, 기본값을 지우면 설정 파일이 없는 기기의 전신 blob 받기가 멈춘다. 지울 때는 전신 blob 설정 자리(`gujo blob config --endpoint`)와 안내를 함께 정해야 한다.

@@ -42,7 +42,7 @@ let allowedOptions: Set<String> = [
     "--version", "--w", "--weight", "--workspace", "--world", "-h", "-j", "-V",
     "--no-studio-adopt",
     // agent-law (ledger 3) — docs/contracts.md "agent-law 명령". 두 CLI 목록을 같게 유지한다.
-    "--also", "--app", "--app-version", "--approve", "--certainty", "--device", "--dry-run", "--effort",
+    "--add", "--also", "--app", "--app-version", "--approve", "--certainty", "--clear", "--device", "--dry-run", "--effort",
     "--exhibit", "--from", "--key", "--predecessor", "--record", "--scheduled", "--reject", "--repo", "--role", "--runtime",
     "--runtime-version", "--scope", "--session", "--speaker", "--status", "--testimony", "--until",
 ]
@@ -110,7 +110,7 @@ let config = LedgerConfig.load()
 let tenantWorld = TenantWikiBinding.activeWorldName()
 guard let world = config.resolveWorld(
     cwd: cwd,
-    explicitWorld: worldOverride ?? "agent-law",
+    explicitWorld: worldOverride ?? LawLedgerDefaults.sharedWorldName,
     tenantWikiWorld: tenantWorld
 ) else {
     fail(

@@ -223,10 +223,14 @@ public enum WorldTenantBinding {
         return nil
     }
 
+    /// 층 값과 상위 world 조합 검사. 층은 `WikiWorldLayer` 원시값 중 하나(공유 원장은 `remoteShared`).
+    /// tenant 는 `--parent` 가 있어야 하고, `--parent` 는 tenant 에만 붙는다.
+    /// 근거: docs/business-rules.md "원장 구성"(층은 설정에 기록, 이름으로 판정하지 않음), 결정 0007.
     public static func requireTenantFlags(layer: String?, parent: String?) -> String? {
         if layer == nil, parent == nil { return nil }
-        if let layer, layer != WikiWorldLayer.tenant.rawValue {
-            return "--layer allows tenant only (got: \(layer))"
+        if let layer, WikiWorldLayer(rawValue: layer) == nil {
+            let allowed = WikiWorldLayer.allCases.map(\.rawValue).joined(separator: "|")
+            return "--layer allows \(allowed) (got: \(layer))"
         }
         if layer == WikiWorldLayer.tenant.rawValue, parent == nil {
             return "tenant world requires --parent <shared-world>"

@@ -4,7 +4,7 @@ import KnowledgeBaseWikiCore
 /// 메뉴 막대 동기화 표시 — `agent-law` 의 마지막 동기화 시각·커밋 대기 수·push 여부.
 /// 값은 `LawGitSync.display()`(네트워크 없음) 하나에서 읽는다. 근거: docs/architecture.md "agent-law (ledger 3)".
 public enum AgentLawSyncSummary {
-    public static let worldName = "agent-law"
+    public static let worldName = LawLedgerDefaults.sharedWorldName
 
     /// 설정에 등록된 `agent-law` 원장 루트. 없으면 nil.
     public static func ledgerRoot(config: LedgerConfig = LedgerConfig.load()) -> URL? {

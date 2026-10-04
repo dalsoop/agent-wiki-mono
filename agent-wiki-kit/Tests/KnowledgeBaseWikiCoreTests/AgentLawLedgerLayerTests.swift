@@ -11,7 +11,7 @@ import Testing
             BoundWorld(name: "person-yun-jeonghan", rootPath: "/tmp/fx/person-yun-jeonghan"),
             BoundWorld(name: "tenant-gujo", rootPath: "/tmp/fx/tenant-gujo", layer: "tenant", parent: "gujo-wiki"),
             BoundWorld(
-                name: "agent-law", rootPath: "/tmp/fx/agent-law/law",
+                name: "agent-law", rootPath: "/tmp/fx/agent-law/law", layer: "remoteShared",
                 key: "law", predecessor: "gujo-wiki"),
             BoundWorld(
                 name: "agent-law-person-yun-jeonghan", rootPath: "/tmp/fx/agent-law/person-yun-jeonghan",
@@ -96,9 +96,33 @@ import Testing
         #expect(!LedgerKeyFormat.isValid("a" + String(repeating: "b", count: 41)))
     }
 
-    @Test func agentLawNameIsRemoteShared() {
-        #expect(WikiWorldPresentation.classify(name: "agent-law", rootPath: "/tmp/x/law") == .remoteShared)
+    /// 층은 설정에 기록된 값이다. 이름이 `agent-law` 라는 것만으로 공유 원장이 되지 않는다.
+    @Test func layerComesFromConfigNotName() throws {
+        #expect(WikiWorldPresentation.classify(name: "agent-law", rootPath: "/tmp/x/law") == .other)
         #expect(agentLawCatalog().resolvedLayer(of: "agent-law") == .remoteShared)
+        let unrecorded = WorldBindingCatalog(worlds: [BoundWorld(name: "agent-law", rootPath: "/tmp/x/law", key: "law")])
+        #expect(unrecorded.resolvedLayer(of: "agent-law") == .other)
+        let recorded = LedgerWorld(name: "agent-law", rootPath: "/tmp/x/law", layer: "remoteShared")
+        #expect(WikiWorldPresentation.layer(of: recorded) == .remoteShared)
+        let items = WikiWorldPresentation.listItems(worlds: [recorded], selectedName: nil)
+        #expect(items.first?.layer == .remoteShared)
+    }
+
+    /// `world set-layer <이름> remoteShared` 와 `world add --layer remoteShared` 를 받는다. tenant 는 여전히 상위가 필요하다.
+    @Test func setLayerAcceptsRemoteShared() throws {
+        let base = BoundLedgerFile(worlds: [BoundWorld(name: "agent-law", rootPath: "/tmp/x/law", key: "law")])
+        let shared = try WorldMutation.settingLayer(of: "agent-law", in: base, layer: "remoteShared", parent: nil).get()
+        #expect(WorldBindingCatalog(worlds: shared.effectiveWorlds).resolvedLayer(of: "agent-law") == .remoteShared)
+        #expect(failureMessage(WorldMutation.settingLayer(of: "agent-law", in: base, layer: "bogus", parent: nil))?
+            .contains("--layer allows") ?? false)
+        #expect(failureMessage(WorldMutation.settingLayer(of: "agent-law", in: base, layer: "tenant", parent: nil)) != nil)
+        #expect(failureMessage(WorldMutation.settingLayer(of: "agent-law", in: base, layer: "remoteShared", parent: "x")) != nil)
+        let added = try WorldMutation.adding(
+            to: BoundLedgerFile(), name: "s", path: "/tmp/s", layer: "remoteShared", parent: nil, key: "ss").get()
+        #expect(added.effectiveWorlds.first?.layer == "remoteShared")
+        // LedgerConfig 도 같은 파일의 층을 읽는다.
+        let config = try JSONDecoder().decode(LedgerConfig.self, from: JSONEncoder().encode(shared))
+        #expect(config.effectiveWorlds.first?.layer == "remoteShared")
     }
 
     // MARK: 설정 변경
@@ -109,7 +133,7 @@ import Testing
             BoundWorld(name: "person-yun-jeonghan", rootPath: "/tmp/p"),
         ])
         file = try WorldMutation.adding(
-            to: file, name: "agent-law", path: "/tmp/al/law", layer: nil, parent: nil,
+            to: file, name: "agent-law", path: "/tmp/al/law", layer: "remoteShared", parent: nil,
             key: "law", predecessor: "gujo-wiki").get()
         file = try WorldMutation.adding(
             to: file, name: "agent-law-person-yun-jeonghan", path: "/tmp/al/p",

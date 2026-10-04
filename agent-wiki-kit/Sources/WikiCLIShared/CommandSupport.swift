@@ -36,8 +36,11 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
   finding <id> --subject <s> --certainty <c> --domain <d> --reason <r> [--from <t>] [--until <t>]
   exhibit put <파일> | get <sha>               증거물
   promote <id> --to <원장>                     승격(영수증 규칙은 옛 승격과 같음)
-  world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]
+  world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>]
+  world set-layer <이름> <층> [--parent <이름>] (공유 원장 층 remoteShared — 이름으로 판정하지 않음)
   world tenant-map <테넌트> <원장> | world device register <키> | world dream-device <키>
+  world storage --endpoint <url> [--bucket <b>] [--region <r>] (R2 엔드포인트 기본값 없음)
+  world ai dream --runtime <r> --model <m> [--effort <e>] | world ai arbiters --add <r>:<m>[:<e>]… | --clear | world ai show
   sync · archive · redact · summon · dream · court · judgment · contents · report models · hook session
   폐지(종료 코드 64): publish→enact · verify→audit · rollback→restore · classify→finding ·
                      capture→exhibit put · blob put|gc · hook authoring→hook session

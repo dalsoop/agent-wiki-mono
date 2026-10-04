@@ -22,9 +22,10 @@ public struct LawArbiterCandidate: Codable, Equatable, Sendable {
     }
 }
 
-/// 호스트 설정의 심급 자리(`court`). 비운 칸은 기본값.
+/// 호스트 설정의 심급 자리(`court`). 이의 기간은 비우면 기본값이고, 중재자 후보는 설정(`world ai arbiters`)에서만 받는다.
 public struct LawCourtSettings: Codable, Equatable, Sendable {
     /// 중재자 후보(앞에서부터). 대상 기록의 `model` 과 다른 첫 후보가 중재한다.
+    /// 비어 있으면 중재자가 없고, 항소심 사건은 대법원으로 회부된다(docs/business-rules.md "심급제").
     public var arbiters: [LawArbiterCandidate]?
     /// 대법원 공지 뒤 이의 제기 기간(시간).
     public var objectionPeriodHours: Double?
@@ -34,16 +35,10 @@ public struct LawCourtSettings: Codable, Equatable, Sendable {
         self.objectionPeriodHours = objectionPeriodHours
     }
 
-    public static let defaultArbiters: [LawArbiterCandidate] = [
-        LawArbiterCandidate(cli: .claude, model: "claude-opus-5-5", effort: LawEffort.high.rawValue),
-        LawArbiterCandidate(cli: .claude, model: "claude-sonnet-5-5", effort: LawEffort.high.rawValue),
-    ]
     public static let defaultObjectionPeriodHours: Double = 72
 
-    public var resolvedArbiters: [LawArbiterCandidate] {
-        guard let arbiters, !arbiters.isEmpty else { return Self.defaultArbiters }
-        return arbiters
-    }
+    /// 설정한 중재자 후보. 모델 이름은 소스에 두지 않는다(설정 `world ai arbiters --add`).
+    public var resolvedArbiters: [LawArbiterCandidate] { arbiters ?? [] }
 
     public var objectionPeriod: TimeInterval {
         let hours = objectionPeriodHours.flatMap { $0 >= 0 ? $0 : nil } ?? Self.defaultObjectionPeriodHours

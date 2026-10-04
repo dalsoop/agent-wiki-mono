@@ -417,16 +417,20 @@ public struct LedgerWorld: Codable, Sendable, Equatable {
     public var rootPath: String
     /// 사람용 표시 이름 — 없으면 slug(name) 그대로 보여준다.
     public var display: String?
+    /// 설정에 기록된 층(`WikiWorldLayer` 원시값). 읽기만 한다 — 쓰기는 `world add --layer`·`world set-layer`
+    /// (`WorldMutation`)가 `BoundLedgerFile` 로 한다. `save` 는 `merged` 로 파일 값을 보존한다.
+    public var layer: String?
 
     /// 사람용 표시 이름 (display 가 있으면 사용, 없으면 표준 기본값 매핑 또는 name).
     public var displayName: String {
         display ?? WorldDisplayNameMapper.defaultDisplayName(for: name)
     }
 
-    public init(name: String, rootPath: String, display: String? = nil) {
+    public init(name: String, rootPath: String, display: String? = nil, layer: String? = nil) {
         self.name = name
         self.rootPath = rootPath
         self.display = display
+        self.layer = layer
     }
 }
 

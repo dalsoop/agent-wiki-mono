@@ -122,7 +122,8 @@ struct RepositoryOverviewView: View {
     }
 
     private var sharedWorldOverview: some View {
-        let layer = WikiWorldPresentation.classify(
+        // 층은 설정에 기록된 값(picker 항목)이 정본이다. 이름으로 판정하지 않는다.
+        let layer = model.currentWorldPickerItem?.layer ?? WikiWorldPresentation.classify(
             name: model.currentWorldName ?? "",
             rootPath: model.rootURL?.path ?? ""
         )
@@ -132,7 +133,8 @@ struct RepositoryOverviewView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(WikiWorldPresentation.title(
                         name: model.currentWorldName ?? "",
-                        rootPath: model.rootURL?.path ?? ""
+                        rootPath: model.rootURL?.path ?? "",
+                        layer: layer
                     )).font(.title3.weight(.semibold))
                     Text(layer.groupTitle).font(.caption).foregroundStyle(.secondary)
                 }

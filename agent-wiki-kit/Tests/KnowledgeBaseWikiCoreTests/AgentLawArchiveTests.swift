@@ -402,9 +402,27 @@ final class ManualClock: @unchecked Sendable {
         let credentials = try present.credentials()
         #expect(credentials.accessKeyID == "AKID")
         #expect(!"\(credentials)".contains("SECRET") && !"\(credentials)".contains("AKID"))
+        let configured = BoundLedgerFile(lawStorage: LawStorageSettings(endpoint: "https://r2.example.test"))
         #expect(throws: LawR2CredentialError.self) {
-            try LawR2Client.standard(file: BoundLedgerFile(), provider: missing)
+            try LawR2Client.standard(file: configured, provider: missing)
         }
+    }
+
+    /// 엔드포인트는 소스에 기본값이 없다 — 설정이 없으면 키체인을 읽기 전에 안내와 함께 실패한다.
+    @Test func r2ClientRequiresConfiguredEndpoint() throws {
+        let present = LawKeychainCredentialProvider { _, account in account == "access-key-id" ? "AKID" : "SECRET" }
+        #expect(throws: LawObjectStoreError.endpointMissing) {
+            try LawR2Client.standard(file: BoundLedgerFile(), provider: present)
+        }
+        #expect(throws: LawObjectStoreError.endpointMissing) {
+            try LawR2Client.standard(
+                file: BoundLedgerFile(lawStorage: LawStorageSettings(endpoint: "  ", bucket: "b")), provider: present)
+        }
+        #expect(LawStorageSettings().resolvedEndpoint == nil)
+        #expect("\(LawObjectStoreError.endpointMissing)".contains("world storage --endpoint"))
+        let client = try LawR2Client.standard(
+            file: BoundLedgerFile(lawStorage: LawStorageSettings(endpoint: "https://r2.example.test")), provider: present)
+        #expect(client.settings.resolvedBucket == LawLedgerDefaults.bucketName)
     }
 
     // MARK: - R2 요청

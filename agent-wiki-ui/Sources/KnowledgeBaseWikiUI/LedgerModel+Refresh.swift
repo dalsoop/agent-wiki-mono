@@ -53,7 +53,7 @@ extension LedgerModel {
     }
 
     /// 결정 0007 의 기본 원장.
-    static let defaultLedgerWorldName = "agent-law"
+    static let defaultLedgerWorldName = LawLedgerDefaults.sharedWorldName
 
     private static func preferredRepositoryWorld(config: LedgerConfig) -> String? {
         let registry = (try? FleetStore().load()) ?? FleetRegistry()

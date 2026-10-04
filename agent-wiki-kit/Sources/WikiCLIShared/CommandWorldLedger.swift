@@ -3,16 +3,20 @@ import KnowledgeBaseWikiCore
 
 // 원장 설정 — `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]`,
 // `world tenant-map <테넌트> <원장>`, `world device register <키>`, `world dream-device <키>`,
-// `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]`(R2 주소, 비밀 아님. 키는 키체인).
+// `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]`(R2 주소, 비밀 아님. 키는 키체인. 엔드포인트 기본값 없음),
+// `world ai dream|arbiters|show`(드리밍 AI·중재자 후보. 모델 이름은 소스에 두지 않고 여기서만 설정).
 // 규칙은 `WorldMutation.adding`·`LedgerThreeConfigMutation` 이 판정하고, 저장은 `WorldBoundIO`(BoundLedgerFile) 하나.
 // 근거: docs/contracts.md "agent-law 명령 (ledger 3)", docs/business-rules.md "원장 구성".
 
 let worldLedgerUsage = """
-사용법: world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>] [--display <이름>]
+사용법: world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>] [--display <이름>]
        world tenant-map <테넌트> <원장>
        world device register <키>
        world dream-device <키>
        world storage [--endpoint <url>] [--bucket <b>] [--region <r>]
+       world ai dream --runtime <r> --model <m> [--effort <e>]
+       world ai arbiters --add <runtime>:<model>[:<effort>]... | --clear
+       world ai show [--json]
 """
 
 /// 두 CLI 의 `world` 분기가 먼저 부른다. ledger 3 원장 설정이면 처리하고 true.
@@ -49,7 +53,9 @@ public func runWorldLedgerSubcommand(file: inout BoundLedgerFile, arguments: [St
         if let region = options.value("--region") { settings.region = region }
         file.lawStorage = settings
         WorldBoundIO.save(file)
-        print("storage endpoint=\(settings.resolvedEndpoint)  bucket=\(settings.resolvedBucket)  region=\(settings.resolvedRegion)") // allow:debug
+        print("storage endpoint=\(settings.resolvedEndpoint ?? "(미설정)")  bucket=\(settings.resolvedBucket)  region=\(settings.resolvedRegion)") // allow:debug
+    case "ai":
+        runWorldAI(file: &file, arguments: arguments)
     default:
         return false
     }
@@ -63,7 +69,7 @@ private func mutationResult(_ result: Result<BoundLedgerFile, WorldMutationFailu
     }
 }
 
-/// ledger 3 원장 등록. `--parent` 가 있으면 층은 tenant(상위는 remoteShared 여야 한다).
+/// ledger 3 원장 등록. 층은 `--layer`(공유 원장은 `remoteShared`)로 기록하고, `--parent` 만 있으면 tenant(상위는 remoteShared 여야 한다).
 private func applyLedgerWorldAdd(file: inout BoundLedgerFile, arguments: [String]) {
     let options = LawOptions.parse(
         arguments, skip: 2,
@@ -91,4 +97,53 @@ private func applyLedgerWorldAdd(file: inout BoundLedgerFile, arguments: [String
     let added = WorldBindingCatalog(worlds: file.effectiveWorlds).world(named: name)
     print("world \(name)  key=\(added?.key ?? "-")  root=\(root)" // allow:debug
         + (added?.parent.map { "  parent=\($0)" } ?? "") + (added?.predecessor.map { "  predecessor=\($0)" } ?? ""))
+}
+
+/// `world ai` — 드리밍 AI(`dream`)와 중재자 후보(`court.arbiters`). 실행 도구 이름은 지원 CLI 목록으로 해석한다.
+/// 설정이 없으면 `dream run` 은 안내와 함께 1, `court hear` 는 중재자 없음으로 대법원 회부.
+private func runWorldAI(file: inout BoundLedgerFile, arguments: [String]) {
+    let action = arguments.count >= 3 ? arguments[2] : "show"
+    switch action {
+    case "dream":
+        let options = LawOptions.parse(
+            arguments, skip: 3, valued: ["--runtime", "--model", "--effort"], flags: ["--json", "-j"],
+            usage: worldLedgerUsage)
+        guard options.positionals.isEmpty, let runtime = options.value("--runtime"),
+              let model = options.value("--model")
+        else { usageFail(worldLedgerUsage) }
+        file = mutationResult(LawAIConfigMutation.settingDream(
+            in: file, runtime: runtime, model: model, effort: options.value("--effort")))
+        WorldBoundIO.save(file)
+        print("dream ai \(file.dream?.runnerLabel ?? "-")") // allow:debug
+    case "arbiters":
+        let options = LawOptions.parse(
+            arguments, skip: 3, valued: ["--add"], flags: ["--clear", "--json", "-j"], usage: worldLedgerUsage)
+        let adds = options.all("--add")
+        // `--add` 와 `--clear` 중 정확히 하나(빈 `--add` 목록 == `--clear` 있음).
+        guard options.positionals.isEmpty, adds.isEmpty == options.has("--clear") else { usageFail(worldLedgerUsage) }
+        file = options.has("--clear")
+            ? LawAIConfigMutation.clearingArbiters(in: file)
+            : mutationResult(LawAIConfigMutation.addingArbiters(in: file, specs: adds))
+        WorldBoundIO.save(file)
+        let list = (file.court?.resolvedArbiters ?? []).map(\.label)
+        print("arbiters \(list.isEmpty ? "(없음 — 항소심은 대법원 회부)" : list.joined(separator: ", "))") // allow:debug
+    case "show":
+        let options = LawOptions.parse(arguments, skip: 3, valued: [], flags: ["--json", "-j"], usage: worldLedgerUsage)
+        guard options.positionals.isEmpty else { usageFail(worldLedgerUsage) }
+        let dream = file.dream?.ai
+        let arbiters = file.court?.resolvedArbiters ?? []
+        if options.has("--json") {
+            struct Pick: Encodable { let runtime: String; let model: String; let effort: String? }
+            struct Envelope: Encodable { let ok: Bool; let dream: Pick?; let arbiters: [Pick] }
+            printJSON(Envelope(
+                ok: true,
+                dream: dream.map { Pick(runtime: $0.cli.rawValue, model: $0.model, effort: $0.effort) },
+                arbiters: arbiters.map { Pick(runtime: $0.cli.rawValue, model: $0.model, effort: $0.effort) }))
+        } else {
+            print("dream     \(dream?.label ?? "(미설정) — \(LawDreamSettings.missingAIGuidance)")") // allow:debug
+            print("arbiters  \(arbiters.isEmpty ? "(없음 — 항소심은 대법원 회부)" : arbiters.map(\.label).joined(separator: ", "))") // allow:debug
+        }
+    default:
+        usageFail(worldLedgerUsage)
+    }
 }

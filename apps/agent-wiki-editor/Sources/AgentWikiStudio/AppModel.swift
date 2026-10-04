@@ -31,13 +31,16 @@ enum StudioArea: String, CaseIterable, Identifiable {
 @MainActor
 @Observable
 final class AppModel {
-    let loc = LocalizationManager(baseBundle: ResourceBundle.localization(preferredName: "GujoAgentWikiEditor_AgentWikiStudio"))
-    // 자기 번역 묶음을 이름으로 고른다 — 패키지 이름(Gujo…)이 앱 이름과 달라 이름 순위가 화면 모듈 묶음을 먼저 집었다(2026-10-04 실측: 메뉴가 키 그대로).
+    let loc = LocalizationManager(baseBundle: ResourceBundle.localization())
     private let service = AgentWikiStudioService()
 
     var status: String = ""
     var world: String = StudioWriteWorld.inferred()
     var worldCatalog: [WikiWorldListItem] = []
+    /// 고른 world 의 층 — 설정에 기록된 값(목록 항목)이 정본이다. 이름으로 판정하지 않는다.
+    var worldLayer: WikiWorldLayer {
+        worldCatalog.first { $0.name == world }?.layer ?? WikiWorldPresentation.classify(name: world, rootPath: "")
+    }
     var area: StudioArea = .notes
     var output: String = ""
     var busy = false
@@ -181,7 +184,7 @@ final class AppModel {
             await loadRecent()
         case .world:
             await loadWorld()
-            if WikiWorldPresentation.classify(name: world, rootPath: "") == .remoteShared
+            if worldLayer == .remoteShared
                 || world == "gujo-wiki" {
                 await loadRemoteStatus()
             }

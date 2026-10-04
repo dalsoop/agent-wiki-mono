@@ -18,7 +18,7 @@ import StateRootKit
 /// 없는 값을 0 으로 채워 "0 토큰으로 썼다"는 거짓을 만들지 않는다.
 public struct Authoring: Sendable, Equatable {
     public var runtime: String?      // claude-code | codex | grok | app | human …
-    public var model: String?        // claude-opus-5 · gpt-… — 같은 author 라도 모델이 다르다
+    public var model: String?        // 정확한 모델 id — 같은 author 라도 모델이 다르다
     public var session: String?      // 하네스 세션 id — 원 대화로 되짚는 실마리
     public var tokensIn: Int?        // 입력 토큰(하네스가 알 때만)
     public var tokensOut: Int?       // 출력 토큰

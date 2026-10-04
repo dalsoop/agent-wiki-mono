@@ -8,7 +8,7 @@ public enum WorldDisplayRegistry {
         "gujo-wiki": "조직 공유 원장 (Gujo Shared Ledger)",
         "person-yun-jeonghan": "윤정한 개인 주관 일지 (Jeonghan Personal Ledger)",
         // ledger 3 공유 원장(결정 0007). 동기화 상태 연결은 동기화 작업(T5)이 한다.
-        "agent-law": "공유 원장 (Agent Law)",
+        LawLedgerDefaults.sharedWorldName: "공유 원장 (Agent Law)",
     ]
 
     /// world slug 및 명시적 display 값을 기반으로 사람용 친화적 표시 이름을 반환한다.

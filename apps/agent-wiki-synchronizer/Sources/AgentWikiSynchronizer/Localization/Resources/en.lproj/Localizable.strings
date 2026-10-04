@@ -96,4 +96,4 @@
 "CommandPublish.needBody" = "provide a body on stdin (omit only for retract publish)";
 "CommandPublish.missingRef" = "missing object ref: %1$@";
 "CommandWorld.unknownOption" = "unknown option: %1$@";
-"CommandWorld.setLayerUsage" = "usage: world set-layer <name> tenant --parent <shared-world>";
+"CommandWorld.setLayerUsage" = "usage: world set-layer <name> <remoteShared|localPerson|repository|other> | world set-layer <name> tenant --parent <shared-world>";
