@@ -90,7 +90,7 @@
 
 - 전용 버킷 `agent-law`, 전용 접근 키. 키 값은 이 기기 키체인(서비스 `agent-law-r2`, 계정 `access-key-id`·`secret-access-key`) 또는 Bitwarden 항목(필드 `access-key-id`·`secret-access-key`)에만 둔다. 설정 파일·plist·로그·원장·저장소·화면에 키 값을 두지 않는다. 근거: 결정 0007, 0009(사용자 원문 "fix auto complete" → "1 2 both").
   - 키체인에 두 값이 있으면 그것을 쓴다. 없고 호스트 설정의 키 출처가 `bitwarden:<item id>`(`world storage --credential-source`)면, R2 키가 꼭 필요한 명령(`archive`(`--dry-run` 제외)·`redact`·`sync`·드리밍 기기의 `dream run`)이 시작할 때 `vaultwarden-client item field exec` 두 겹으로 자신을 다시 실행해 값을 **하위 프로세스 환경으로만** 받는다.
-  - 다시 실행된 자식은 재실행 표지(`AGENT_WIKI_R2_FROM_BITWARDEN=1`)가 있을 때만, 그리고 부모 프로세스가 PATH 의 `vaultwarden-client` 실물(심볼릭 링크를 따라간 같은 파일)일 때만 `AGENT_LAW_R2_ACCESS_KEY_ID`·`AGENT_LAW_R2_SECRET_ACCESS_KEY` 를 받고, 받은 즉시 세 변수를 자기 환경에서 지운다(git·AI 실행 도구에 물려주지 않는다). 표지가 있으면 다시 실행하지 않는다.
+  - 다시 실행된 자식은 재실행 표지(`AGENT_WIKI_R2_FROM_BITWARDEN=<표>`)가 있을 때만, 그리고 부모가 재실행 직전 발급한 일회용 표(사용자 전용 임시 폴더의 0600 빈 파일, 120초 안, 한 번 교환하면 삭제)를 교환했을 때만 `AGENT_LAW_R2_ACCESS_KEY_ID`·`AGENT_LAW_R2_SECRET_ACCESS_KEY` 를 받고, 받은 즉시 세 변수를 자기 환경에서 지운다(git·AI 실행 도구에 물려주지 않는다). 표지가 있으면 다시 실행하지 않는다.
   - 표지 없이 사람이 넣은 환경 변수는 받지 않는다. 사람이 셸 환경 변수로 키를 넣는 경로는 열지 않는다.
 - 엔드포인트·버킷·지역은 비밀이 아니지만 계정을 드러내므로 호스트 설정(`world storage`)에만 둔다. 소스에 R2 계정 엔드포인트 기본값을 두지 않는다. 키 출처(Bitwarden 항목 id)도 비밀이 아니며 같은 자리에 둔다. 엔드포인트가 없으면 R2 를 쓰는 명령은 키를 읽기 전에 "R2 엔드포인트 미설정" 으로 실패하거나 그 단계를 건너뛴다.
 - 이미 쓴 R2 객체는 고치지 않는다(조건부 쓰기, 같은 주소면 실패). 유일한 예외는 가림이다.
