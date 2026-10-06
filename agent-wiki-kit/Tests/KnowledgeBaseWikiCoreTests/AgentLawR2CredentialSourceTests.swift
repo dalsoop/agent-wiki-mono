@@ -140,7 +140,7 @@ struct AgentLawR2CredentialSourceTests {
     @Test func environmentWithoutMarkerIsRefused() throws {
         let manual = LawR2EnvHandoff(environment: [
             LawR2EnvHandoff.accessKeyVariable: "MANUAL-ACCESS", LawR2EnvHandoff.secretKeyVariable: "MANUAL-SECRET",
-        ])
+        ], parentIsTrustedClient: true)
         #expect(!manual.isReexecChild)
         #expect(manual.credentials == nil)
         let resolver = LawR2CredentialResolver(source: .keychain, keychain: Self.missingKeychain, handoff: manual)
@@ -149,7 +149,7 @@ struct AgentLawR2CredentialSourceTests {
         let wrongMarker = LawR2EnvHandoff(environment: [
             LawR2EnvHandoff.markerVariable: "yes",
             LawR2EnvHandoff.accessKeyVariable: "A", LawR2EnvHandoff.secretKeyVariable: "B",
-        ])
+        ], parentIsTrustedClient: true)
         #expect(wrongMarker.credentials == nil)
     }
 
@@ -157,15 +157,39 @@ struct AgentLawR2CredentialSourceTests {
         let handoff = LawR2EnvHandoff(environment: [
             LawR2EnvHandoff.markerVariable: LawR2EnvHandoff.markerValue,
             LawR2EnvHandoff.accessKeyVariable: "BW-ACCESS", LawR2EnvHandoff.secretKeyVariable: " BW-SECRET\n",
-        ])
+        ], parentIsTrustedClient: true)
         #expect(handoff.isReexecChild)
         #expect(handoff.credentials == Self.received)
         #expect(!"\(handoff)".contains("BW-SECRET") && !"\(handoff)".contains("BW-ACCESS"))
         let partial = LawR2EnvHandoff(environment: [
             LawR2EnvHandoff.markerVariable: LawR2EnvHandoff.markerValue, LawR2EnvHandoff.accessKeyVariable: "BW-ACCESS",
-        ])
+        ], parentIsTrustedClient: true)
         #expect(partial.isReexecChild && partial.credentials == nil)
         #expect(!"\(LawR2CredentialError.bitwardenHandoffEmpty)".contains("BW-ACCESS"))
+    }
+
+    @Test func markerWithoutVaultParentIsRefused() throws {
+        // 표지까지 손으로 세워도 부모가 PATH 의 vaultwarden-client 실물이 아니면 받지 않는다.
+        let spoofed = LawR2EnvHandoff(environment: [
+            LawR2EnvHandoff.markerVariable: LawR2EnvHandoff.markerValue,
+            LawR2EnvHandoff.accessKeyVariable: "A", LawR2EnvHandoff.secretKeyVariable: "B",
+        ], parentIsTrustedClient: false)
+        #expect(!spoofed.isReexecChild)
+        #expect(spoofed.credentials == nil)
+    }
+
+    @Test func trustedClientComparesResolvedPaths() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let real = dir.appendingPathComponent("password-vault-client").path
+        FileManager.default.createFile(atPath: real, contents: Data())
+        let link = dir.appendingPathComponent("vaultwarden-client").path
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: real)
+        #expect(LawR2EnvHandoff.isTrustedClient(parentExecutable: real, client: link))
+        #expect(!LawR2EnvHandoff.isTrustedClient(parentExecutable: "/bin/zsh", client: link))
+        #expect(!LawR2EnvHandoff.isTrustedClient(parentExecutable: nil, client: link))
+        #expect(!LawR2EnvHandoff.isTrustedClient(parentExecutable: real, client: nil))
     }
 
     @Test func scrubRemovesHandoffVariablesFromProcessEnvironment() throws {
