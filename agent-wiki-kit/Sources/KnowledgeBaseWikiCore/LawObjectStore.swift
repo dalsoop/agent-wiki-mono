@@ -3,9 +3,10 @@ import Security
 import SigV4Kit
 import WikiLedgerKit
 
-// agent-law R2 — 전용 버킷 `agent-law`, 전용 접근 키(키체인 서비스 `agent-law-r2`).
-// 근거: docs/security.md "R2 와 세션", docs/architecture.md "agent-law (ledger 3)", 결정 0007.
-// - 키는 키체인에서만 읽는다. 환경 변수·설정 파일로 받지 않는다. 엔드포인트·버킷 이름은 호스트 설정(`lawStorage`).
+// agent-law R2 — 전용 버킷 `agent-law`, 전용 접근 키(키체인 서비스 `agent-law-r2` 또는 Bitwarden 항목).
+// 근거: docs/security.md "R2 와 세션", docs/architecture.md "agent-law (ledger 3)", 결정 0007·0009.
+// - 키는 키체인에서 읽거나, 출처가 Bitwarden 이면 재실행된 자식이 하위 프로세스 환경으로 받는다(`LawR2CredentialSource.swift`).
+//   사람이 넣은 환경 변수·설정 파일로는 받지 않는다. 엔드포인트·버킷 이름·키 출처(항목 id)는 호스트 설정(`lawStorage`).
 // - 이미 쓴 객체는 고치지 않는다: 쓰기는 조건부(`If-None-Match: *`, 있으면 실패). 지우기는 가림만 쓴다.
 // 옛 원장 blob 동기화(`GujoBlobSync`·`GujoBlobConfig`)는 그대로 두고, 서명은 같은 정본(`SigV4Kit`)을 쓴다.
 
@@ -84,11 +85,13 @@ extension LawObjectStore {
 
 // MARK: - 설정(비밀 아님)
 
-/// 호스트 설정의 R2 자리(`lawStorage`). 비밀이 아닌 엔드포인트·버킷·지역만 둔다.
+/// 호스트 설정의 R2 자리(`lawStorage`). 비밀이 아닌 엔드포인트·버킷·지역·키 출처(Bitwarden 항목 id)만 둔다.
 public struct LawStorageSettings: Codable, Equatable, Sendable {
     public var endpoint: String?
     public var bucket: String?
     public var region: String?
+    /// 키 출처. nil 이면 키체인만(기본). `bitwarden:<item id>` 면 키체인에 없을 때 Bitwarden 을 거쳐 다시 실행한다.
+    public var credentialSource: String?
 
     /// 버킷 이름은 결정 0007 이 정한 전용 버킷.
     public static let defaultBucket = LawLedgerDefaults.bucketName
@@ -97,16 +100,23 @@ public struct LawStorageSettings: Codable, Equatable, Sendable {
     /// (docs/standards.md "원격 호스트 주소는 … 설정에서 얻는다", docs/security.md "R2 와 세션").
     public static let missingEndpointGuidance = "R2 엔드포인트 미설정 — `agent-wiki world storage --endpoint <url>`"
 
-    public init(endpoint: String? = nil, bucket: String? = nil, region: String? = nil) {
+    public init(
+        endpoint: String? = nil, bucket: String? = nil, region: String? = nil, credentialSource: String? = nil
+    ) {
         self.endpoint = endpoint
         self.bucket = bucket
         self.region = region
+        self.credentialSource = credentialSource
     }
 
     /// 설정한 엔드포인트. 없으면 nil — R2 를 쓰는 명령은 `missingEndpointGuidance` 로 실패하거나 그 단계를 건너뛴다.
     public var resolvedEndpoint: String? { nonEmpty(endpoint) }
     public var resolvedBucket: String { nonEmpty(bucket) ?? Self.defaultBucket }
     public var resolvedRegion: String { nonEmpty(region) ?? Self.defaultRegion }
+    /// 키 출처. 형식이 틀린 값은 키체인으로 본다(`world storage --credential-source` 가 쓰기 전에 형식을 검사한다).
+    public var resolvedCredentialSource: LawR2CredentialSource {
+        LawR2CredentialSource(reference: credentialSource) ?? .keychain
+    }
 
     private func nonEmpty(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
@@ -133,14 +143,28 @@ public struct LawR2Credentials: Sendable, Equatable, CustomStringConvertible, Cu
 public enum LawR2CredentialError: Error, Equatable, Sendable, CustomStringConvertible {
     case missing(service: String, account: String)
     case unreadable(service: String, account: String, status: Int32)
+    /// Bitwarden 을 거쳐 다시 실행됐는데 값을 받지 못했다(다시 실행하지 않는다).
+    case bitwardenHandoffEmpty
+    /// 출처가 Bitwarden 인데 이 경로는 시작할 때 다시 실행하지 않았다(R2 가 선택 단계인 명령·화면 앱).
+    case bitwardenNotReexecuted(itemID: String)
+
+    /// 키를 넣는 두 방법 안내.
+    public static let sourceGuidance =
+        "`agent-wiki world storage --credential-source bitwarden:<item id>` 로 출처를 지정하거나 키체인에 넣어 주세요"
 
     public var description: String {
         switch self {
         case .missing(let service, let account):
-            return "R2 키 없음: 키체인 서비스 '\(service)' 계정 '\(account)' — 금고에서 꺼내 키체인에 넣어 주세요"
+            return "R2 키 없음: 키체인 서비스 '\(service)' 계정 '\(account)' — \(Self.sourceGuidance)"
                 + " (docs/operations.md agent-law 절). 환경 변수·설정 파일로는 받지 않습니다"
         case .unreadable(let service, let account, let status):
-            return "R2 키를 읽을 수 없음: 키체인 서비스 '\(service)' 계정 '\(account)' (상태 \(status))"
+            return "R2 키를 읽을 수 없음: 키체인 서비스 '\(service)' 계정 '\(account)' (상태 \(status)) — \(Self.sourceGuidance)"
+        case .bitwardenHandoffEmpty:
+            return "R2 키를 Bitwarden 에서 받지 못함: 다시 실행된 프로세스에 값이 없음"
+                + " (항목 필드 `\(LawKeychainCredentialProvider.accessKeyAccount)`·`\(LawKeychainCredentialProvider.secretKeyAccount)` 확인)"
+        case .bitwardenNotReexecuted(let item):
+            return "R2 키가 키체인에 없음: 출처 bitwarden:\(item) 는 R2 명령(`archive`·`redact`·`sync`·`dream run`)이"
+                + " 시작할 때만 받습니다 — 그 명령으로 실행하거나 키체인에 넣어 주세요"
         }
     }
 }
@@ -255,14 +279,15 @@ public struct LawR2Client: LawObjectStore {
         self.now = now
     }
 
-    /// 호스트 설정 + 키체인. 엔드포인트가 없으면 `LawObjectStoreError.endpointMissing`(키체인을 읽기 전),
-    /// 키가 없으면 `LawR2CredentialError.missing`.
+    /// 호스트 설정 + 키(기본: 키체인 → Bitwarden 재실행으로 받은 값, `LawR2CredentialResolver`).
+    /// 엔드포인트가 없으면 `LawObjectStoreError.endpointMissing`(키를 읽기 전), 키가 없으면 `LawR2CredentialError`.
     public static func standard(
-        file: BoundLedgerFile, provider: any LawR2CredentialProviding = LawKeychainCredentialProvider()
+        file: BoundLedgerFile, provider: (any LawR2CredentialProviding)? = nil
     ) throws -> LawR2Client {
         let settings = file.lawStorage ?? LawStorageSettings()
         guard settings.resolvedEndpoint != nil else { throw LawObjectStoreError.endpointMissing }
-        return LawR2Client(settings: settings, credentials: try provider.credentials())
+        let resolved = provider ?? LawR2CredentialResolver(source: settings.resolvedCredentialSource)
+        return LawR2Client(settings: settings, credentials: try resolved.credentials())
     }
 
     public func putIfAbsent(key: String, data: Data, contentType: String) throws {

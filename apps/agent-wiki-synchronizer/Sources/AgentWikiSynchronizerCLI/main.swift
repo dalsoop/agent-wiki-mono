@@ -8,7 +8,11 @@ import AppScaffoldKit
 import WikiCLIShared
 import LocalizationKit
 
-SingleInstanceCLI.autoGuard()
+// R2 키 재실행 표지·값을 가장 먼저 읽고 환경에서 지운다(결정 0009). Bitwarden 을 거쳐 다시 실행된 자식은
+// 단일 인스턴스 잠금을 다시 잡지 않는다 — 부모(execv 로 vaultwarden-client 가 된 프로세스)가 쥐고 있다.
+if !LawR2EnvHandoff.current.isReexecChild {
+    SingleInstanceCLI.autoGuard()
+}
 
 // Cloud Apps gate
 GujoManaged.exitIfNotEntitledSync()
@@ -29,7 +33,7 @@ guard let command = arguments.first else { fail(usage) }
 let allowedOptions: Set<String> = [
     "--access-key", "--agent", "--alias", "--all", "--allow-unclassified", "--apply", "--as", "--as-agent", "--attr",
     "--authored", "--batch", "--blob", "--bucket", "--canonical-task", "--checker", "--cite",
-    "--classification-reason", "--comment", "--confirm", "--count", "--dispatch", "--domain",
+    "--classification-reason", "--comment", "--confirm", "--count", "--credential-source", "--dispatch", "--domain",
     "--dry", "--endpoint", "--engine", "--event", "--exclude", "--exit-code", "--file", "--fleet",
     "--git-common-dir", "--help", "--here", "--ids", "--is-inside-work-tree", "--json", "--keep-daily",
     "--keep-monthly", "--keep-weekly", "--kind", "--knowledge", "--left-right", "--level", "--limit",
@@ -72,6 +76,8 @@ if command == "skill-install" || command == "skill-uninstall" || command == "ski
 }
 // 폐지된 이름은 원장을 열기 전에 64 와 새 이름 안내만 낸다(docs/contracts.md "agent-law 명령").
 if let guidance = CommandSurfaceRouting.retiredGuidance(arguments) { usageFail(guidance) }
+// R2 키가 꼭 필요한 명령(archive·redact·sync·dream run)은 키체인에 키가 없고 출처가 Bitwarden 이면 여기서 다시 실행한다.
+reexecForLawR2CredentialsIfNeeded(command: arguments, file: loadBoundFile())
 if command == "hook" {
     runHook(
         context: LawCommandContext(

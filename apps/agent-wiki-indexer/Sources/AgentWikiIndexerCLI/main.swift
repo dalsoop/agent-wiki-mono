@@ -89,7 +89,7 @@ func printLocalUsage() { print(localUsage) }
 let allowedOptions: Set<String> = [
     "--access-key", "--agent", "--alias", "--all", "--allow-unclassified", "--apply", "--as", "--as-agent", "--attr",
     "--authored", "--batch", "--blob", "--bucket", "--canonical-task", "--checker", "--cite",
-    "--classification-reason", "--comment", "--confirm", "--count", "--dispatch", "--domain",
+    "--classification-reason", "--comment", "--confirm", "--count", "--credential-source", "--dispatch", "--domain",
     "--dry", "--endpoint", "--engine", "--event", "--exclude", "--exit-code", "--file", "--fleet",
     "--git-common-dir", "--help", "--here", "--ids", "--is-inside-work-tree", "--json", "--keep-daily",
     "--keep-monthly", "--keep-weekly", "--kind", "--knowledge", "--left-right", "--level", "--limit",

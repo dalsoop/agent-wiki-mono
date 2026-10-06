@@ -3,7 +3,8 @@ import KnowledgeBaseWikiCore
 
 // 원장 설정 — `world add <이름> --key <k> --root <경로> [--parent <이름>] [--predecessor <이름>]`,
 // `world tenant-map <테넌트> <원장>`, `world device register <키>`, `world dream-device <키>`,
-// `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]`(R2 주소, 비밀 아님. 키는 키체인. 엔드포인트 기본값 없음),
+// `world storage [--endpoint <url>] [--bucket <b>] [--region <r>] [--credential-source bitwarden:<item id>|none]`
+// (R2 주소·키 출처, 비밀 아님. 키 값은 키체인 또는 Bitwarden 항목에만. 엔드포인트 기본값 없음. 결정 0009),
 // `world ai dream|arbiters|show`(드리밍 AI·중재자 후보. 모델 이름은 소스에 두지 않고 여기서만 설정).
 // 규칙은 `WorldMutation.adding`·`LedgerThreeConfigMutation` 이 판정하고, 저장은 `WorldBoundIO`(BoundLedgerFile) 하나.
 // 근거: docs/contracts.md "agent-law 명령 (ledger 3)", docs/business-rules.md "원장 구성".
@@ -13,7 +14,7 @@ let worldLedgerUsage = """
        world tenant-map <테넌트> <원장>
        world device register <키>
        world dream-device <키>
-       world storage [--endpoint <url>] [--bucket <b>] [--region <r>]
+       world storage [--endpoint <url>] [--bucket <b>] [--region <r>] [--credential-source bitwarden:<item id>|none]
        world ai dream --runtime <r> --model <m> [--effort <e>]
        world ai arbiters --add <runtime>:<model>[:<effort>]... | --clear
        world ai show [--json]
@@ -44,16 +45,22 @@ public func runWorldLedgerSubcommand(file: inout BoundLedgerFile, arguments: [St
         print("dream device \(rest[0])") // allow:debug
     case "storage":
         let options = LawOptions.parse(
-            arguments, skip: 2, valued: ["--endpoint", "--bucket", "--region"],
+            arguments, skip: 2, valued: ["--endpoint", "--bucket", "--region", "--credential-source"],
             flags: ["--json", "-j"], usage: worldLedgerUsage)
         guard options.positionals.isEmpty else { usageFail(worldLedgerUsage) }
         var settings = file.lawStorage ?? LawStorageSettings()
         if let endpoint = options.value("--endpoint") { settings.endpoint = endpoint }
         if let bucket = options.value("--bucket") { settings.bucket = bucket }
         if let region = options.value("--region") { settings.region = region }
+        if let source = options.value("--credential-source") {
+            switch LawR2CredentialSource.settingValue(forOption: source) {
+            case .success(let reference): settings.credentialSource = reference
+            case .failure(let error): usageFail("\(error)\n\(worldLedgerUsage)")
+            }
+        }
         file.lawStorage = settings
         WorldBoundIO.save(file)
-        print("storage endpoint=\(settings.resolvedEndpoint ?? "(미설정)")  bucket=\(settings.resolvedBucket)  region=\(settings.resolvedRegion)") // allow:debug
+        print("storage endpoint=\(settings.resolvedEndpoint ?? "(미설정)")  bucket=\(settings.resolvedBucket)  region=\(settings.resolvedRegion)  credentials=\(settings.resolvedCredentialSource)") // allow:debug
     case "ai":
         runWorldAI(file: &file, arguments: arguments)
     default:
