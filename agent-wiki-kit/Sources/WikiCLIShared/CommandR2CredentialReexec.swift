@@ -21,7 +21,11 @@ public func reexecForLawR2CredentialsIfNeeded(command: [String], file: BoundLedg
         fail(message)
     case .reexec(let plan):
         FileHandle.standardError.write(Data("R2 키를 Bitwarden 항목에서 받아 다시 실행합니다\n".utf8))
-        setenv(LawR2EnvHandoff.markerVariable, LawR2EnvHandoff.markerValue, 1)
+        // 일회용 표 — 다시 실행된 자식이 교환해야만 넘어온 키를 받는다(손으로 세운 표지 거부).
+        guard let ticket = LawR2HandoffTicket.standard.issue() else {
+            fail("R2 키 재실행 표를 만들지 못함: \(LawR2HandoffTicket.standard.directory.path)")
+        }
+        setenv(LawR2EnvHandoff.markerVariable, ticket, 1)
         // execv 는 C 배열을 요구한다. 각 인자를 strdup 해 수명을 프로세스 이미지 교체까지 유지한다.
         var cArguments: [UnsafeMutablePointer<CChar>?] = plan.argv.map { strdup($0) } + [nil]
         execv(plan.program, &cArguments)

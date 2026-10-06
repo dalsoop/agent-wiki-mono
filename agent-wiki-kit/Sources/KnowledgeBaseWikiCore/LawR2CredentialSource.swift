@@ -75,9 +75,8 @@ public struct LawR2CredentialSourceOptionError: Error, Equatable, Sendable, Cust
 public struct LawR2EnvHandoff: Sendable, Equatable {
     public static let accessKeyVariable = "AGENT_LAW_R2_ACCESS_KEY_ID"
     public static let secretKeyVariable = "AGENT_LAW_R2_SECRET_ACCESS_KEY"
-    /// 재실행 표지. 부모가 `execv` 직전에 세운다.
+    /// 재실행 표지. 값은 부모가 `execv` 직전에 발급한 일회용 표(`LawR2HandoffTicket`)다.
     public static let markerVariable = "AGENT_WIKI_R2_FROM_BITWARDEN"
-    public static let markerValue = "1"
     public static let variables = [markerVariable, accessKeyVariable, secretKeyVariable]
 
     /// 이 프로세스가 Bitwarden 을 거쳐 다시 실행된 자식인가.
@@ -90,10 +89,12 @@ public struct LawR2EnvHandoff: Sendable, Equatable {
     }
 
     /// 표지 없는 환경 변수는 무시한다(사람이 env 로 키를 넣는 경로는 열지 않는다).
-    /// 표지도 손으로 세울 수 있으므로, 부모 프로세스가 PATH 의 `vaultwarden-client` 실물일 때만 받는다
-    /// (`parentIsTrustedClient`). 근거: 결정 0009 보강 — 표지만으로는 사람이 env 로 키를 넣는 경로가 열린다.
-    public init(environment: [String: String], parentIsTrustedClient: Bool) {
-        let child = environment[Self.markerVariable] == Self.markerValue && parentIsTrustedClient
+    /// 표지 값도 손으로 세울 수 있으므로, 부모가 발급한 일회용 표를 이 프로세스가 실제로 교환했을 때만
+    /// 받는다(`ticketRedeemed`). 셸 설정에 박아 둔 값은 다음 실행에서 표가 없어 거부된다.
+    /// `vaultwarden-client item field exec` 는 자신을 대상 명령으로 바꿔 실행하므로(부모로 남지 않음)
+    /// 부모 프로세스 확인은 쓸 수 없다(2026-10-06 실측). 근거: 결정 0009.
+    public init(environment: [String: String], ticketRedeemed: Bool) {
+        let child = !(environment[Self.markerVariable] ?? "").isEmpty && ticketRedeemed
         func value(_ name: String) -> String? {
             guard let raw = environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
             else { return nil }
@@ -110,31 +111,61 @@ public struct LawR2EnvHandoff: Sendable, Equatable {
     /// CLI 진입점이 가장 먼저 읽는다(단일 인스턴스 가드보다 먼저).
     public static let current: LawR2EnvHandoff = {
         let environment = ProcessInfo.processInfo.environment
-        let trusted = environment[markerVariable] == markerValue
-            && isTrustedClient(parentExecutable: parentExecutablePath(),
-                               client: LawR2BitwardenReexec.locate(LawR2BitwardenReexec.clientName, environment: environment))
-        let handoff = LawR2EnvHandoff(environment: environment, parentIsTrustedClient: trusted)
+        let redeemed = environment[markerVariable].map { LawR2HandoffTicket.standard.redeem($0) } ?? false
+        let handoff = LawR2EnvHandoff(environment: environment, ticketRedeemed: redeemed)
         scrubProcessEnvironment()
         return handoff
     }()
 
-    /// 부모 실행 파일이 PATH 의 클라이언트(심볼릭 링크를 따라간 실물)와 같은 파일인가.
-    public static func isTrustedClient(parentExecutable: String?, client: String?) -> Bool {
-        guard let parentExecutable, let client else { return false }
-        func real(_ path: String) -> String { (path as NSString).resolvingSymlinksInPath }
-        return real(parentExecutable) == real(client)
-    }
-
-    /// 부모 프로세스의 실행 파일 절대 경로(libproc). 알 수 없으면 nil.
-    static func parentExecutablePath() -> String? {
-        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
-        let length = proc_pidpath(getppid(), &buffer, UInt32(buffer.count))
-        guard length > 0 else { return nil }
-        return String(cString: buffer)
-    }
-
     public static func scrubProcessEnvironment() {
         for name in variables { unsetenv(name) }
+    }
+}
+
+// MARK: - 일회용 표
+
+/// 재실행 직전 부모가 발급하고 다시 실행된 자식이 한 번 교환하는 표. 사용자 전용 폴더(0700)의 빈 파일(0600)이고,
+/// 이름이 표 값이다. 교환하면 지운다. 오래된 표(기본 120초)는 받지 않는다.
+public struct LawR2HandoffTicket: Sendable {
+    public let directory: URL
+    public let maxAge: TimeInterval
+
+    public init(directory: URL, maxAge: TimeInterval = 120) {
+        self.directory = directory
+        self.maxAge = maxAge
+    }
+
+    public static let standard = LawR2HandoffTicket(
+        directory: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("agent-wiki-r2-tickets"))
+
+    /// 새 표를 발급하고 값을 돌려준다. 폴더·파일을 만들지 못하면 nil.
+    public func issue() -> String? {
+        let fm = FileManager.default
+        do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        } catch {
+            return nil
+        }
+        let token = UUID().uuidString
+        let created = fm.createFile(
+            atPath: directory.appendingPathComponent(token).path, contents: Data(), attributes: [.posixPermissions: 0o600])
+        return created ? token : nil
+    }
+
+    /// 표를 교환한다 — 형식이 맞고, 파일이 있고, 오래되지 않았으면 지우고 true.
+    public func redeem(_ token: String, now: Date = Date()) -> Bool {
+        guard UUID(uuidString: token) != nil else { return false }
+        let path = directory.appendingPathComponent(token).path
+        let fm = FileManager.default
+        guard let attributes = try? fm.attributesOfItem(atPath: path),
+              let modified = attributes[.modificationDate] as? Date else { return false }
+        let fresh = now.timeIntervalSince(modified) <= maxAge
+        do {
+            try fm.removeItem(atPath: path)
+        } catch {
+            return false
+        }
+        return fresh
     }
 }
 

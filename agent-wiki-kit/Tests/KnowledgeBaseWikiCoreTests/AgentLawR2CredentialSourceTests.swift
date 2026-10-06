@@ -140,56 +140,52 @@ struct AgentLawR2CredentialSourceTests {
     @Test func environmentWithoutMarkerIsRefused() throws {
         let manual = LawR2EnvHandoff(environment: [
             LawR2EnvHandoff.accessKeyVariable: "MANUAL-ACCESS", LawR2EnvHandoff.secretKeyVariable: "MANUAL-SECRET",
-        ], parentIsTrustedClient: true)
+        ], ticketRedeemed: true)
         #expect(!manual.isReexecChild)
         #expect(manual.credentials == nil)
         let resolver = LawR2CredentialResolver(source: .keychain, keychain: Self.missingKeychain, handoff: manual)
         #expect(throws: LawR2CredentialError.self) { try resolver.credentials() }
-        // 다른 표지 값도 받지 않는다.
-        let wrongMarker = LawR2EnvHandoff(environment: [
-            LawR2EnvHandoff.markerVariable: "yes",
-            LawR2EnvHandoff.accessKeyVariable: "A", LawR2EnvHandoff.secretKeyVariable: "B",
-        ], parentIsTrustedClient: true)
-        #expect(wrongMarker.credentials == nil)
     }
 
-    @Test func environmentWithMarkerIsAcceptedAndMasked() throws {
+    @Test func environmentWithRedeemedTicketIsAcceptedAndMasked() throws {
         let handoff = LawR2EnvHandoff(environment: [
-            LawR2EnvHandoff.markerVariable: LawR2EnvHandoff.markerValue,
+            LawR2EnvHandoff.markerVariable: "TICKET",
             LawR2EnvHandoff.accessKeyVariable: "BW-ACCESS", LawR2EnvHandoff.secretKeyVariable: " BW-SECRET\n",
-        ], parentIsTrustedClient: true)
+        ], ticketRedeemed: true)
         #expect(handoff.isReexecChild)
         #expect(handoff.credentials == Self.received)
         #expect(!"\(handoff)".contains("BW-SECRET") && !"\(handoff)".contains("BW-ACCESS"))
         let partial = LawR2EnvHandoff(environment: [
-            LawR2EnvHandoff.markerVariable: LawR2EnvHandoff.markerValue, LawR2EnvHandoff.accessKeyVariable: "BW-ACCESS",
-        ], parentIsTrustedClient: true)
+            LawR2EnvHandoff.markerVariable: "TICKET", LawR2EnvHandoff.accessKeyVariable: "BW-ACCESS",
+        ], ticketRedeemed: true)
         #expect(partial.isReexecChild && partial.credentials == nil)
         #expect(!"\(LawR2CredentialError.bitwardenHandoffEmpty)".contains("BW-ACCESS"))
     }
 
-    @Test func markerWithoutVaultParentIsRefused() throws {
-        // 표지까지 손으로 세워도 부모가 PATH 의 vaultwarden-client 실물이 아니면 받지 않는다.
+    @Test func markerWithoutTicketIsRefused() throws {
+        // 표지까지 손으로 세워도 부모가 발급한 표를 교환하지 못하면 받지 않는다.
         let spoofed = LawR2EnvHandoff(environment: [
-            LawR2EnvHandoff.markerVariable: LawR2EnvHandoff.markerValue,
+            LawR2EnvHandoff.markerVariable: UUID().uuidString,
             LawR2EnvHandoff.accessKeyVariable: "A", LawR2EnvHandoff.secretKeyVariable: "B",
-        ], parentIsTrustedClient: false)
+        ], ticketRedeemed: false)
         #expect(!spoofed.isReexecChild)
         #expect(spoofed.credentials == nil)
     }
 
-    @Test func trustedClientComparesResolvedPaths() throws {
+    @Test func handoffTicketIsOneShotAndExpires() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
-        let real = dir.appendingPathComponent("password-vault-client").path
-        FileManager.default.createFile(atPath: real, contents: Data())
-        let link = dir.appendingPathComponent("vaultwarden-client").path
-        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: real)
-        #expect(LawR2EnvHandoff.isTrustedClient(parentExecutable: real, client: link))
-        #expect(!LawR2EnvHandoff.isTrustedClient(parentExecutable: "/bin/zsh", client: link))
-        #expect(!LawR2EnvHandoff.isTrustedClient(parentExecutable: nil, client: link))
-        #expect(!LawR2EnvHandoff.isTrustedClient(parentExecutable: real, client: nil))
+        let tickets = LawR2HandoffTicket(directory: dir, maxAge: 120)
+        let token = try #require(tickets.issue())
+        let attributes = try FileManager.default.attributesOfItem(atPath: dir.appendingPathComponent(token).path)
+        #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+        #expect(tickets.redeem(token))
+        #expect(!tickets.redeem(token))  // 한 번만
+        #expect(!tickets.redeem("not-a-uuid"))
+        #expect(!tickets.redeem(UUID().uuidString))  // 발급 안 한 표
+        let old = try #require(tickets.issue())
+        #expect(!tickets.redeem(old, now: Date().addingTimeInterval(121)))  // 오래된 표
+        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent(old).path))  // 그래도 지운다
     }
 
     @Test func scrubRemovesHandoffVariablesFromProcessEnvironment() throws {
