@@ -1,4 +1,5 @@
 import CommandKit
+import Darwin
 import Foundation
 
 // agent-law R2 키 출처 — 키체인(기본) 또는 Bitwarden 항목.
@@ -89,8 +90,10 @@ public struct LawR2EnvHandoff: Sendable, Equatable {
     }
 
     /// 표지 없는 환경 변수는 무시한다(사람이 env 로 키를 넣는 경로는 열지 않는다).
-    public init(environment: [String: String]) {
-        let child = environment[Self.markerVariable] == Self.markerValue
+    /// 표지도 손으로 세울 수 있으므로, 부모 프로세스가 PATH 의 `vaultwarden-client` 실물일 때만 받는다
+    /// (`parentIsTrustedClient`). 근거: 결정 0009 보강 — 표지만으로는 사람이 env 로 키를 넣는 경로가 열린다.
+    public init(environment: [String: String], parentIsTrustedClient: Bool) {
+        let child = environment[Self.markerVariable] == Self.markerValue && parentIsTrustedClient
         func value(_ name: String) -> String? {
             guard let raw = environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
             else { return nil }
@@ -106,10 +109,29 @@ public struct LawR2EnvHandoff: Sendable, Equatable {
     /// 이 프로세스 환경에서 한 번 읽고 세 변수를 지운다 — git·AI 실행 도구 같은 하위 프로세스가 값을 물려받지 않게.
     /// CLI 진입점이 가장 먼저 읽는다(단일 인스턴스 가드보다 먼저).
     public static let current: LawR2EnvHandoff = {
-        let handoff = LawR2EnvHandoff(environment: ProcessInfo.processInfo.environment)
+        let environment = ProcessInfo.processInfo.environment
+        let trusted = environment[markerVariable] == markerValue
+            && isTrustedClient(parentExecutable: parentExecutablePath(),
+                               client: LawR2BitwardenReexec.locate(LawR2BitwardenReexec.clientName, environment: environment))
+        let handoff = LawR2EnvHandoff(environment: environment, parentIsTrustedClient: trusted)
         scrubProcessEnvironment()
         return handoff
     }()
+
+    /// 부모 실행 파일이 PATH 의 클라이언트(심볼릭 링크를 따라간 실물)와 같은 파일인가.
+    public static func isTrustedClient(parentExecutable: String?, client: String?) -> Bool {
+        guard let parentExecutable, let client else { return false }
+        func real(_ path: String) -> String { (path as NSString).resolvingSymlinksInPath }
+        return real(parentExecutable) == real(client)
+    }
+
+    /// 부모 프로세스의 실행 파일 절대 경로(libproc). 알 수 없으면 nil.
+    static func parentExecutablePath() -> String? {
+        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        let length = proc_pidpath(getppid(), &buffer, UInt32(buffer.count))
+        guard length > 0 else { return nil }
+        return String(cString: buffer)
+    }
 
     public static func scrubProcessEnvironment() {
         for name in variables { unsetenv(name) }
