@@ -117,7 +117,7 @@
 | 목차 | `contents` |
 | 보고 | `report models [--since <t>]` |
 | 승격 | `promote <id> --to <원장>` |
-| 원장 설정 | `world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>]`(`--parent` 만 주면 층 tenant) · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` · `world storage [--endpoint <url>] [--bucket <b>] [--region <r>]`(엔드포인트 기본값 없음 — 없으면 R2 명령은 "R2 엔드포인트 미설정" 으로 1 또는 그 단계 건너뜀) |
+| 원장 설정 | `world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>]`(`--parent` 만 주면 층 tenant) · `world tenant-map <테넌트> <원장>` · `world device register <키>` · `world dream-device <키>` · `world storage [--endpoint <url>] [--bucket <b>] [--region <r>] [--credential-source bitwarden:<item id>|none]`(엔드포인트 기본값 없음 — 없으면 R2 명령은 "R2 엔드포인트 미설정" 으로 1 또는 그 단계 건너뜀. 키 출처 기본은 키체인, 형식이 틀리면 64. Bitwarden 출처면 키체인에 키가 없을 때 `archive`·`redact`·`sync`·`dream run` 이 `vaultwarden-client item field exec` 로 자신을 다시 실행한다 — 결정 0009) |
 | AI 설정 | `world ai dream --runtime <r> --model <m> [--effort <e>]` · `world ai arbiters --add <runtime>:<model>[:<effort>]…` \| `--clear` · `world ai show [--json]`. 실행 도구는 지원 CLI 목록(`claude`·`codex`·`grok`·`agy`·`opencode`·`cursor`)으로, 강도는 `low`·`medium`·`high`·`xhigh`·`max` 로 해석하고 그 밖은 1. 드리밍 AI 가 없으면 `dream run` 1, 중재자가 없으면 `court hear` 는 대법원 회부 |
 | 훅 | `hook session [--session <id>] [--runtime <r>] [--runtime-version <v>] [--model <m>] [--effort <e>]` (표준 입력에 실행 도구의 세션 시작 훅 JSON. 표준 출력 없음, 항상 종료 코드 0) |
 

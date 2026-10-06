@@ -39,7 +39,8 @@ usage: \(tool) [--as <author>] [--world <name>] <command> [args]
   world add <이름> --key <k> --root <경로> [--layer <층>] [--parent <이름>] [--predecessor <이름>]
   world set-layer <이름> <층> [--parent <이름>] (공유 원장 층 remoteShared — 이름으로 판정하지 않음)
   world tenant-map <테넌트> <원장> | world device register <키> | world dream-device <키>
-  world storage --endpoint <url> [--bucket <b>] [--region <r>] (R2 엔드포인트 기본값 없음)
+  world storage --endpoint <url> [--bucket <b>] [--region <r>] [--credential-source bitwarden:<item id>|none]
+    (R2 엔드포인트 기본값 없음. 키는 키체인 agent-law-r2, 없으면 출처 Bitwarden 항목에서 하위 프로세스 환경으로만)
   world ai dream --runtime <r> --model <m> [--effort <e>] | world ai arbiters --add <r>:<m>[:<e>]… | --clear | world ai show
   sync · archive · redact · summon · dream · court · judgment · contents · report models · hook session
   폐지(종료 코드 64): publish→enact · verify→audit · rollback→restore · classify→finding ·

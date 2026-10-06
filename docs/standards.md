@@ -83,4 +83,4 @@ swift build --package-path apps/agent-wiki-reader
 - `LawRuntime` 의 값(`claude-code`·`codex` 등)은 실행 파일 이름이 아니라 기록 어휘이므로 그 상수에만 둔다. 실행 도구를 부를 때는 지원 CLI 목록을 쓴다.
 - 분야 8개는 ledger 2 분류(`LedgerClassificationInput.domains`)와 ledger 3 사실인정(`LawDomain`)에 따로 있다. ledger 2 는 전신으로만 남으므로 새 값은 `LawDomain` 에만 더한다.
 - 실행 도구별 세션 id 환경 변수 이름은 지원 CLI 목록 한 곳에 둔다.
-- R2 키는 키체인에서만 읽는다.
+- R2 키는 키체인에서 읽거나, 출처가 Bitwarden 이면 재실행된 자식이 하위 프로세스 환경에서 받는다. 판정은 `LawR2CredentialSource.swift`(`LawR2CredentialResolver`·`LawR2BitwardenReexec`) 한 곳, `execv` 는 `WikiCLIShared` 의 `reexecForLawR2CredentialsIfNeeded` 한 곳이다. 근거: 결정 0009.

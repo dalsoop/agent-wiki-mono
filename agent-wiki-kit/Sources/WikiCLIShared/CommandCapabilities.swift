@@ -38,7 +38,7 @@ private let wikiCommands: [Capabilities.Command] = [
             .init(name: "world tenant-map", summary: "테넌트 → 원장 대응 <테넌트> <원장>", json: false),
             .init(name: "world device register", summary: "이 기기 키 등록 <키>", json: false),
             .init(name: "world dream-device", summary: "드리밍 기기 지정 <키>", json: false),
-            .init(name: "world storage", summary: "agent-law R2 자리 보기·설정 [--endpoint <url>] [--bucket <b>] [--region <r>] — 엔드포인트 기본값 없음", json: false),
+            .init(name: "world storage", summary: "agent-law R2 자리 보기·설정 [--endpoint <url>] [--bucket <b>] [--region <r>] [--credential-source bitwarden:<item id>|none] — 엔드포인트 기본값 없음, 키 출처 기본은 키체인", json: false),
             .init(name: "world ai dream", summary: "드리밍 AI 설정 --runtime <지원 CLI> --model <모델 id> [--effort <강도>]", json: false),
             .init(name: "world ai arbiters", summary: "중재자 후보 --add <runtime>:<model>[:<effort>]… | --clear (없으면 항소심은 대법원 회부)", json: false),
             .init(name: "world ai show", summary: "드리밍 AI·중재자 후보 보기", json: true),
