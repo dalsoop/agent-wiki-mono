@@ -143,10 +143,6 @@ public struct AppBundleID: RawRepresentable, ExpressibleByStringLiteral, Hashabl
         "agent-remote-terminal": "net.ranode.agent-remote-terminal",
         "agent-remote-terminal-ios": "net.ranode.agent-remote-terminal",
         "agent-remote-terminal-swift": "net.ranode.agent-remote-terminal",
-        "agent-request": "net.ranode.agent-request",
-        "agent-request-ledger": "net.ranode.agent-request-ledger",
-        "agent-request-ledger-swift": "net.ranode.agent-request-ledger",
-        "agent-request-swift": "net.ranode.agent-request",
         "agent-review-reporter": "net.ranode.agent-review-reporter",
         "agent-review-reporter-swift": "net.ranode.agent-review-reporter",
         "agent-room-monitor": "net.ranode.agent-room-monitor",
@@ -1119,10 +1115,6 @@ public struct AppBundleID: RawRepresentable, ExpressibleByStringLiteral, Hashabl
     public static let agentRemoteTerminalIOS: AppBundleID = "net.ranode.agent-remote-terminal"
     public static let agentRemoteTerminalIos: AppBundleID = "net.ranode.agent-remote-terminal"
     public static let agentRemoteTerminalSwift: AppBundleID = "net.ranode.agent-remote-terminal"
-    public static let agentRequest: AppBundleID = "net.ranode.agent-request"
-    public static let agentRequestLedger: AppBundleID = "net.ranode.agent-request-ledger"
-    public static let agentRequestLedgerSwift: AppBundleID = "net.ranode.agent-request-ledger"
-    public static let agentRequestSwift: AppBundleID = "net.ranode.agent-request"
     public static let agentReviewReporter: AppBundleID = "net.ranode.agent-review-reporter"
     public static let agentReviewReporterSwift: AppBundleID = "net.ranode.agent-review-reporter"
     public static let agentRoomMonitor: AppBundleID = "net.ranode.agent-room-monitor"
