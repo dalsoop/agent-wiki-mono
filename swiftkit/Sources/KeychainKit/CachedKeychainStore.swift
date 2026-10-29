@@ -8,7 +8,7 @@ import Security
 ///
 /// 근본 문제: raw `SecItemCopyMatching` 은 securityd 시스템콜이라 느린데, SwiftUI `body` 처럼
 /// 자주·요소마다 재평가되는 경로에서 이를 캐시 없이 반복하면 앱 전체가 버벅인다(실측:
-/// agent-request, agent-vault). 이 저장소는 읽기를 **인메모리 메모이즈**(첫 1회만
+/// agent-vault). 이 저장소는 읽기를 **인메모리 메모이즈**(첫 1회만
 /// Keychain 조회)하고 쓰기/삭제 때 무효화한다 — 그래서 render 경로에서 불려도 비용이 0 에 수렴한다.
 ///
 /// **thread-safety**: `OSAllocatedUnfairLock` 으로 캐시 읽기·쓰기를 직렬화한다. static 메서드(실제 Keychain
