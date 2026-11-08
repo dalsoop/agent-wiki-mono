@@ -4,7 +4,7 @@ import LocalizationKit
 import CommandKit
 
 
-/// Gujo **hub** service readiness (gujo.ai download supply + multi-gate pack).
+/// Gujo **hub** service readiness (gujo.io download supply + multi-gate pack).
 ///
 /// Does **not** thrash k8s pins. Runs installed CLIs on this Mac (macOS only).
 /// Software store package deploy stays in `DeployPipelineProbe`.

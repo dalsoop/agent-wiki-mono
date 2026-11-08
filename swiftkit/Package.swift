@@ -187,7 +187,7 @@ let package = Package(
         // 접근성(AXUIElement) 트리 읽기 공용 primitive.
         .library(name: "AXTreeKit", targets: ["AXTreeKit"]),
         .library(name: "InteropKit", targets: ["InteropKit"]),
-        // gujo.ai 구매자 계통 정본 — 라이브러리·설치·다운로드·자격 모델.
+        // gujo.io 구매자 계통 정본 — 라이브러리·설치·다운로드·자격 모델.
         // gujo(판매자 셸)와 gujo-cloud-apps(구매자 허브)가 함께 쓴다. 앱끼리 직접 참조하지 않는다.
         .library(name: "GujoCoreKit", targets: ["GujoCoreKit"]),
         // 회원(고객) 모델·검색·기기·구독 요약 뷰모델. 네트워크 없음.

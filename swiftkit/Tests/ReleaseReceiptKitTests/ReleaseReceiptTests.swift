@@ -26,7 +26,7 @@ final class ReleaseReceiptTests: XCTestCase {
             sparkle: sparkle
         )
 
-        XCTAssertEqual(receipt.schema, "https://gujo.ai/schemas/release-receipt-v1.json")
+        XCTAssertEqual(receipt.schema, "https://gujo.io/schemas/release-receipt-v1.json")
         XCTAssertEqual(receipt.appSlug, "my-app")
         XCTAssertEqual(receipt.bundleID, "com.example.myapp")
         XCTAssertEqual(receipt.version, "1.0.0")

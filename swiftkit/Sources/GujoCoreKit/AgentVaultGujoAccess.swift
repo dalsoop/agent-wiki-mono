@@ -10,7 +10,7 @@ public struct GujoVaultError: LocalizedError, Equatable, Sendable {
 
 /// AgentVaultClientKit 경계.
 /// - `check`: 권한 게이트 (비밀 없음)
-/// - `resolveAPIKey`: in-process 소비 (#28 D8). 이 앱은 gujo.ai API 를 URLSession 으로
+/// - `resolveAPIKey`: in-process 소비 (#28 D8). 이 앱은 gujo.io API 를 URLSession 으로
 ///   직접 치므로 `use(command:)` 서브프로세스 경로를 쓸 수 없다.
 ///
 /// 반환된 API key 는 **저장하지 않는다** — 요청 수명 동안만 메모리에 둔다.
