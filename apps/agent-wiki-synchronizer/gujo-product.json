@@ -4,10 +4,10 @@
     "product_id": 251,
     "catalog_slug": "agent-wiki-synchronizer",
     "store_catalog_id": 251,
-    "store_catalog_url": "https://app.gujo.ai/catalog/251",
-    "gujo_api": "https://gujo.ai",
-    "support_url": "https://support.gujo.ai",
-    "account_url": "https://app.gujo.ai/downloads",
+    "store_catalog_url": "https://app.gujo.io/catalog/251",
+    "gujo_api": "https://gujo.io",
+    "support_url": "https://support.gujo.io",
+    "account_url": "https://app.gujo.io/downloads",
     "distribution_doc": "DISTRIBUTION.md"
   },
   "content": {

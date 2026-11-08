@@ -21,7 +21,7 @@ final class ReceiptIngestTests: XCTestCase {
         let fileURL = tempDir.appendingPathComponent("release-receipt.json")
         let json = """
         {
-          "$schema": "https://gujo.ai/schemas/release-receipt-v1.json",
+          "$schema": "https://gujo.io/schemas/release-receipt-v1.json",
           "appSlug": "screencapture",
           "bundleID": "net.ranode.screencapture",
           "version": "1.0.0",
@@ -150,7 +150,7 @@ final class ReceiptIngestTests: XCTestCase {
         let fileURL = tempDir.appendingPathComponent("release-receipt.json")
         let json = """
         {
-          "$schema": "https://gujo.ai/schemas/release-receipt-v1.json",
+          "$schema": "https://gujo.io/schemas/release-receipt-v1.json",
           "appSlug": "screencapture",
           "bundleID": "net.ranode.screencapture",
           "version": "1.0.0",

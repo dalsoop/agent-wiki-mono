@@ -59,7 +59,7 @@ public struct SparkleReceipt: Codable, Sendable, Equatable {
 
 /// Immutable, cryptographically verifiable release receipt for app distribution.
 public struct ReleaseReceipt: Codable, Sendable, Equatable {
-    private static let schemaDomain = "gujo" + ".ai"
+    private static let schemaDomain = "gujo" + ".io"
     public static let defaultSchema = "https://\(schemaDomain)/schemas/release-receipt-v1.json"
 
     public let schema: String

@@ -9,14 +9,14 @@ func fallbackDefaults() {
     #expect(table["subscription"] == nil)
     #expect(table["software"] == "http://app.gujo.test:8012")
     #expect(table["tokens"] == "http://tokens.gujo.test:8011")
-    #expect(table["core-prod"] == "https://gujo.ai")
-    #expect(table["gujo-core"] == "https://gujo.ai")
-    #expect(table["pay"] == "https://pay.gujo.ai")
-    #expect(table["pay-prod"] == "https://pay.gujo.ai")
-    #expect(table["learn"] == "https://learn.gujo.ai")
-    #expect(table["learn-prod"] == "https://learn.gujo.ai")
+    #expect(table["core-prod"] == "https://gujo.io")
+    #expect(table["gujo-core"] == "https://gujo.io")
+    #expect(table["pay"] == "https://pay.gujo.io")
+    #expect(table["pay-prod"] == "https://pay.gujo.io")
+    #expect(table["learn"] == "https://learn.gujo.io")
+    #expect(table["learn-prod"] == "https://learn.gujo.io")
     #expect(table["lecture"] == "http://lecture.gujo.test:8015")
-    #expect(table["lecture-prod"] == "https://lecture.gujo.ai")
+    #expect(table["lecture-prod"] == "https://lecture.gujo.io")
     #expect(table["gpu-panel"] == "")
 }
 
@@ -144,13 +144,13 @@ func pathBuildersUseExistingKeys() {
     let table = EndpointRouter.resolve(environment: [:], homeDirectory: "/nonexistent-home")
     let apps = table["apps"] ?? ""
     let support = table["support"] ?? ""
-    #expect(apps == "https://app.gujo.ai")
-    #expect(support == "https://support.gujo.ai")
-    #expect(EndpointRouter.catalogPageURL(id: 30, appsBase: apps)?.absoluteString == "https://app.gujo.ai/catalog/30")
-    #expect(EndpointRouter.downloadsURL(appsBase: apps)?.absoluteString == "https://app.gujo.ai/downloads")
-    #expect(EndpointRouter.supportPageURL(supportBase: support)?.absoluteString == "https://support.gujo.ai")
-    #expect((table["pay"] ?? "") == "https://pay.gujo.ai")
-    #expect(EndpointRouter.joining(table["pay"] ?? "", path: "")?.absoluteString == "https://pay.gujo.ai")
+    #expect(apps == "https://app.gujo.io")
+    #expect(support == "https://support.gujo.io")
+    #expect(EndpointRouter.catalogPageURL(id: 30, appsBase: apps)?.absoluteString == "https://app.gujo.io/catalog/30")
+    #expect(EndpointRouter.downloadsURL(appsBase: apps)?.absoluteString == "https://app.gujo.io/downloads")
+    #expect(EndpointRouter.supportPageURL(supportBase: support)?.absoluteString == "https://support.gujo.io")
+    #expect((table["pay"] ?? "") == "https://pay.gujo.io")
+    #expect(EndpointRouter.joining(table["pay"] ?? "", path: "")?.absoluteString == "https://pay.gujo.io")
     #expect(EndpointRouter.joining("", path: "catalog/1") == nil)
     #expect(EndpointRouter.joining(apps, path: "")?.absoluteString == apps)
 }
@@ -174,7 +174,7 @@ func learnLedgerOverlay() throws {
         homeDirectory: "/nonexistent-home"
     )
     #expect(table["learn"] == "https://learn-ledger.invalid")
-    #expect(table["learn-prod"] == "https://learn.gujo.ai")
+    #expect(table["learn-prod"] == "https://learn.gujo.io")
 }
 
 @Test("learn 키 — GUJO_ENDPOINT_LEARN 이 원장·폴백보다 우선한다")
@@ -195,7 +195,7 @@ func learnEnvOverlay() throws {
         homeDirectory: "/nonexistent-home"
     )
     #expect(table["learn"] == "https://learn-env.invalid")
-    #expect(table["learn-prod"] == "https://learn.gujo.ai")
+    #expect(table["learn-prod"] == "https://learn.gujo.io")
 }
 
 @Test("오버레이 키 — hyphen 과 underscore 를 서로 정규화하지 않는다")
@@ -213,8 +213,8 @@ func overlayDoesNotNormalizeHyphenAndUnderscore() {
 @Test("번들 폴백 — 공개·알려진 live 만 채우고 클러스터 키는 빈 문자열")
 func bundledDefaultsKeepPublicHostsAndEmptyClusterKeys() {
     let table = EndpointRouter.resolve(environment: [:], homeDirectory: "/nonexistent-home")
-    #expect(table["app"] == "https://gujo.ai")
-    #expect(table["apps"] == "https://app.gujo.ai")
+    #expect(table["app"] == "https://gujo.io")
+    #expect(table["apps"] == "https://app.gujo.io")
     #expect(table["s3"] == "https://s3.ranode.net")
     #expect(table["infisical"] == "https://infisical.local.ranode.net")
     #expect(table["ranode-internal"] == "https://internal.ranode.net")

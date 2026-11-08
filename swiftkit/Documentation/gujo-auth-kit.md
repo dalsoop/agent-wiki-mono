@@ -1,6 +1,6 @@
 # GujoAuthKit · GujoStaffAPIKit — Gujo 스태프 인증 계약 v1
 
-두 킷은 gujo.ai 스태프 인증(계약 §1·§2·§4)과 스태프 API(§5)의 **유일한 Swift 이행체**다.
+두 킷은 gujo.io 스태프 인증(계약 §1·§2·§4)과 스태프 API(§5)의 **유일한 Swift 이행체**다.
 앱은 토큰·호스트·ability 이름을 직접 다루지 않고 이 킷만 쓴다.
 
 ## 규칙 요약

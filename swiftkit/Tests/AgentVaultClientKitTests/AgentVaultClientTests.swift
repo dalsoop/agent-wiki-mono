@@ -199,7 +199,7 @@ struct AgentVaultCardTests {
     @Test func contextPrefersCardOwnerTenantOverFallback() {
         let card = AgentVaultCard(
             identity: .init(id: "g1", name: "Gujo", kind: "apiToken"),
-            account: .init(account: "", host: "gujo.ai", secretStored: true, locator: nil),
+            account: .init(account: "", host: "gujo.io", secretStored: true, locator: nil),
             status: .init(ownerTenantID: "tenant:gujo"))
         #expect(card.context(agentID: "app:gujo@macbook").tenantID == "tenant:gujo")
     }

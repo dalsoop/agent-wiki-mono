@@ -47,7 +47,7 @@
 | `apps` / `appsProd` | `apps` / `apps-prod` | 앱 포털 |
 | `assets` / `assetsProd` | `assets` / `assets-prod` | Asset 영역 |
 | `support` / `supportProd` | `support` / `support-prod` | 고객지원 |
-| `pay` / `payProd` | `pay` / `pay-prod` | 결제. `gujo.ai/pricing` 이 아니다 |
+| `pay` / `payProd` | `pay` / `pay-prod` | 결제. `gujo.io/pricing` 이 아니다 |
 | `learn` / `learnProd` | `learn` / `learn-prod` | 강좌·수강. `lecture` 와 별개 |
 | `gpuPanel` | `gpu-panel` | GPU 패널. 번들 값은 빈 문자열 |
 
@@ -59,20 +59,20 @@ host-infra 선언은 인프라 원장에 그 호스트가 있는지다. Endpoint
 
 | 키 | 폴백 | host-infra 선언 |
 |---|---|---|
-| `app` | `https://gujo.ai` | 선언 |
-| `apps` / `apps-prod` | `https://apps.gujo.ai` | 선언 |
-| `assets` / `assets-prod` | `https://assets.gujo.ai` | 선언 |
-| `support` / `support-prod` | `https://support.gujo.ai` | 선언 |
-| `learn` / `learn-prod` | `https://learn.gujo.ai` | 선언 — `lecture.gujo.ai` 와 별개 호스트 |
-| `pay` / `pay-prod` | `https://pay.gujo.ai` | 미선언 — 결정 대기 (백로그 A01E22AF, 실측 2026-09-10). **값은 바꾸지 않는다** |
+| `app` | `https://gujo.io` | 선언 |
+| `apps` / `apps-prod` | `https://apps.gujo.io` | 선언 |
+| `assets` / `assets-prod` | `https://assets.gujo.io` | 선언 |
+| `support` / `support-prod` | `https://support.gujo.io` | 선언 |
+| `learn` / `learn-prod` | `https://learn.gujo.io` | 선언 — `lecture.gujo.io` 와 별개 호스트 |
+| `pay` / `pay-prod` | `https://pay.gujo.io` | 미선언 — 결정 대기 (백로그 A01E22AF, 실측 2026-09-10). **값은 바꾸지 않는다** |
 | `lecture` | `http://lecture.gujo.test:8015` | 로컬 폴백 |
-| `lecture-prod` | `https://lecture.gujo.ai` | 선언 — 강좌 사이트. `learn` 과 별개 |
+| `lecture-prod` | `https://lecture.gujo.io` | 선언 — 강좌 사이트. `learn` 과 별개 |
 | `core` | `http://gujo.test:8001` | 로컬 폴백 |
-| `core-prod` / `gujo-core` | `https://gujo.ai` | 선언 |
+| `core-prod` / `gujo-core` | `https://gujo.io` | 선언 |
 | `software` | `http://apps.gujo.test:8012` | 로컬 폴백 |
 | `distribution-feed-template` | (빈 문자열) | 값은 URL 이 아니라 `{product_id}` 자리표시를 담은 Sparkle 피드 템플릿. 빌드 앱 원장이 채움 — ship 의 제품 ID 피드 opt-in(`update_feed`) 전용, 비면 opt-in 앱 ship 실패 |
 | `tokens` | `http://tokens.gujo.test:8011` | 로컬 폴백 |
-| `api-prod` | `https://api.gujo.ai` | 선언 |
+| `api-prod` | `https://api.gujo.io` | 선언 |
 | `infisical` | `https://infisical.local.ranode.net` | InfisicalCerts 권장 호스트 |
 | `s3` | `https://s3.ranode.net` | Sparkle S3 |
 | `ranode-internal` | `https://internal.ranode.net` | 내부 게이트 |
@@ -92,7 +92,7 @@ host-infra 선언은 인프라 원장에 그 호스트가 있는지다. Endpoint
 
 ## 금지
 
-- 앱 소스에 `https://*.gujo.ai` 리터럴. 키만 쓴다.
+- 앱 소스에 `https://*.gujo.io` 리터럴. 키만 쓴다.
 - 번들 폴백에 클러스터 호스트를 지어 넣기(`*.local.ranode.net` 등). 빈 문자열이 정직하다.
 - `pay` 값을 host-infra 에 맞춰 임의로 바꾸기. 사용자 결정(A01E22AF)까지 유지.
 - env/원장 키의 hyphen ↔ underscore 정규화. 현재 동작을 고정한다.

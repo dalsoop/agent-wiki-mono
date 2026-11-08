@@ -43,7 +43,7 @@ public struct GujoErrorBody: Decodable, Equatable, Sendable {
     }
 }
 
-/// gujo.ai API 호스트 해석 — EndpointRouterKit `gujo-core` 키만 본다(하드코딩 금지).
+/// gujo.io API 호스트 해석 — EndpointRouterKit `gujo-core` 키만 본다(하드코딩 금지).
 public enum GujoCoreHost {
     public static let endpointKey = "gujo-core"
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// 소득세법 간편장부 표준손익계산서 계정과목. 판관비 세목은 간편장부 소득금액계산서 부속서류의
-/// 항목을 따르고, 매출원가에는 gujo.ai 운영에 필요한 AI API 사용료·서버/클라우드를 둔다
+/// 항목을 따르고, 매출원가에는 gujo.io 운영에 필요한 AI API 사용료·서버/클라우드를 둔다
 /// (해외 AI API·서버 = 매출원가, 개발 도구 SaaS = 판관비 지급수수료 — 위키 9261be4f).
 /// raw 값이 앱 간 교환 문자열이다 — KoreanTaxRulesKit 은 이 enum 없이 raw 문자열만 받는다.
 public enum AccountCode: String, Codable, Sendable, CaseIterable {

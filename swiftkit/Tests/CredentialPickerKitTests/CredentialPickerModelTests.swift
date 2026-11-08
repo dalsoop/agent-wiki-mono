@@ -170,7 +170,7 @@ final class CredentialPickerModelTests: XCTestCase {
         let client = StubClient(cards: [
             AgentVaultCard(
                 identity: .init(id: "g1", name: "gujo", kind: "apiToken"),
-                account: .init(account: "", host: "gujo.ai", secretStored: true, locator: nil),
+                account: .init(account: "", host: "gujo.io", secretStored: true, locator: nil),
                 status: .init(ownerTenantID: "tenant:gujo")),
         ])
         let model = CredentialPickerModel(
